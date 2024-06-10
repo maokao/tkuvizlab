@@ -1,0 +1,107 @@
+<head>
+  <style> body { margin: 0; } 
+  .nodelabel { color: black;}
+  </style>
+
+  <!--<script src="//unpkg.com/three"></script>
+  <script src="js/threejs/three.min.js"></script>
+  <script src="//unpkg.com/three-spritetext"></script>-->
+  <script src="//unpkg.com/3d-force-graph"></script>
+  <script src="makeTextSprite.js"></script>
+  
+  <!-- <script src="3d-force-graph.js"></script> -->
+
+</head>
+
+<body style="color: white;">
+  <div id="3d-graph"></div>
+  <script src="publications.js"></script>
+  <script type="importmap">{ "imports": { "three": "//unpkg.com/three/build/three.module.js" }}</script>
+  <script type="module">
+    import * as THREE from '//unpkg.com/three/build/three.module.js';
+    import SpriteText from "//unpkg.com/three-spritetext/dist/three-spritetext.mjs";
+gData.links.forEach(function(link){
+    for(var j = 0; j < gData.nodes.length; j++) {
+      if(gData.nodes[j].id==link.source)
+      {
+        if (!gData.nodes[j]["linkCount"]) gData.nodes[j]["linkCount"] = 0;
+        gData.nodes[j]["linkCount"]++; 
+        break;
+      }
+    }
+  });
+/*
+    var sprites = new THREE.Object3D();
+    var aaa;
+
+    const Graph = ForceGraph3D()
+      (document.getElementById('3d-graph'))
+        .nodeLabel(d => d.group == 0 ? "":"<h6 class='nodelabel'>"+d.id+"</h6>")
+        //.linkColor("#333")
+        .linkColor(link => link.color ? 'red' : '#333' )
+        .linkOpacity(0.7)
+        .nodeThreeObject(d => {
+          //const sprite = new SpriteText(d.id);
+          
+          sprite = new SpriteText();
+          if(d.group == 0){
+            sprite.text = d.id;
+          }
+          else
+            sprite.text = " ";
+          sprite.color = "#333";
+          sprite.textHeight = 12;
+          sprite.material.depthWrite = false; // make sprite background transparent
+
+          var ballGeo = new THREE.SphereGeometry(d.group==0 ? d.linkCount*1.5+5 :  5, 32, 32);
+          var material = new THREE.MeshLambertMaterial({
+            //color: d.group==0 ? "#57bbc3" : "#df6491",
+            color: d.group==0 ? "#003399" : d.group==1 ? "#aa0000" : d.group==2 ? "#ff9900" : d.group==3 ? "#ffff00" : d.group==4 ? "#00aa00" : "#aa00aa",
+            emissive: "#000000",
+            transparent: true,
+            opacity: 0.9
+          });
+          var ball = new THREE.Mesh(ballGeo, material);
+
+          sprites.add(sprite); 
+          return ball;
+          //return sprite;
+        })
+        .onEngineTick(function() {
+          
+          for(i=0; i<gData.nodes.length; i++)
+          {
+            
+            sprites.children[i].position.set(gData.nodes[i].x, gData.nodes[i].y+20, gData.nodes[i].z);
+          }
+            //sprites.children[i].position.set(100,100,100);       
+          //aaa = gData.nodes[0].x;
+    
+        })
+        .backgroundColor("#f8f9fc")
+        .graphData(gData);
+*/     
+    const Graph = ForceGraph3D()
+      (document.getElementById('3d-graph'))
+        .linkColor(link => link.color ? 'red' : '#333' )
+        .linkOpacity(0.7)
+        .nodeThreeObject(d => new THREE.Mesh(
+            new THREE.SphereGeometry(d.group==0 ? d.linkCount*1.5+5 :  5, 32, 32),
+            new THREE.MeshLambertMaterial({
+              color: d.group==0 ? "#003399" : "#aa0000",
+              transparent: true,
+              opacity: 0.75
+          })
+        ))
+        .backgroundColor("#f8f9fc")
+        .graphData(gData);
+
+        const chargeForce = Graph
+                  .d3Force('charge')
+                  .distanceMin(50)
+                  .distanceMax(200);
+
+//        Graph.scene().add(sprites);
+
+  </script>
+</body>

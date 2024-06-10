@@ -1,0 +1,742 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-32HH3QG6V8"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-32HH3QG6V8');
+</script>
+<title>Publications</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<link rel="stylesheet" href="css/style.css">
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=Cinzel&display=swap" rel="stylesheet">
+		  <!--<script src="//unpkg.com/three"></script>
+		  <script src="js/threejs/three.min.js"></script>
+		  <script src="//unpkg.com/three-spritetext"></script>
+		  <script src="//unpkg.com/3d-force-graph"></script>
+		  <script src="js/3d-force-graph.js"></script>
+		  <script src="makeTextSprite.js"></script>-->
+<script type="text/javascript">
+<!--
+// QuickSearch script for JabRef HTML export 
+// Version: 3.0
+//
+// Copyright (c) 2006-2011, Mark Schenk
+//
+// This software is distributed under a Creative Commons Attribution 3.0 License
+// http://creativecommons.org/licenses/by/3.0/
+//
+// Features:
+// - intuitive find-as-you-type searching
+//    ~ case insensitive
+//    ~ ignore diacritics (optional)
+//
+// - search with/without Regular Expressions
+// - match BibTeX key
+//
+
+// Search settings
+var searchAbstract = true;	// search in abstract
+var searchComment = true;	// search in comment
+
+var noSquiggles = true; 	// ignore diacritics when searching
+var searchRegExp = false; 	// enable RegExp searches
+
+
+if (window.addEventListener) {
+	window.addEventListener("load",initSearch,false); }
+else if (window.attachEvent) {
+	window.attachEvent("onload", initSearch); }
+
+function initSearch() {
+	// check for quick search table and searchfield
+	if (!document.getElementById('qs_table')||!document.getElementById('quicksearch')) { return; }
+
+	// load all the rows and sort into arrays
+	loadTableData();
+	
+	//find the query field
+	qsfield = document.getElementById('qs_field');
+
+	// previous search term; used for speed optimisation
+	prevSearch = '';
+
+	//find statistics location
+	stats = document.getElementById('stat');
+	setStatistics(-1);
+	
+	// set up preferences
+	initPreferences();
+
+	// shows the searchfield
+	document.getElementById('quicksearch').style.display = 'block';
+	document.getElementById('qs_field').onkeyup = quickSearch;
+}
+
+function loadTableData() {
+	// find table and appropriate rows
+	searchTable = document.getElementById('qs_table');
+	var allRows = searchTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+	// split all rows into entryRows and infoRows (e.g. abstract, comment, bibtex)
+	entryRows = new Array(); infoRows = new Array(); absRows = new Array(); revRows = new Array();
+
+	// get data from each row
+	entryRowsData = new Array(); absRowsData = new Array(); revRowsData = new Array(); 
+	
+	BibTeXKeys = new Array();
+	
+	for (var i=0, k=0, j=0; i<allRows.length;i++) {
+		if (allRows[i].className.match(/entry/)) {
+			entryRows[j] = allRows[i];
+			entryRowsData[j] = stripDiacritics(getTextContent(allRows[i]));
+			allRows[i].id ? BibTeXKeys[j] = allRows[i].id : allRows[i].id = 'autokey_'+j;
+			j ++;
+		} else {
+			infoRows[k++] = allRows[i];
+			// check for abstract/comment
+			if (allRows[i].className.match(/abstract/)) {
+				absRows.push(allRows[i]);
+				absRowsData[j-1] = stripDiacritics(getTextContent(allRows[i]));
+			} else if (allRows[i].className.match(/comment/)) {
+				revRows.push(allRows[i]);
+				revRowsData[j-1] = stripDiacritics(getTextContent(allRows[i]));
+			}
+		}
+	}
+	//number of entries and rows
+	numEntries = entryRows.length;
+	numInfo = infoRows.length;
+	numAbs = absRows.length;
+	numRev = revRows.length;
+}
+
+function quickSearch(){
+	
+	tInput = qsfield;
+
+	if (tInput.value.length == 0) {
+		showAll();
+		setStatistics(-1);
+		qsfield.className = '';
+		return;
+	} else {
+		t = stripDiacritics(tInput.value);
+
+		if(!searchRegExp) { t = escapeRegExp(t); }
+			
+		// only search for valid RegExp
+		try {
+			textRegExp = new RegExp(t,"i");
+			closeAllInfo();
+			qsfield.className = '';
+		}
+			catch(err) {
+			prevSearch = tInput.value;
+			qsfield.className = 'invalidsearch';
+			return;
+		}
+	}
+	
+	// count number of hits
+	var hits = 0;
+
+	// start looping through all entry rows
+	for (var i = 0; cRow = entryRows[i]; i++){
+
+		// only show search the cells if it isn't already hidden OR if the search term is getting shorter, then search all
+		if(cRow.className.indexOf('noshow')==-1 || tInput.value.length <= prevSearch.length){
+			var found = false; 
+
+			if (entryRowsData[i].search(textRegExp) != -1 || BibTeXKeys[i].search(textRegExp) != -1){ 
+				found = true;
+			} else {
+				if(searchAbstract && absRowsData[i]!=undefined) {
+					if (absRowsData[i].search(textRegExp) != -1){ found=true; } 
+				}
+				if(searchComment && revRowsData[i]!=undefined) {
+					if (revRowsData[i].search(textRegExp) != -1){ found=true; } 
+				}
+			}
+			
+			if (found){
+				cRow.className = 'entry show';
+				hits++;
+			} else {
+				cRow.className = 'entry noshow';
+			}
+		}
+	}
+
+	// update statistics
+	setStatistics(hits)
+	
+	// set previous search value
+	prevSearch = tInput.value;
+}
+
+
+// Strip Diacritics from text
+// http://stackoverflow.com/questions/990904/javascript-remove-accents-in-strings
+
+// String containing replacement characters for stripping accents 
+var stripstring = 
+    'AAAAAAACEEEEIIII'+
+    'DNOOOOO.OUUUUY..'+
+    'aaaaaaaceeeeiiii'+
+    'dnooooo.ouuuuy.y'+
+    'AaAaAaCcCcCcCcDd'+
+    'DdEeEeEeEeEeGgGg'+
+    'GgGgHhHhIiIiIiIi'+
+    'IiIiJjKkkLlLlLlL'+
+    'lJlNnNnNnnNnOoOo'+
+    'OoOoRrRrRrSsSsSs'+
+    'SsTtTtTtUuUuUuUu'+
+    'UuUuWwYyYZzZzZz.';
+
+function stripDiacritics(str){
+
+    if(noSquiggles==false){
+        return str;
+    }
+
+    var answer='';
+    for(var i=0;i<str.length;i++){
+        var ch=str[i];
+        var chindex=ch.charCodeAt(0)-192;   // Index of character code in the strip string
+        if(chindex>=0 && chindex<stripstring.length){
+            // Character is within our table, so we can strip the accent...
+            var outch=stripstring.charAt(chindex);
+            // ...unless it was shown as a '.'
+            if(outch!='.')ch=outch;
+        }
+        answer+=ch;
+    }
+    return answer;
+}
+
+// http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+// NOTE: must escape every \ in the export code because of the JabRef Export...
+function escapeRegExp(str) {
+  return str.replace(/[-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+}
+
+function toggleInfo(articleid,info) {
+
+	var entry = document.getElementById(articleid);
+	var abs = document.getElementById('abs_'+articleid);
+	var rev = document.getElementById('rev_'+articleid);
+	var bib = document.getElementById('bib_'+articleid);
+	
+	if (abs && info == 'abstract') {
+		abs.className.indexOf('noshow') == -1?abs.className = 'abstract noshow':abs.className = 'abstract show';
+	} else if (rev && info == 'comment') {
+		rev.className.indexOf('noshow') == -1?rev.className = 'comment noshow':rev.className = 'comment show';
+	} else if (bib && info == 'bibtex') {
+		bib.className.indexOf('noshow') == -1?bib.className = 'bibtex noshow':bib.className = 'bibtex show';
+	} else { 
+		return;
+	}
+
+	// check if one or the other is available
+	var revshow; var absshow; var bibshow;
+	(abs && abs.className.indexOf('noshow') == -1)? absshow = true: absshow = false;
+	(rev && rev.className.indexOf('noshow') == -1)? revshow = true: revshow = false;	
+	(bib && bib.className.indexOf('noshow') == -1)? bibshow = true: bibshow = false;
+	
+	// highlight original entry
+	if(entry) {
+		if (revshow || absshow || bibshow) {
+		entry.className = 'entry highlight show';
+		} else {
+		entry.className = 'entry show';
+		}
+	}
+	
+	// When there's a combination of abstract/comment/bibtex showing, need to add class for correct styling
+	if(absshow) {
+		(revshow||bibshow)?abs.className = 'abstract nextshow':abs.className = 'abstract';
+	} 
+	if (revshow) {
+		bibshow?rev.className = 'comment nextshow': rev.className = 'comment';
+	}	
+	
+}
+
+function setStatistics (hits) {
+	if(hits < 0) { hits=numEntries; }
+	if(stats) { stats.firstChild.data = hits + '/' + numEntries}
+}
+
+function getTextContent(node) {
+	// Function written by Arve Bersvendsen
+	// http://www.virtuelvis.com
+	
+	if (node.nodeType == 3) {
+	return node.nodeValue;
+	} // text node
+	if (node.nodeType == 1 && node.className != "infolinks") { // element node
+	var text = [];
+	for (var chld = node.firstChild;chld;chld=chld.nextSibling) {
+		text.push(getTextContent(chld));
+	}
+	return text.join("");
+	} return ""; // some other node, won't contain text nodes.
+}
+
+function showAll(){
+	closeAllInfo();
+	for (var i = 0; i < numEntries; i++){ entryRows[i].className = 'entry show'; }
+}
+
+function closeAllInfo(){
+	for (var i=0; i < numInfo; i++){
+		if (infoRows[i].className.indexOf('noshow') ==-1) {
+			infoRows[i].className = infoRows[i].className + ' noshow';
+		}
+	}
+}
+
+function clearQS() {
+	qsfield.value = '';
+	showAll();
+}
+
+function redoQS(){
+	showAll();
+	quickSearch(qsfield);
+}
+
+function updateSetting(obj){
+	var option = obj.id;
+	var checked = obj.value;
+
+	switch(option)
+	 {
+	 case "opt_searchAbs":
+	   searchAbstract=!searchAbstract;
+	   redoQS();
+	   break;
+	 case "opt_searchComment":
+	   searchComment=!searchComment;
+	   redoQS();
+	   break;
+	 case "opt_useRegExp":
+	   searchRegExp=!searchRegExp;
+	   redoQS();
+	   break;
+	 case "opt_noAccents":
+	   noSquiggles=!noSquiggles;
+	   loadTableData();
+	   redoQS();
+	   break;
+	 }
+}
+
+function initPreferences(){
+	if(searchAbstract){document.getElementById("opt_searchAbs").checked = true;}
+	if(searchComment){document.getElementById("opt_searchComment").checked = true;}
+	if(noSquiggles){document.getElementById("opt_noAccents").checked = true;}
+	if(searchRegExp){document.getElementById("opt_useRegExp").checked = true;}
+	
+	if(numAbs==0) {document.getElementById("opt_searchAbs").parentNode.style.display = 'none';}
+	if(numRev==0) {document.getElementById("opt_searchComment").parentNode.style.display = 'none';}	
+}
+
+function toggleSettings(){
+	var togglebutton = document.getElementById('showsettings');
+	var settings = document.getElementById('settings');
+	
+	if(settings.className == "hidden"){
+		settings.className = "show";
+		togglebutton.innerText = "close settings";
+		togglebutton.textContent = "close settings";
+	}else{
+		settings.className = "hidden";
+		togglebutton.innerText = "settings...";		
+		togglebutton.textContent = "settings...";
+	}
+}
+
+-->
+</script>
+<style type="text/css">
+/*body { background-color: white; font-family: Arial, sans-serif; font-size: 13px; line-height: 1.2; padding: 1em; color: #2E2E2E; width: 80em; margin: auto auto; }
+*/
+form#quicksearch { width: auto; border-style: solid; border-color: gray; border-width: 1px 0px; padding: 0.7em 0.5em; display:none; position:relative; }
+span#searchstat {padding-left: 1em;}
+
+div#settings { margin-top:0.7em; /* border-bottom: 1px transparent solid; background-color: #efefef; border: 1px grey solid; */ }
+div#settings ul {margin: 0; padding: 0; }
+div#settings li {margin: 0; padding: 0 1em 0 0; display: inline; list-style: none; }
+div#settings li + li { border-left: 2px #efefef solid; padding-left: 0.5em;}
+div#settings input { margin-bottom: 0px;}
+
+div#settings.hidden {display:none;}
+
+#showsettings { border: 1px grey solid; padding: 0 0.5em; float:right; line-height: 1.6em; text-align: right; }
+#showsettings:hover { cursor: pointer; }
+
+.invalidsearch { background-color: red; }
+input[type="button"] { background-color: #efefef; border: 1px #2E2E2E solid;}
+
+table { border: 1px gray none; width: 100%; empty-cells: show; border-spacing: 0em 0.1em;}
+th, td { border: none; padding: 0.5em; vertical-align: top; text-align: justify; }
+
+td a { color: navy; text-decoration: none; }
+td a:hover  { text-decoration: underline; }
+
+tr.noshow { display: none;}
+tr.highlight td { background-color: #EFEFEF; border-top: 2px #2E2E2E solid; font-weight: bold; }
+tr.abstract td, tr.comment td, tr.bibtex td { background-color: #EFEFEF; text-align: justify; border-bottom: 2px #2E2E2E solid; }
+tr.nextshow td { border-bottom-style: none; }
+
+tr.bibtex pre { width: 100%; overflow: auto; white-space: pre-wrap;}
+p.infolinks { margin: 0.3em 0em 0em 0em; padding: 0px; }
+
+@media print {
+	p.infolinks, #qs_settings, #quicksearch, t.bibtex { display: none !important; }
+	tr { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body class="is-preload" style="background-color: #011a43;">
+<div id="page-wrapper">
+	<div id="main" class="style1" style="padding: 2em 0 4em 0;">
+					<!-- Header -->
+				<header id="header" style="position: fixed; z-index: 500; color: white; padding: 10px; width: 100%;background: rgba(60,60,60,0.2);">
+					<!--<div id="logo" style="background: url(i/title.svg) no-repeat 0px 0px;"></div>-->
+					<div><img src="i/title.svg"  id="logo"></div>
+					<nav id="nav">
+						<ul>
+							<li><a href="index.html">Home</a></li>
+							<li>
+								<a href="publication.html">Publications</a>
+							</li>
+							<li><a href="#">Softwares</a>
+								<ul>
+									<li><a href="http://gap.stat.sinica.edu.tw/Software/GAP/index.htm" target="blank">GAP</a></li>
+									<li><a href="http://gap.stat.sinica.edu.tw/Software/iGAP/index.htm" target="blank">iGAP</a></li>
+								</ul>
+							</li>
+						</ul>
+					</nav>
+				</header>
+				<div class="container" style="text-align: center;">
+					<header>
+						<h2>Publications</h2>
+					</header>
+				</div>
+					<div class="container" style="background: #f8f9fc; color: black; position: relative; ">
+						<div><iframe sandbox="allow-popups allow-scripts allow-forms allow-same-origin" src="maokao.html" marginwidth="0" marginheight="0" style="height:500px; width: 100%;" scrolling="no"></iframe></div><div style="position: absolute;top: 0;"><h3 style="color: #333; font-weight:800; margin: 0; padding: 0.75em 0.75em;">Co-authors Network</h3></div>
+					</div>
+					<div><br></div>
+					<div class="container" style="background: #f8f9fc; color: black;">
+					<header style=" padding: 0.75em 0.75em;">
+						<h3 style="color: #333; font-weight:800; margin: 0;">Refereed Journal Articles</h3>
+					</header>
+<table id="qs_table" border="1">
+<tbody>
+<tr id="Kwon2022" class="entry">
+	<td>Kwon O-H, <b style="color: #333;">Kao C-H</b>, Chen C-H and Ma K-L (2022), <i>"A Deep Generative Model for Reordering Adjacency Matrices"</i>, IEEE Transactions on Visualization and Computer Graphics.  IEEE.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Kwon2022','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Kwon2022" class="bibtex noshow">
+<td><b>BibTeX</b>:
+<pre>
+@article{Kwon2022,
+  author = {Kwon, Oh-Hyun and Kao, Chiun-How and Chen, Chun-Houh and Ma, Kwan-Liu},
+  title = {A Deep Generative Model for Reordering Adjacency Matrices},
+  journal = {IEEE Transactions on Visualization and Computer Graphics},
+  publisher = {IEEE},
+  year = {2022}
+}
+</pre></td>
+</tr>
+<tr id="Chang2021" class="entry">
+	<td>Chang L-C, Hsu Y-C, Chiu H-M, Ueda K, Wu M-S, <b style="color: #333;">Kao C-H</b>* and Shen T-L* (2021), <i>"Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia"</i>, Frontiers in oncology.  Vol. 11 Frontiers Media SA.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Chang2021','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Chang2021" class="bibtex noshow">
+<td><b>BibTeX</b>:
+<pre>
+@article{Chang2021,
+  author = {Chang, Li-Chun and Hsu, Yi-Chiung and Chiu, Han-Mo and Ueda, Koji and Wu, Ming-Shiang and Kao, Chiun-How and Shen, Tang-Long},
+  title = {Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia},
+  journal = {Frontiers in oncology},
+  publisher = {Frontiers Media SA},
+  year = {2021},
+  volume = {11}
+}
+</pre></td>
+</tr>
+<tr id="Yang2020a" class="entry">
+	<td>Yang H-C, Chen C-h, Wang J-H, Liao H-C, Yang C-T, Chen C-W, Lin Y-C, <b style="color: #333;">Kao C-H</b>, Lu M-YJ and Liao JC (2020), <i>"Analysis of genomic distributions of SARS-CoV-2 reveals a dominant strain type with strong allelic associations"</i>, Proceedings of the National Academy of Sciences.  Vol. 117(48), pp. 30679-30686. National Acad Sciences.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Yang2020a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Yang2020a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@article{Yang2020a,
+  author = {Yang, Hsin-Chou and Chen, Chun-houh and Wang, Jen-Hung and Liao, Hsiao-Chi and Yang, Chih-Ting and Chen, Chia-Wei and Lin, Yin-Chun and Kao, Chiun-How and Lu, Mei-Yeh Jade and Liao, James C},
+  title = {Analysis of genomic distributions of SARS-CoV-2 reveals a dominant strain type with strong allelic associations},
+  journal = {Proceedings of the National Academy of Sciences},
+  publisher = {National Acad Sciences},
+  year = {2020},
+  volume = {117},
+  number = {48},
+  pages = {30679--30686}
+}
+</pre></td>
+</tr>
+<tr id="Kao2017a" class="entry">
+	<td><b style="color: #333;">Kao C-H</b>, Hsieh C-H, Chu Y-F, Kuang Y-T and Yang C-K (2017), <i>"Using data visualization technique to detect sensitive information re-identification problem of real open dataset"</i>, Journal of Systems Architecture.  Vol. 80, pp. 85-91. Elsevier.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Kao2017a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Kao2017a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@article{Kao2017a,
+  author = {Kao, Chiun-How and Hsieh, Chih-Hung and Chu, Yu-Feng and Kuang, Yu-Ting and Yang, Chuan-Kai},
+  title = {Using data visualization technique to detect sensitive information re-identification problem of real open dataset},
+  journal = {Journal of Systems Architecture},
+  publisher = {Elsevier},
+  year = {2017},
+  volume = {80},
+  pages = {85--91}
+}
+</pre></td>
+</tr>
+<tr id="Kao2014a" class="entry">
+	<td><b style="color: #333;">Kao C-H</b>, Nakano J, Shieh S-H, Tien Y-J, Wu H-M, Yang C-k and Chen C-h (2014), <i>"Exploratory data analysis of interval-valued symbolic data with matrix visualization"</i>, Computational Statistics &amp; Data Analysis.  Vol. 79, pp. 14-29. Elsevier.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Kao2014a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Kao2014a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@article{Kao2014a,
+  author = {Kao, Chiun-How and Nakano, Junji and Shieh, Sheau-Hue and Tien, Yin-Jing and Wu, Han-Ming and Yang, Chuan-kai and Chen, Chun-houh},
+  title = {Exploratory data analysis of interval-valued symbolic data with matrix visualization},
+  journal = {Computational Statistics &amp; Data Analysis},
+  publisher = {Elsevier},
+  year = {2014},
+  volume = {79},
+  pages = {14--29}
+}
+</pre></td>
+</tr>
+<tr id="Chiu2006a" class="entry">
+	<td>Chiu M-J, Hua M-S, Chen T-F, Hwu H-G, <b style="color: #333;">Kao C-H</b> and Chen C-H (2006), <i>"Brain responses of explicit and implicit memory: An event-related potential study"</i>, Neuroreport.  Vol. 17(14), pp. 1483-1486. LWW.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Chiu2006a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Chiu2006a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@article{Chiu2006a,
+  author = {Chiu, Ming-Jang and Hua, Mau-Sun and Chen, Ta-Fu and Hwu, Hai-Gwo and Kao, Chiun-How and Chen, Chun-Houh},
+  title = {Brain responses of explicit and implicit memory: An event-related potential study},
+  journal = {Neuroreport},
+  publisher = {LWW},
+  year = {2006},
+  volume = {17},
+  number = {14},
+  pages = {1483--1486}
+}
+</pre></td>
+</tr>
+
+</tbody>
+</table>
+
+<header style=" padding: 0.75em 0.75em;">
+	<h3 style="color: #333; font-weight:800; margin: 0;">Book Chapters</h3>
+</header>
+<table id="qs_table" border="1">
+<tbody>
+<tr id="Wu2020a" class="entry">
+	<td>Wu H-M, <b style="color: #333;">Kao C-H</b> and Chen C-h (2020), <i>"Dimension Reduction and Visualization of Symbolic Interval-Valued Data Using Sliced Inverse Regression"</i>, Advances in Data Science: Symbolic, Complex and Network Data.  Vol. 4, pp. 49-77. Wiley Online Library.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Wu2020a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Wu2020a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@article{Wu2020a,
+  author = {Wu, Han-Ming and Kao, Chiun-How and Chen, Chun-houh},
+  title = {Dimension Reduction and Visualization of Symbolic Interval-Valued Data Using Sliced Inverse Regression},
+  journal = {Advances in Data Science: Symbolic, Complex and Network Data},
+  publisher = {Wiley Online Library},
+  year = {2020},
+  volume = {4},
+  pages = {49--77}
+}
+</pre></td>
+</tr>
+</tbody>
+</table>
+
+<header style=" padding: 0.75em 0.75em;">
+	<h3 style="color: #333; font-weight:800; margin: 0;">Refereed Proceedings Articles</h3>
+</header>
+<table id="qs_table" border="1">
+<tbody>
+
+<tr id="Yang2019a" class="entry">
+	<td>Yang C-K, <b style="color: #333;">Kao C-H</b>, Lai Y-C and Lo N-W (2019), <i>"Privacy-preserving encryption-domain video retrieval over the cloud via block transformations of key frames"</i>, In 2019 42nd International Convention on Information and Communication Technology, Electronics and Microelectronics (MIPRO). , pp. 1150-1153.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Yang2019a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Yang2019a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@inproceedings{Yang2019a,
+  author = {Yang, Chuan-Kai and Kao, Chiun-How and Lai, Yuan-Cheng and Lo, Nai-Wei},
+  title = {Privacy-preserving encryption-domain video retrieval over the cloud via block transformations of key frames},
+  booktitle = {2019 42nd International Convention on Information and Communication Technology, Electronics and Microelectronics (MIPRO)},
+  year = {2019},
+  pages = {1150--1153}
+}
+</pre></td>
+</tr>
+<tr id="Lee2017a" class="entry">
+	<td>Lee T-J, Tseng S-S, Chen H-C, Lin S-C and <b style="color: #333;">Kao C-H</b> (2017), <i>"A Frame-Based Approach to Generating Insider Threat Test Suite on Cloud File-Sharing"</i>, In International Symposium on Mobile Internet Security. , pp. 151-156.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Lee2017a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Lee2017a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@inproceedings{Lee2017a,
+  author = {Lee, Tsung-Ju and Tseng, Shian-Shyong and Chen, Hsing-Chung and Lin, Sung-Chiang and Kao, Chiun-How},
+  title = {A Frame-Based Approach to Generating Insider Threat Test Suite on Cloud File-Sharing},
+  booktitle = {International Symposium on Mobile Internet Security},
+  year = {2017},
+  pages = {151--156}
+}
+</pre></td>
+</tr>
+
+<tr id="Kao2016b" class="entry">
+	<td><b style="color: #333;">Kao C-H</b>, Dai J-H, Ko R, Kuang Y-T, Lai C-P and Mao C-H (2016), <i>"MITC Viz: Visual Analytics for Man-in-the-Cloud Threats Awareness"</i>, In 2016 International Computer Symposium (ICS). , pp. 306-311.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Kao2016b','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Kao2016b" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@inproceedings{Kao2016b,
+  author = {Kao, Chiun-How and Dai, Jyun-Han and Ko, Ru and Kuang, Yu-Ting and Lai, Chi-Ping and Mao, Ching-Hao},
+  title = {MITC Viz: Visual Analytics for Man-in-the-Cloud Threats Awareness},
+  booktitle = {2016 International Computer Symposium (ICS)},
+  year = {2016},
+  pages = {306--311}
+}
+</pre></td>
+</tr>
+<tr id="Kao2016c" class="entry">
+	<td><b style="color: #333;">Kao C-H</b>, Hsieh C-H, Hsu C-L, Chu Y-F and Kuang Y-T (2016), <i>"Odd visualizer: Scalable open data de-identification visualizer"</i>, In Proceedings of 2016 International Workshop on Computer Science and Engineering. 
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Kao2016c','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Kao2016c" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@inproceedings{Kao2016c,
+  author = {Kao, Chiun-How and Hsieh, Chih-Hung and Hsu, Chien-Lung and Chu, Yu-Feng and Kuang, Yu-Ting},
+  title = {Odd visualizer: Scalable open data de-identification visualizer},
+  booktitle = {Proceedings of 2016 International Workshop on Computer Science and Engineering},
+  year = {2016}
+}
+</pre></td>
+</tr>
+<tr id="Hsieh2015a" class="entry">
+	<td>Hsieh C-H, Lee K-C, Mao C-H, Lai C-M, <b style="color: #333;">Kao C-H</b> and Dai J-H (2015), <i>"Sec-Buzzers: a Web Service for Exploring Cyber Security Emerging Topics based on Social Network Mining"</i>, In Proceedings of the ASE BigData &amp; SocialInformatics 2015. , pp. 1-6.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Hsieh2015a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Hsieh2015a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@incollection{Hsieh2015a,
+  author = {Hsieh, Chih-Hung and Lee, Kuo-Chen and Mao, Ching-Hao and Lai, Chia-Min and Kao, Chiun-How and Dai, Jyun-Han},
+  title = {Sec-Buzzers: a Web Service for Exploring Cyber Security Emerging Topics based on Social Network Mining},
+  booktitle = {Proceedings of the ASE BigData &amp; SocialInformatics 2015},
+  year = {2015},
+  pages = {1--6}
+}
+</pre></td>
+</tr>
+
+<tr id="Chen2004a" class="entry">
+	<td>Chen C-H, Hwu H-G, Jang W-J,  <b style="color: #333;">Kao C-H</b>, Tien Y-J, Tzeng S and Wu H-M (2004), <i>"Matrix visualization and information mining"</i>, In COMPSTAT 2004—Proceedings in Computational Statistics. , pp. 85-100.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Chen2004a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Chen2004a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@inproceedings{Chen2004a,
+  author = {Chen, Chun-Houh and Hwu, Hai-Gwo and Jang, Wen-Jung and Kao, Chiun-How and Tien, Yin-Jing and Tzeng, ShengLi and Wu, Han-Ming},
+  title = {Matrix visualization and information mining},
+  booktitle = {COMPSTAT 2004—Proceedings in Computational Statistics},
+  year = {2004},
+  pages = {85--100}
+}
+</pre></td>
+</tr>
+<tr id="Yang1999a" class="entry">
+	<td>Yang C-Z and <b style="color: #333;">Kao C-H</b> (1999), <i>"Visualizing large hierarchical information structures in digital libraries"</i>, In Proceedings of the Second Asian Digital Library Conference. , pp. 8-9.
+	<p class="infolinks"> [<a href="javascript:toggleInfo('Yang1999a','bibtex')">BibTeX</a>]</p>
+	</td>
+</tr>
+<tr id="bib_Yang1999a" class="bibtex noshow">
+<td><b style="color: #333;">BibTeX</b>:
+<pre>
+@inproceedings{Yang1999a,
+  author = {Yang, Cheng-Zen and Kao, Chiun-How},
+  title = {Visualizing large hierarchical information structures in digital libraries},
+  booktitle = {Proceedings of the Second Asian Digital Library Conference},
+  year = {1999},
+  pages = {8--9}
+}
+</pre></td>
+</tr>
+
+
+</tbody>
+</table>
+
+</div>
+</div>
+			<!-- Footer -->
+				<footer id="footer">
+					<ul class="icons">
+						<li><a href="https://www.facebook.com/mao.kao.1/" target="blank" class="icon alt fa-facebook"><span class="label">Facebook</span></a></li>
+						<li><a href="https://www.linkedin.com/in/chiun-how-kao" target="blank" class="icon alt fa-linkedin"><span class="label">LinkedIn</span></a></li>
+						<li><a href="https://www.instagram.com/ranmakao/" target="blank" class="icon alt fa-instagram"><span class="label">Instagram</span></a></li>
+						<li><a href="https://github.com/maokao" target="blank" class="icon alt fa-github"><span class="label">GitHub</span></a></li>
+						<li><a href="mailto:157294@mail.tku.edu.tw" class="icon alt fa-envelope"><span class="label">Email</span></a></li>
+					</ul>
+					<ul class="copyright">
+						<li><p>Copyright &copy; 2020-2024 Kao, Chiun-How<br>淡江大學統計學系<br>Department of Statistics, Tamkang University <br>研究室: 商管學院B1129室<br>Office: College of Business and Management, B1129</li>
+					</ul>
+				</footer>
+</div>
+<!-- file generated by JabRef -->
+</body>
+</html>
