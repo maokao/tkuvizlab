@@ -932,6 +932,7 @@
         document.getElementById('colorforXproximity').addEventListener('change', function() {
             var newPalette = d3.select("#colorforXproximity").property("value");
             var newCondition = "RangeMatrix";
+
             gapX.optionTargetDataMap = "rp";
             gapX.rpPaletteReverse = document.getElementById('reverseColorforX').checked;
             gapX.changePalette(newCondition, newPalette, "#windowProxforX_svg");
@@ -941,6 +942,7 @@
         document.getElementById('reverseColorforX').addEventListener('change', function() {
             var newPalette = d3.select("#colorforXproximity").property("value");
             var newCondition = "RangeMatrix";
+
             gapX.optionTargetDataMap = "rp";
             gapX.rpPaletteReverse = document.getElementById('reverseColorforX').checked;
             gapX.changePalette(newCondition, newPalette, "#windowProxforX_svg");
@@ -950,6 +952,7 @@
         document.getElementById('colorforYproximity').addEventListener('change', function() {
             var newPalette = d3.select("#colorforYproximity").property("value");
             var newCondition = "RangeMatrix";
+
             gapY.optionTargetDataMap = "rp";
             gapY.rpPaletteReverse = document.getElementById('reverseColorforY').checked;
             gapY.changePalette(newCondition, newPalette, "#windowProxforY_svg");
@@ -959,6 +962,7 @@
         document.getElementById('reverseColorforY').addEventListener('change', function() {
             var newPalette = d3.select("#colorforYproximity").property("value");
             var newCondition = "RangeMatrix";
+
             gapY.optionTargetDataMap = "rp";
             gapY.rpPaletteReverse = document.getElementById('reverseColorforY').checked;
             gapY.changePalette(newCondition, newPalette, "#windowProxforY_svg");
@@ -968,6 +972,7 @@
         document.getElementById('colorforZproximity').addEventListener('change', function() {
             var newPalette = d3.select("#colorforZproximity").property("value");
             var newCondition = "RangeMatrix";
+
             gapZ.optionTargetDataMap = "rp";
             gapZ.rpPaletteReverse = document.getElementById('reverseColorforZ').checked;
             gapZ.changePalette(newCondition, newPalette, "#windowProxforZ_svg");
@@ -977,6 +982,7 @@
         document.getElementById('reverseColorforZ').addEventListener('change', function() {
             var newPalette = d3.select("#colorforZproximity").property("value");
             var newCondition = "RangeMatrix";
+
             gapZ.optionTargetDataMap = "rp";
             gapZ.rpPaletteReverse = document.getElementById('reverseColorforZ').checked;
             gapZ.changePalette(newCondition, newPalette, "#windowProxforZ_svg");

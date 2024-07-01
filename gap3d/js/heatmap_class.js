@@ -2986,6 +2986,50 @@ changePalette(conditionName, paletteName, heatmapId) {
 
             self.changeLegentTextForRawDataMatrix(conditionName);
         }
+        /*
+        if(conditionName == "CenterMatrix")
+        {
+            let tmpmax=0.0;
+            if(maxInputRange2>Math.abs([minInputRange2]))
+            {
+                tmpmax = maxInputRange2;
+            }
+            else
+            {
+                tmpmax = Math.abs([minInputRange2]);
+            }
+            var colorScale = null;
+            if(self.rdPaletteReverse)
+                colorScale = d3.scaleSequential()
+                        //.domain([self.max_value, self.min_value])
+                        .domain([-tmpmax, tmpmax])
+                        .interpolator(colorID);  
+            else
+                colorScale = d3.scaleSequential()
+                        //.domain([self.max_value, self.min_value])
+                        .domain([tmpmax, -tmpmax])
+                        .interpolator(colorID);  
+
+            var svg = d3.select(heatmapId);
+            var t = svg.transition().duration(500);
+            t.select("#mv").selectAll(".cell")
+                .style("fill", function(d) {
+                        if (d != null) 
+                        {
+                            //if(d<minInputRange1 || d>maxInputRange1)
+                                //return "#ffffff";
+                            //else
+                                return colorScale(d);
+                        }
+                        else return "url(#diagonalHatch)";
+                });
+            d3.select("#md_colorspec").select("svg").selectAll(".cellLegend")
+                .style("fill", function(d, i) {
+                    return colorScale(d);
+                });
+
+            self.changeLegentTextForRawDataMatrix(conditionName);
+        }*/
     }
     else if(self.optionTargetDataMap == "rp")
     {
@@ -3014,25 +3058,51 @@ changePalette(conditionName, paletteName, heatmapId) {
         }*/
         if(self.rpPaletteReverse)
         {
-            if(paletteName == "GAP_Rainbow")
-                colorScale = GAP_Rainbow(minInputRange2, maxInputRange2);
-            else if(paletteName == "GAP_Blue_White_Red")
-                colorScale = GAP_Blue_White_Red(maxInputRange2, minInputRange2);
-            else
-                colorScale = d3.scaleSequential()
-                    .domain([minInputRange2, maxInputRange2])
-                    .interpolator(colorID); 
+            if(self.rowIsSimilarity){
+                if(paletteName == "GAP_Rainbow")
+                    colorScale = GAP_Rainbow(1, -1);
+                else if(paletteName == "GAP_Blue_White_Red")
+                    colorScale = GAP_Blue_White_Red(1, -1);
+                else{
+                    colorScale = d3.scaleSequential()
+                        .domain([-1, 1])
+                        .interpolator(colorID);
+                }
+            }
+            else{
+                if(paletteName == "GAP_Rainbow")
+                    colorScale = GAP_Rainbow(minInputRange2, maxInputRange2);
+                else if(paletteName == "GAP_Blue_White_Red")
+                    colorScale = GAP_Blue_White_Red(maxInputRange2, minInputRange2);
+                else
+                    colorScale = d3.scaleSequential()
+                        .domain([minInputRange2, maxInputRange2])
+                        .interpolator(colorID);                
+            }                    
         }
         else
         {
-            if(paletteName == "GAP_Rainbow")
-                colorScale = GAP_Rainbow(maxInputRange2, minInputRange2);
-            else if(paletteName == "GAP_Blue_White_Red")
-                colorScale = GAP_Blue_White_Red(minInputRange2, maxInputRange2);
-            else
-                colorScale = d3.scaleSequential()
-                    .domain([maxInputRange2, minInputRange2])
-                    .interpolator(colorID); 
+            if(self.rowIsSimilarity){
+                if(paletteName == "GAP_Rainbow")
+                    colorScale = GAP_Rainbow(-1, 1);
+                else if(paletteName == "GAP_Blue_White_Red")
+                    colorScale = GAP_Blue_White_Red(-1, 1);
+                else{
+                    colorScale = d3.scaleSequential()
+                        .domain([1, -1])
+                        .interpolator(colorID);
+                }
+            }
+            else{
+                if(paletteName == "GAP_Rainbow")
+                    colorScale = GAP_Rainbow(maxInputRange2, minInputRange2);
+                else if(paletteName == "GAP_Blue_White_Red")
+                    colorScale = GAP_Blue_White_Red(minInputRange2, maxInputRange2);
+                else
+                    colorScale = d3.scaleSequential()
+                        .domain([maxInputRange2, minInputRange2])
+                        .interpolator(colorID); 
+            }
         }
 
         var svg = d3.select(heatmapId);
