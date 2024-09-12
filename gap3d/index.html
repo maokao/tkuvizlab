@@ -9,7 +9,8 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
 
     <!-- Favicon -->
-    <link rel="Shortcut Icon" type="image/x-icon" href="img/gap.ico"/>
+    <!-- <link rel="Shortcut Icon" type="image/x-icon" href="img/gap.ico"/> -->
+    <link rel="Shortcut Icon" type="image/x-icon" href="img/cube3.ico"/>
 
     <!-- awesome icon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
@@ -22,8 +23,8 @@
 
     <!-- <script type="module" src="js/color.js"></script> -->
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@4.4.2"></script>
 
     <script type="text/javascript" src="js/dendrogram.js"></script>
     <script type="text/javascript" src="js/seriation.js"></script>
@@ -42,7 +43,7 @@
 
     <script src="public/graindashboard/js/graindashboard.js"></script>
     <script src="public/graindashboard/js/graindashboard.vendor.js"></script>
-
+    
     <!--for 雙按鈕滑動條-->
     <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
     <script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
@@ -56,7 +57,7 @@
         var colCount;
 
         // 全域變數來儲存目前的透明度值
-        var currentOpacity = 0.5; // 初始值為 0.5
+        var currentOpacity = 0.2; // 初始值為 0.2
         
         var globalMin = 0; // 全域最小值
         var globalMax = 100; // 全域最大值
@@ -69,7 +70,13 @@
 
         var fieldX, fieldY, fieldZ;
 
+        var selectedValueField;
+
         var numX, numY, numZ, cubeSizeX, cubeSizeY, cubeSizeZ;
+
+        var fontSize;
+
+        var finalFontSize;
 
         var uniqueX, uniqueY, uniqueZ;
 
@@ -124,9 +131,6 @@
         // 用於追蹤已選取的類別 (for bar chart)
         let categoryConditions = new Set();
 
-        // 追蹤選取的 bar (for change bar's color of bar chart)
-        let selectedBars = new Set();
-
         // 用於追蹤選中的範圍 (for histogram)
         let rangeConditions = new Set(); // 用於追蹤選中的範圍 (for histogram)
 
@@ -142,6 +146,15 @@
 
         let matchesCategoryConditions;
         let matchesRangeConditions;
+
+        // 初始化 filteredPositions 為一個空 array (for 取得 cube 的位置)
+        let filteredPositions = [];
+
+        // 定義一個 array 來儲存目前的顏色
+        const currentCubeColors = [];
+
+        // 結合 filteredPositions 和 currentCubeColors
+        let filteredColors = [];
 
         var gapX;
 
@@ -439,6 +452,7 @@
                 
         //---- functions ----//
         //---- functions ----//
+        //---- functions ----//
 
         // 提取 data 中所有 column 之唯一值，以創建 data_array
         function getUniqueColumnValues(dataArray, columnName) {
@@ -523,7 +537,7 @@
             // renderer.render(scene, camera);
         }
 
-        // 滑動條值改變時呼叫 updateOpacity、filterCubes函數
+        // 滑動條值改變時呼叫 filterCubes 函數
         document.getElementById('opacityRange').addEventListener('input', function() {
             currentOpacity = parseFloat(this.value);
             //updateOpacity();
@@ -533,6 +547,12 @@
         // 滑動條值改變時呼叫 filterCubes 函數
         document.getElementById('filteropacityRange').addEventListener('input', function() {
             filterCubes();
+            
+            // // 自動隱藏表格
+            // const existingWindow = document.getElementById('filtersamplelist');
+            // if (existingWindow) {
+            //     existingWindow.remove(); // 移除浮動視窗及其包含的表格
+            // }
         });
 
         // 填充下拉式選單選項
@@ -795,14 +815,9 @@
         }
 
         // 根據顏色方案更新 colorbar 的背景，並更新最小值和最大值標籤的內容
-        function updateColorbar(colorScheme, min, max) {
-            var colorbarContainer = document.getElementById('colorbar-container');
-            var colorbar = document.getElementById('colorbar');
-            var colorbarMinLabel = document.getElementById('colorbar-min-label');
-            var colorbarMaxLabel = document.getElementById('colorbar-max-label');
-
+        function updateColorbar(colorScheme, min, max, colorbarContainer, colorbar, colorbarMinLabel, colorbarMaxLabel) {
             // 根據顏色方案更新 colorbar 的背景漸變
-            var gradient = getColorGradient(colorScheme);
+            var gradient = getColorGradient(colorScheme, 'reverseColors');
             colorbar.style.background = gradient;
 
             // 顯示 colorbar 容器
@@ -814,8 +829,8 @@
         }
 
         // 根據顏色方案獲取漸變樣式的函數
-        function getColorGradient(colorScheme) {
-            var reverse = document.getElementById('reverseColors').checked; // 檢查 checkbox 是否被選中
+        function getColorGradient(colorScheme, reverseid) {
+            var reverse = document.getElementById(reverseid).checked; // 檢查 checkbox 是否被選中
             var direction = reverse ? 'to bottom' : 'to top'; // 根據是否反轉來決定漸變方向
 
             switch (colorScheme) {
@@ -898,11 +913,17 @@
             }
         }
 
+        // colorbar container for cube
+        var colorbarContainerforcube = document.getElementById('colorbar-container');
+        var colorbarforcube = document.getElementById('colorbar');
+        var colorbarMinLabelforcube = document.getElementById('colorbar-min-label');
+        var colorbarMaxLabelforcube = document.getElementById('colorbar-max-label');
+
         // color bar 在資料載入後才出現
         function updateEverycolorthingBasedOnCurrentSettings() {
             var selectedColorScheme = document.getElementById('colorSchemeSelect').value;
             if (isDataLoaded) { // 只有在資料載入後才調用
-                updateColorbar(selectedColorScheme, globalMin, globalMax);
+                updateColorbar(selectedColorScheme, globalMin, globalMax, colorbarContainerforcube, colorbarforcube, colorbarMinLabelforcube, colorbarMaxLabelforcube);
                 // 也更新其他需要根據這些設定變化的元素，例如場景中的物體顏色
                 updateColorScheme();
             }
@@ -910,22 +931,32 @@
 
         // 確保在顏色方案發生變化時 updateColorbar 函數能夠根據當前的反轉狀態更新色條
         document.getElementById('colorSchemeSelect').addEventListener('change', function() {
-            updateEverycolorthingBasedOnCurrentSettings();
+            // 只有在資料載入後才調用
+            if (isDataLoaded) {
+                updateEverycolorthingBasedOnCurrentSettings();
 
-            // 從 DOM 取得目前選取的 displayCondition
-            var displayCondition = document.getElementById('DisplayCondition').value;
+                // 從 DOM 取得目前選取的 displayCondition
+                var displayCondition = document.getElementById('DisplayCondition').value;
 
-            applyChangesBasedOnNewIndices();
+                applyChangesBasedOnNewIndices();
+
+                filterCubes(); // transferPositionsToDatatable();
+            }
         });
 
         // reverseColors
         document.getElementById('reverseColors').addEventListener('change', function() {
-            updateEverycolorthingBasedOnCurrentSettings();
+            // 只有在資料載入後才調用
+            if (isDataLoaded) {
+                updateEverycolorthingBasedOnCurrentSettings();
 
-            // 從 DOM 取得目前選取的 displayCondition
-            var displayCondition = document.getElementById('DisplayCondition').value;
+                // 從 DOM 取得目前選取的 displayCondition
+                var displayCondition = document.getElementById('DisplayCondition').value;
 
-            applyChangesBasedOnNewIndices();
+                applyChangesBasedOnNewIndices();
+
+                filterCubes();
+            }
         });
 
         // X Proxiimity Matrix 改變顏色方案
@@ -1394,6 +1425,9 @@
             // 從 DOM 取得目前選取的 displayCondition
             var displayCondition = document.getElementById('DisplayCondition').value;
 
+            // 清空目前顏色 array
+            currentCubeColors.length = 0;
+
             if (displayCondition === 'RangeX') {
                 for (let i = 0; i < Xindices.length; i++) {
                     let uniqueValue = uniqueX[Xindices[i]]; // 取得目前 uniqueX 類別的值
@@ -1426,6 +1460,12 @@
                                 // 儲存顏色資料值和顏色方案，即使是透明的立方體也這樣做，以便保持資訊的完整性
                                 cube.userData.value = value;
                                 cube.userData.colorScheme = currentColorScheme;
+
+                                // 儲存顏色及位置資訊
+                                currentCubeColors.push({
+                                    position: { i, j, k },
+                                    color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
+                                });
                             }
                         }
                     }
@@ -1453,8 +1493,17 @@
 
                                 cubesOpacity[i][j][k] = cube.material.opacity;
                                 cube.material.color.set(color);
+
                                 cube.userData.value = value;
                                 cube.userData.colorScheme = currentColorScheme;
+
+                                // 儲存顏色及位置資訊
+                                currentCubeColors.push({
+                                    position: { i, j, k },
+                                    color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
+                                    value: value,
+                                    colorScheme: currentColorScheme
+                                });
                             }
                         }
                     }
@@ -1482,8 +1531,17 @@
 
                                 cubesOpacity[i][j][k] = cube.material.opacity;
                                 cube.material.color.set(color);
+
                                 cube.userData.value = value;
                                 cube.userData.colorScheme = currentColorScheme;
+
+                                // 儲存顏色及位置資訊
+                                currentCubeColors.push({
+                                    position: { i, j, k },
+                                    color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
+                                    value: value,
+                                    colorScheme: currentColorScheme
+                                });
                             }
                         }
                     }
@@ -1531,6 +1589,12 @@
 
                                 cube.material.transparent = true;
                                 cube.material.needsUpdate = true; // 確保 Three.js 知道需要更新材料
+
+                                // 儲存顏色及位置資訊
+                                currentCubeColors.push({
+                                    position: { i, j, k },
+                                    color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
+                                });
                             }
                         }
                     }
@@ -1540,12 +1604,17 @@
             }
 
             // 在立方體創建後更新 colorbar
-            updateColorbar(currentColorScheme, globalMin, globalMax);
-        }
+            updateColorbar(currentColorScheme, globalMin, globalMax, colorbarContainerforcube, colorbarforcube, colorbarMinLabelforcube, colorbarMaxLabelforcube);
 
+            // // currentCubeColors 包含了所有當前顏色
+            // console.log('Current Cube Colors:', currentCubeColors);
+        }
+        
         // 為 display Condition 下拉式選單新增事件監聽器
         document.getElementById('DisplayCondition').addEventListener('change', function() {
-            // // 清除 bar chart 設定
+            // 只有在資料載入後才調用
+            if (isDataLoaded) {
+                // // 清除 bar chart 設定
             // clearbar();
 
             // 重置滑動條到初始位置
@@ -1557,6 +1626,9 @@
             handles.eq(1).find(".ui-slider-value").text(globalMax.toFixed(2));
 
             applyChangesBasedOnNewIndices();
+
+            filterCubes();
+            }
         });
 
         // 為 X 軸排序下拉式選單新增事件監聽器
@@ -1594,13 +1666,11 @@
             updateXOrder();
             applyChangesBasedOnNewIndices();
 
+            filterCubes();
             
             let chartDataX= calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType);
             //console.log(chartDataX);
             updateBarChart('chartX', chartDataX, 'X');
-            
-            // reset cube and bar chart
-            clearbar();
         });
 
         // 為 Y 軸排序下拉式選單新增事件監聽器
@@ -1639,13 +1709,12 @@
             updateYOrder();
             applyChangesBasedOnNewIndices();
 
+            filterCubes();
+
             let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType);
             // console.log(Yindices);
             // console.log(chartDataY);
             updateBarChart('chartY', chartDataY, 'Y');
-
-            // reset cube and bar chart
-            clearbar();
         });
 
         // 為 Z 軸排序下拉式選單新增事件監聽器
@@ -1682,14 +1751,13 @@
             updateZOrder();
             applyChangesBasedOnNewIndices();
 
+            filterCubes();
+
             let chartDataZ = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Z', calculationType);
             // console.log(Zindices);
             // console.log(chartDataZ.results_name);
             // console.log(chartDataZ.results_value);
             updateBarChart('chartZ', chartDataZ, 'Z');
-
-            // reset cube and bar chart
-            clearbar();
         });
 
         // 為 X 軸flip下拉式選單新增事件監聽器
@@ -1973,34 +2041,43 @@
 
         // 添加軸標籤
         function createAxisLabel(text, position, size, axisLabelName) {
-            var canvas = document.createElement('canvas'); // 創建一個新的 HTML <canvas> 元素，它可以用來繪製圖形和文本
+            var canvas = document.createElement('canvas'); // 創建一個新的 HTML <canvas> 元素
+            var context = canvas.getContext('2d'); // 獲取該 <canvas> 元素的 2D 繪圖上下文
             
-            var context = canvas.getContext('2d'); // 獲取該 <canvas> 元素的 2D 繪圖上下文，這是一個用於在 <canvas> 上繪製的對象
-            var fontSize = 48; // 根據需要調整字體大小
-            context.font = `${fontSize}px Arial`; // 設定字體大小為 fontSize 像素，並且選擇字體樣式為 Arial
+            // 根據需要調整字體大小
+            var fontSize = parseFloat(document.getElementById('fontSize').value);
+            // 更新顯示值
+            document.getElementById('fontSizeValue').textContent = fontSize;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            finalFontSize = 105 - fontSize;
+
+            // 設定字體大小為 fontSize 像素，並且選擇字體樣式為 Arial
+            context.font = `${finalFontSize}px Arial`;
             context.fillStyle = 'rgba(92, 92, 92, 1.0)'; // 文字顏色：深灰色 (完全不透明) #5C5C5C
 
             // 計算文本寬度並根據此來設定 canvas 寬度
             var textWidth = context.measureText(text).width;
             canvas.width = 1000; // 設定固定的 canvas 寬度
-            canvas.height = fontSize * 2; // 高度足夠容納文本
+            canvas.height = finalFontSize * 2; // 高度足夠容納文本
             context.textAlign = 'center'; // 將文本對齊方式：'center' 'right'
-            context.fillText(text, canvas.width / 2, canvas.height / 2 + fontSize / 2); // 在 <canvas> 上繪製實心的文本
+            context.textBaseline = 'middle'; // 設定文本基線為 'middle'，確保文本垂直居中
+            context.fillText(text, canvas.width / 2, canvas.height / 2); // 在 <canvas> 上繪製實心的文本
 
-            // 從剛才繪製的 <canvas> 創建一個新的 Three.js 材質的貼圖 (texture)，這將允許將文本貼在 3D 對象上
+            // 從剛才繪製的 <canvas> 創建一個新的 Three.js 材質的貼圖 (texture)
             var texture = new THREE.CanvasTexture(canvas);
             texture.minFilter = THREE.LinearFilter;
             texture.needsUpdate = true;
 
-            // 創建一個 SpriteMaterial 它是一種用於創建具有純色或貼圖的矩形平面的材質
+            // 創建一個 SpriteMaterial，它是一種用於創建具有純色或貼圖的矩形平面的材質
             var material = new THREE.SpriteMaterial({
                 map: texture,
                 depthTest: false // 添加這個屬性禁用深度測試
             });
 
-            var sprite = new THREE.Sprite(material); // 使用該材質來創建一個 THREE.Sprite 它是一種始終面向攝像機的對象 常用於顯示貼圖
-            sprite.position.copy(position); // 將 sprite 的位置設定為傳入的 position 這個位置是該標籤在 3D 場景中的位置
-            sprite.scale.set(size * canvas.width / canvas.height, size, 1); // 調整標籤尺寸 (使用 size 參數和 <canvas> 的寬高比例來確保文本保持正確的比例和大小)
+            var sprite = new THREE.Sprite(material); // 使用該材質來創建一個 THREE.Sprite
+            sprite.position.copy(position); // 將 sprite 的位置設定為傳入的 position
+            sprite.scale.set(size * canvas.width / canvas.height, size, 1); // 調整標籤尺寸
             sprite.name = axisLabelName; // 為軸標籤設定一個唯一的名稱
 
             scene.add(sprite);
@@ -2118,38 +2195,6 @@
                 }
             });
 
-            // if (updateAxes) {
-            //     var axisLengthX = numX * cubeSizeX;
-            //     var axisLengthY = numY * cubeSizeY;
-            //     var axisLengthZ = numZ * cubeSizeZ;
-
-            //     // 使用更新後之 Direction
-            //     var [directionX, directionY, directionZ] = updateAxesDirectionBasedOnVertex(closestVertex_camera);
-
-            //     var axesInfo = [
-            //         { color: "#5C5C5C", direction: directionX, length: axisLengthX, name: 'axisX_forcamera' },
-            //         { color: "#5C5C5C", direction: directionY, length: axisLengthY, name: 'axisY_forcamera' },
-            //         { color: "#5C5C5C", direction: directionZ, length: axisLengthZ, name: 'axisZ_forcamera' }
-            //     ];
-
-            //     axesInfo.forEach(function(info) {
-            //         var points = [closestVertex_camera.clone()];
-            //         var end = closestVertex_camera.clone().addScaledVector(info.direction, info.length);
-            //         points.push(end);
-
-            //         var geometry = new THREE.BufferGeometry().setFromPoints(points);
-            //         var material = new THREE.LineBasicMaterial({ color: info.color });
-            //         var axis = new THREE.Line(geometry, material);
-            //         axis.name = info.name;
-
-            //         var existingAxis = scene.getObjectByName(info.name);
-            //         if (existingAxis) {
-            //             scene.remove(existingAxis);
-            //         }
-
-            //         scene.add(axis);
-            //     });
-            // }
             updateAxeslabelBasedOnVertex(cubeSizeX, cubeSizeY, cubeSizeZ, numX, numY, numZ, closestVertex_camera, uniqueX, uniqueY, uniqueZ);
         }
 
@@ -2327,6 +2372,16 @@
                 }
             }
 
+            // console.log(rowProxData1D);
+            // console.log('rowProxDataX', rowProxDataX);
+
+            // 計算最大值和最小值，並四捨五入到整數位
+            const maxProxX = Math.round(Math.max(...rowProxData1D));
+            const minProxX = Math.round(Math.min(...rowProxData1D));
+
+            // console.log('最大值:', maxProxX);
+            // console.log('最小值:', minProxX);
+
             if (d3.select("#"+windowID).empty()) {
 
                 gapX = new GAP();
@@ -2349,8 +2404,11 @@
                 var svgContainerX = document.createElement('div');
                 //svgContainerX.innerHTML = '<div id="${windowID}" class="row" style="width: 500px; height: 500px;></div>';
 
+                // 建立 colorbar 的 HTML 元素
+                var colorbarX = document.createElement('div');
+
                 // 呼叫 createFloatingWindow 來創建浮動視窗
-                createFloatingWindow(windowID, title, svgContainerX, 396, 110, 350, 350);
+                createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 350, 350);
 
                 // 呼叫 funtion 在 windowID 下建立 svg
                 gapX.setupProximityData(`#${windowID}_svg`);
@@ -2363,7 +2421,7 @@
                 gapX.isRowProxfirst = false;
                 gapX.rowIsSimilarity = rowIsSimilarity;
 
-                // let ArrayYZ = convert3DArrayTo2D('X');
+                let ArrayYZ = convert3DArrayTo2D('X');
                 // console.log(ArrayYZ);
                 // 輸出成 txt
                 // exportArrayToTxt(ArrayYZ, 'ArrayYZ.txt');
@@ -2505,6 +2563,10 @@
                 }
             }
 
+            // 計算最大值和最小值，並四捨五入到整數位
+            const maxProxY = Math.round(Math.max(...rowProxData1D));
+            const minProxY = Math.round(Math.min(...rowProxData1D));
+
             if (d3.select("#"+windowID).empty()) {
                 gapY = new GAP();
                 // 取得 RowProx 二維陣列資料
@@ -2526,8 +2588,11 @@
                 var svgContainerY = document.createElement('div');
                 //svgContainerY.innerHTML = '<div id="${windowID}" class="row" style="width: 500px; height: 500px;></div>';
 
+                // 建立 colorbar 的 HTML 元素
+                var colorbarY = document.createElement('div');
+
                 // 呼叫 createFloatingWindow 來創建浮動視窗
-                createFloatingWindow(windowID, title, svgContainerY, 396, 340, 350, 350);
+                createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 350, 350);
 
                 // 呼叫 funtion 在 windowID 下建立 svg
                 gapY.setupProximityData(`#${windowID}_svg`);
@@ -2679,6 +2744,10 @@
                 }
             }
 
+            // 計算最大值和最小值，並四捨五入到整數位
+            const maxProxZ = Math.round(Math.max(...rowProxData1D));
+            const minProxZ = Math.round(Math.min(...rowProxData1D));
+
             if (d3.select("#"+windowID).empty()) {
                 gapZ = new GAP();
                 // 取得 RowProx 二維陣列資料
@@ -2700,8 +2769,11 @@
                 var svgContainerZ = document.createElement('div');
                 //svgContainerZ.innerHTML = '<div id="${windowID}_svg" class="row" style="width: 100%; height: 100%;></div>';
 
+                // 建立 colorbar 的 HTML 元素
+                var colorbarZ = document.createElement('div');
+
                 // 呼叫 createFloatingWindow 來創建浮動視窗
-                createFloatingWindow(windowID, title, svgContainerZ, 396, 570, 350, 350);
+                createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 350, 350);
 
                 // 呼叫 funtion 在 windowID 下建立 svg
                 gapZ.setupProximityData(`#${windowID}_svg`);
@@ -2734,70 +2806,7 @@
         });
 
         // 建立浮動視窗
-        // function createFloatingWindow(windowId, title, contentElement, left, top, width, height) {
-        //     // 建立浮動視窗元素
-        //     const floatWindow = document.createElement('div');
-        //     floatWindow.classList.add('floating-window');
-        //     floatWindow.id = windowId;
-
-        //     // 設定樣式
-        //     floatWindow.style.position = 'absolute';
-        //     floatWindow.style.left = left + 'px'; // 使用傳入的 left 值
-        //     floatWindow.style.top = top + 'px'; // 使用傳入的 top
-        //     floatWindow.style.width = width + 'px'; // 設置初始寬度
-        //     floatWindow.style.height = height + 'px'; // 設置初始高度
-
-        //     // 建立視窗頭部 並使用 Flexbox 佈局 (for 拖移)
-        //     const header = document.createElement('div');
-        //     header.classList.add('window-header');
-        //     header.style.display = 'flex';
-        //     header.style.justifyContent = 'space-between'; // 在頭部兩端分佈元素
-        //     header.style.alignItems = 'center'; // 垂直居中對齊
-
-        //     // 建立標題元素
-        //     const titleElement = document.createElement('span');
-        //     titleElement.textContent = title;
-        //     header.appendChild(titleElement);
-
-        //     const content = document.createElement('div');
-        //     content.style.width = '100%';
-        //     content.style.height = '100%';
-        //     content.id = windowId+"_svg";
-
-        //     // 建立關閉按鈕
-        //     const closeButton = document.createElement('span');
-        //     closeButton.textContent = '×';
-        //     closeButton.classList.add('close');
-        //     closeButton.onclick = function() {
-        //         floatWindow.remove();
-        //     };
-        //     header.appendChild(closeButton);
-        //     header.onmousedown = function(event) {
-        //         startDrag(event, windowId);
-        //     };
-
-        //     // 將頭部添加到浮動窗口
-        //     floatWindow.appendChild(header);
-
-        //     // 將提供的內容新增到浮動視窗中
-        //     //floatWindow.appendChild(contentElement);
-        //     floatWindow.appendChild(content);
-
-        //     // 組裝視窗並顯示
-        //     document.getElementById('floatingWindowContainer').appendChild(floatWindow);
-        //     floatWindow.style.display = 'block';
-
-        //     // 設定視窗的初始 z-index
-        //     floatWindow.style.zIndex = highestZIndex++;
-
-        //     // 新增點擊事件監聽器來調整 z-index
-        //     floatWindow.addEventListener('click', function() {
-        //         this.style.zIndex = ++highestZIndex;
-        //     });
-        // }
-
-        // 建立浮動視窗
-        function createFloatingWindow(windowId, title, contentElement, left, top, width, height) {
+        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height) { // 'colorforXproximity', 'reverseColorforX'
             // 建立浮動視窗元素
             const floatWindow = document.createElement('div');
             floatWindow.classList.add('floating-window');
@@ -2805,6 +2814,7 @@
 
             // 設定樣式
             floatWindow.style.position = 'absolute';
+            floatWindow.style.display = 'flex'; // 將浮動視窗的佈局設定為 Flexbox，以便並排顯示內容
             floatWindow.style.left = left + 'px'; // 使用傳入的 left 值
             floatWindow.style.top = top + 'px'; // 使用傳入的 top
             floatWindow.style.width = width + 'px'; // 設置初始寬度
@@ -2821,11 +2831,6 @@
             const titleElement = document.createElement('span');
             titleElement.textContent = title;
             header.appendChild(titleElement);
-
-            const content = document.createElement('div');
-            content.style.width = '100%';
-            content.style.height = '100%';
-            content.id = windowId+"_svg";
 
             // 建立最小化/還原按鈕
             const toggleButton = document.createElement('span');
@@ -2871,8 +2876,97 @@
             // 將頭部添加到浮動窗口
             floatWindow.appendChild(header);
 
-            // 將提供的內容新增到浮動視窗中
-            floatWindow.appendChild(content);
+            // 建立內容容器，並將 heatmap 和 colorbar 添加到其中
+            const container = document.createElement('div');
+
+            container.style.display = 'flex'; // 使用 Flexbox 佈局
+            // container.style.position = 'relative'; // 設定為相對定位，以便 colorbar 使用絕對定位
+            container.style.alignItems = 'center'; // 垂直居中對齊
+            container.style.width = '100%'; // 讓容器填滿視窗寬度
+            container.style.height = '100%'; // 讓容器填滿視窗寬度
+
+            // 設定 heatmap 樣式並新增到容器
+            contentElement.style.height = '100%'; // 讓內容區域填滿容器高度
+            contentElement.style.width = '100%'; // 讓內容區域填滿容器寬度
+            contentElement.id = windowId + "_svg";
+
+            // 建立 colorbar 容器和標籤
+            const colorbarContainer = document.createElement('div');
+
+            colorbarContainer.id = 'colorbarforprox-container';
+            colorbarContainer.style.flexDirection = 'row'; // 横向排列元素
+            colorbarContainer.style.display = 'flex';
+            colorbarContainer.style.alignItems = 'center';
+            colorbarContainer.style.position = 'relative';
+            colorbarContainer.style.marginRight = '35px'; // 給標籤留一些空間
+
+            // 設定 colorbar 樣式並新增到容器
+            colorbarElement.style.width = '20px'; // 設定 colorbar 的寬度
+            colorbarElement.style.height = '200px'; // 設定 colorbar 的高度
+            colorbarElement.style.border = '1px solid #FFF'; // 設定 colorbar 的邊框樣式
+            colorbarElement.style.position = 'relative'; // 設定 colorbar 相對定位，以便標籤使用絕對定位
+
+            // 設定顏色方案下拉式選單的監聽器
+            const colorforproximity = document.getElementById(selectedSchemeforproximity);
+
+            colorforproximity.addEventListener('change', function() {
+                const selectedScheme = colorforproximity.value; // 取得所選的顏色方案
+                const gradient = getColorGradient(selectedScheme, reverseColorforproximity); // 取得對應的漸層樣式 'reverseColorforX' 
+                colorbarElement.style.background = gradient; // 將漸層樣式套用到 colorbar
+            });
+
+            // 初始化時設定預設的顏色方案
+            const initialColorScheme = colorforproximity.value;
+            colorbarElement.style.background = getColorGradient(initialColorScheme, reverseColorforproximity)
+
+            // 監聽 reverseColorforproximityCheckbox 的變化
+            const reverseColorforproximityCheckbox = document.getElementById(reverseColorforproximity);
+
+            reverseColorforproximityCheckbox.addEventListener('change', function() {
+                const selectedScheme = colorforproximity.value; // 取得所選的顏色方案
+                const gradient = getColorGradient(selectedScheme, reverseColorforproximity); // 取得對應的漸層樣式
+                colorbarElement.style.background = gradient; // 將漸層樣式套用到 colorbar
+            });
+
+            // 建立最大值標籤
+            const maxLabel = document.createElement('div');
+            maxLabel.id = 'colorbarforprox-max-label';
+            maxLabel.classList.add('colorbarforprox-label');
+            maxLabel.textContent = maxLabelText;
+
+            // 設定最大值標籤樣式
+            maxLabel.style.position = 'absolute';
+            maxLabel.style.left = '24px'; // 距離 colorbar 右側 24px
+            maxLabel.style.bottom = '95%'; // 與 colorbar 頂部對齊
+            maxLabel.style.fontSize = '12px';
+            maxLabel.style.fontFamily = 'Arial, sans-serif';
+            maxLabel.style.textAlign = 'left'; // 標籤靠左顯示
+
+            // 建立最小值標籤
+            const minLabel = document.createElement('div');
+            minLabel.id = 'colorbarforprox-min-label';
+            minLabel.classList.add('colorbarforprox-label');
+            minLabel.textContent = minLabelText;
+
+            // 設定最小值標籤樣式
+            minLabel.style.position = 'absolute';
+            minLabel.style.left = '24px'; // 距離 colorbar 右側 24px
+            minLabel.style.top = '95%'; // 與 colorbar 底部對齊
+            minLabel.style.fontSize = '12px';
+            minLabel.style.fontFamily = 'Arial, sans-serif';
+            minLabel.style.textAlign = 'left';
+
+            // 將標籤和 colorbar 加入 colorbarContainer
+            colorbarContainer.appendChild(maxLabel);
+            colorbarContainer.appendChild(colorbarElement);
+            colorbarContainer.appendChild(minLabel);
+
+            // 將內容容器新增到浮動視窗中
+            container.appendChild(contentElement); // 將 heatmap 元素加入容器中
+            container.appendChild(colorbarContainer); // 將 colorbarContainer 元素加入容器中
+
+            // 將內容容器新增到浮動視窗中
+            floatWindow.appendChild(container);
 
             // 組裝視窗並顯示
             document.getElementById('floatingWindowContainer').appendChild(floatWindow);
@@ -2887,8 +2981,7 @@
             });
         }
 
-
-        function createFloatingWindow_forchart(windowId, title, contentElement, left, top, width, height) {
+        function createFloatingWindow_forchart(windowId, title, contentElement, left, right, top, width, height) {
             // 建立浮動視窗元素
             const floatWindow = document.createElement('div');
             floatWindow.classList.add('floating-window');
@@ -2897,6 +2990,7 @@
             // 設定樣式
             floatWindow.style.position = 'absolute';
             floatWindow.style.left = left + 'px'; // 使用傳入的 left 值
+            floatWindow.style.right = right + 'px'; // 使用傳入的 right 值
             floatWindow.style.top = top + 'px'; // 使用傳入的 top
             floatWindow.style.width = width + 'px'; // 設置初始寬度
             floatWindow.style.height = height + 'px'; // 設置初始高度
@@ -2937,6 +3031,94 @@
                 }
             };
             header.appendChild(toggleButton);
+            header.onmousedown = function(event) {
+                startDrag(event, windowId);
+            };
+
+            // 將頭部添加到浮動窗口
+            floatWindow.appendChild(header);
+
+            // 將提供的內容新增到浮動視窗中
+            floatWindow.appendChild(contentElement);
+
+            // 組裝視窗並顯示
+            document.getElementById('floatingWindowContainer').appendChild(floatWindow);
+            floatWindow.style.display = 'block';
+
+            // 設定視窗的初始 z-index
+            floatWindow.style.zIndex = highestZIndex++;
+
+            // 新增點擊事件監聽器來調整 z-index
+            floatWindow.addEventListener('click', function() {
+                this.style.zIndex = ++highestZIndex;
+            });
+        }
+
+        function createFloatingWindow_samplelist(windowId, title, contentElement, left, right, top, width, height) {
+            // 建立浮動視窗元素
+            const floatWindow = document.createElement('div');
+            floatWindow.classList.add('floating-window');
+            floatWindow.id = windowId;
+
+            // 設定樣式
+            floatWindow.style.position = 'absolute';
+            floatWindow.style.left = left + 'px'; // 使用傳入的 left 值
+            floatWindow.style.right = right + 'px'; // 使用傳入的 right 值
+            floatWindow.style.top = top + 'px'; // 使用傳入的 top
+            floatWindow.style.width = width + 'px'; // 設置初始寬度
+            floatWindow.style.height = height + 'px'; // 設置初始高度
+
+            // 建立視窗頭部 並使用 Flexbox 佈局 (for 拖移)
+            const header = document.createElement('div');
+            header.classList.add('window-header');
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between'; // 在頭部兩端分佈元素
+            header.style.alignItems = 'center'; // 垂直居中對齊
+
+            // 建立標題元素
+            const titleElement = document.createElement('span');
+            titleElement.textContent = title;
+            header.appendChild(titleElement);
+
+            // 最小化/還原按鈕
+            const toggleButton = document.createElement('span');
+            toggleButton.textContent = '–'; // 使用減號表示最小化
+            toggleButton.classList.add('toggle');
+            toggleButton.style.fontSize = '24px'; // 增大字體大小
+            toggleButton.style.marginLeft = 'auto'; // 將按鈕推到右邊
+            toggleButton.style.cursor = 'pointer'; // 滑鼠懸停時顯示手形圖標
+            toggleButton.onclick = function() {
+                if (floatWindow.classList.contains('minimized')) {
+                    // 如果已經是最小化狀態，還原視窗
+                    floatWindow.style.height = floatWindow.dataset.originalHeight;
+                    contentElement.style.display = 'block'; // 再次顯示內容
+                    floatWindow.classList.remove('minimized');
+                    toggleButton.textContent = '–'; // 切換回最小化按鈕
+                } else {
+                    // 最小化視窗
+                    floatWindow.dataset.originalHeight = floatWindow.style.height; // 儲存原始高度
+                    floatWindow.style.height = header.offsetHeight + 'px'; // 設定高度為頭部高度
+                    contentElement.style.display = 'none'; // 隱藏內容
+                    floatWindow.classList.add('minimized');
+                    toggleButton.textContent = ' + '; // 切換為還原按鈕
+                }
+            };
+            header.appendChild(toggleButton);
+            header.onmousedown = function(event) {
+                startDrag(event, windowId);
+            };
+
+            // 建立關閉按鈕
+            const closeButton = document.createElement('span');
+            closeButton.textContent = '×';
+            closeButton.classList.add('close');
+            closeButton.style.marginLeft = '8px'; // 給關閉按鈕一點左邊距
+            closeButton.onclick = function() {
+                floatWindow.remove();
+            };
+            header.appendChild(closeButton);
+
+            // 設置拖移事件
             header.onmousedown = function(event) {
                 startDrag(event, windowId);
             };
@@ -3229,84 +3411,6 @@
             return result;
         }
 
-        // // 創建 bar chart
-        // function updateBarChart(containerId, dataPoints, axis) {
-        //     const ctx = document.getElementById(containerId).getContext('2d');
-            
-        //     // 如果圖表已經存在，先銷毀它
-        //     if (window[containerId + 'ChartInstance']) {
-        //         window[containerId + 'ChartInstance'].destroy();
-        //     }
-            
-        //     // 確保每個軸的選取 bar 記錄被初始化
-        //     if (!selectedBars[axis]) {
-        //         selectedBars[axis] = new Set();
-        //     }
-
-        //     // 預設和選取狀態下的顏色
-        //     const defaultColor = 'rgba(133, 163, 245, 0.2)';
-        //     const selectedColor = 'rgba(57, 108, 247, 0.5)';
-
-        //     // 根據是否選取設定每個 bar 的顏色
-        //     const backgroundColors = Object.keys(dataPoints).map(label => 
-        //         selectedBars[axis].has(label) ? selectedColor : defaultColor
-        //     );
-
-        //     // 建立新的長條圖
-        //     window[containerId + 'ChartInstance'] = new Chart(ctx, {
-        //         type: 'bar',
-        //         data: {
-        //             labels: Object.keys(dataPoints),
-        //             datasets: [{
-        //                 label: 'Value',
-        //                 data: Object.values(dataPoints), // 對應的資料點
-        //                 backgroundColor: backgroundColors,
-        //                 borderColor: 'rgba(133, 163, 245, 0.7)',
-        //                 borderWidth: 1
-        //             }]
-        //         },
-        //         options: {
-        //             scales: {
-        //                 y: { beginAtZero: true },
-        //                 x: {
-        //                     ticks: {
-        //                         padding: 1, // 設定標籤與 Y 軸之間的距離
-        //                         maxRotation: 90, // 最大旋轉角度
-        //                         // minRotation: 90, // 最小旋轉角度 (設定為相同值使所有標籤保持相同角度)
-        //                     }
-        //                 }
-        //             },
-        //             responsive: true, // 確保響應式開啟
-        //             maintainAspectRatio: false, // 如果需要，可以設定為 false 來允許高度也隨著寬度而變化
-        //             onClick: function(evt, element) {
-        //                 if (element.length > 0) {
-        //                     const index = element[0].index; // 取得點擊的 bar 的索引
-        //                     const label = this.data.labels[index]; // 取得標籤
-
-        //                     if (selectedBars[axis].has(label)) {
-        //                         selectedBars[axis].delete(label);
-        //                         this.data.datasets[0].backgroundColor[index] = defaultColor;
-        //                     } else {
-        //                         selectedBars[axis].add(label);
-        //                         this.data.datasets[0].backgroundColor[index] = selectedColor;
-        //                     }
-        //                     this.update();
-
-        //                     // 根據點擊的 bar 將條件添加至 categoryConditions
-        //                     filterCubesbyCategoriesaddinselectedCategories(label, axis);
-
-        //                     // 根據條件 filter Cubes
-        //                     filterCubes();
-
-        //                     // // 根據不同軸輸出一二維陣列
-        //                     // const extractedData = extractDataForAxis(axis, index);
-        //                     // console.log(extractedData);
-        //                 }
-        //             }
-        //         }
-        //     });
-        // }
-
         // 創建 bar chart
         function updateBarChart(containerId, dataPoints, axis) {
             // 如果圖表已經存在，先銷毀它
@@ -3317,11 +3421,6 @@
             }
 
             const ctx = document.getElementById(containerId).getContext('2d');
-            
-            // 確保每個軸的選取 bar 記錄被初始化
-            if (!selectedBars[axis]) {
-                selectedBars[axis] = new Set();
-            }
 
             // 預設和選取狀態下的顏色
             const defaultColor = 'rgba(133, 163, 245, 0.2)';
@@ -3337,7 +3436,7 @@
 
             // 根據是否選取設定每個 bar 的顏色
             const backgroundColors = dataPoints.results_name.map(label => 
-                selectedBars[axis].has(label) ? selectedColor : defaultColor
+                categoryConditions.has(`${axis}:${label}`) ? selectedColor : defaultColor
             );
 
             // 建立新的長條圖
@@ -3401,19 +3500,18 @@
 
                         // console.log(label);
 
-                        if (selectedBars.has(label)) {
-                            selectedBars.delete(label);
-                            window[containerId + 'ChartInstance'].data.datasets[0].backgroundColor[i] = defaultColor;  // 將顏色變回未選取的顏色
+                        const categoryKey = `${axis}:${label}`;
 
+                        if (categoryConditions.has(categoryKey)) {
                             // 根據點擊的 bar 將條件添加至 categoryConditions
-                            filterCubesbyCategoriesaddinselectedCategories(label, axis);
+                            categoryConditions.delete(categoryKey);
+                            window[containerId + 'ChartInstance'].data.datasets[0].backgroundColor[i] = defaultColor; // 將顏色變回未選取的顏色
                         } else {
-                            selectedBars.add(label);
-                            window[containerId + 'ChartInstance'].data.datasets[0].backgroundColor[i] = selectedColor;  // 將顏色變為選取的顏色
-
                             // 根據點擊的 bar 將條件添加至 categoryConditions
-                            filterCubesbyCategoriesaddinselectedCategories(label, axis);
+                            categoryConditions.add(categoryKey);
+                            window[containerId + 'ChartInstance'].data.datasets[0].backgroundColor[i] = selectedColor; // 將顏色變為選取的顏色
                         }
+                        // console.log(categoryConditions);
                     }
                     window[containerId + 'ChartInstance'].update();
 
@@ -3421,7 +3519,6 @@
                     isDragging = false;
                 }
             });
-
             window[containerId + 'ChartInstance'];
         }
 
@@ -3436,6 +3533,7 @@
                 // 否則，新增該類別到集合中
                 categoryConditions.add(categoryKey);
             }
+            console.log(categoryConditions);
         }
 
         // 計算 Histogram 用之 bins, counts
@@ -3473,76 +3571,6 @@
 
             return { bins, counts };
         }
-
-        // 創建 Histogram
-        // function drawHistogram(chartId, bins, counts) {
-        //     const ctx = document.getElementById(chartId).getContext('2d');
-            
-        //     // 如果圖表已經存在，先銷毀它
-        //     if (window[chartId + 'ChartInstance']) {
-        //         window[chartId + 'ChartInstance'].destroy();
-        //     }
-
-        //     // 預設和選取狀態下的顏色
-        //     const defaultColor = 'rgb(75, 192, 192, .2)';
-        //     const selectedColor = 'rgb(23, 191, 191, .5)';
-
-        //     // 根據是否選取設定每個 bar 的顏色
-        //     const backgroundColors = bins.map(bin =>
-        //         selectedHistogramBars.has(bin) ? selectedColor : defaultColor
-        //     );
-            
-        //     window[chartId + 'ChartInstance'] = new Chart(ctx, {
-        //         type: 'bar',
-        //         data: {
-        //             labels: bins, // 區間作為標籤
-        //             datasets: [{
-        //                 label: 'Distribution',
-        //                 data: counts, // 區間內資料點數量
-        //                 backgroundColor: backgroundColors,
-        //                 borderColor: 'rgb(75, 192, 192, .7)',
-        //                 borderWidth: .5 // 邊框的寬度
-        //             }]
-        //         },
-        //         options: {
-        //             scales: {
-        //                 y: { // y 軸配置
-        //                     beginAtZero: true, // y軸從 0 開始
-        //                     title: {
-        //                         display: true, // 顯示 y 軸標題
-        //                         text: 'counts' // y 軸標題文本
-        //                     }
-        //                 }
-        //             },
-        //             barPercentage: 1.0, // 直方圖寬度佔分類寬度的比例 設定為 1 使柱子緊密排列
-        //             categoryPercentage: 1.0, // 類別之間的寬度佔總類別寬度的比例 設定為 1 減少類別之間的間隔
-        //             responsive: true, // 確保響應式開啟
-        //             maintainAspectRatio: false, // 如果需要，可以設定為 false 來允許高度也隨著寬度而變化
-        //             onClick: function(evt, element) {
-        //                 if (element.length > 0) {
-        //                     const index = element[0].index; // 取得點擊的 bar 的索引
-        //                     const label = this.data.labels[index]; // 取得標籤
-
-        //                     // 更新選取狀態和顏色
-        //                     if (selectedHistogramBars.has(label)) {
-        //                         selectedHistogramBars.delete(label);
-        //                         this.data.datasets[0].backgroundColor[index] = defaultColor;
-        //                     } else {
-        //                         selectedHistogramBars.add(label);
-        //                         this.data.datasets[0].backgroundColor[index] = selectedColor;
-        //                     }
-        //                     this.update();
-
-        //                     // 根據所選 value range 將條件添加至 rangeConditions
-        //                     filterCubesbyvalueaddinselectedCategories(label)
-
-        //                     // 根據條件 filter Cubes
-        //                     filterCubes();
-        //                 }
-        //             }
-        //         }
-        //     });
-        // }
 
         // 創建 Histogram
         function drawHistogram(chartId, bins, counts) {
@@ -3668,6 +3696,9 @@
             // console.log(categoryConditions);
             // console.log(rangeConditions);
 
+            // 清空之前的過濾結果 (for 取得 cube 的位置)
+            filteredPositions = [];
+
             var opacityRange = document.getElementById('opacityRange');
             var newOpacity = parseFloat(opacityRange.value);
             document.getElementById('opacityValue').textContent = newOpacity;
@@ -3739,17 +3770,14 @@
                             return cubeValue >= minValue && cubeValue <= maxValue;
                         });
                     }
-                    // 更新透明度
-                    /*if (cube.userData.value !== null) {
-                        cube.material.opacity = (matchesCategoryConditions && matchesRangeConditions) ? newOpacity : filternewOpacity;
-                        cubesOpacity[i][j][k] = cube.material.opacity;
-                    }*/
+                    
                     var value = cube.userData.value; // 立方體的值
+
                     if (value == null) { // 如果為遺失值，透明度為 0
                         cube.material.opacity = 0;
                         cubesOpacity[i][j][k] = 0; // 追蹤透明度值
                     } 
-                    else{
+                    else {
                         if (categoryConditions.size == 0 && rangeConditions.size == 0) { // 如果長條圖跟直方圖都沒有選擇 bar，且非遺失值，則更新透明度
                             // 非遺失值值立方體根據滑動條更新透明度
                             if (value < globalSliderMin || value > globalSliderMax) {
@@ -3757,7 +3785,6 @@
                                 cube.material.opacity = 0;
                                 cubesOpacity[i][j][k] = 0; // 追蹤透明度值
                                 // console.log(cubesOpacity);
-                                        
                             } else if (globalSliderMin <= value <= globalSliderMax) {
                                 // 值在滑動條選擇的範圍內
                                 cube.material.opacity = newOpacity;
@@ -3765,31 +3792,189 @@
                                 // 追蹤透明度值
                                 cubesOpacity[i][j][k] = cube.material.opacity; 
                                 //console.log(globalSliderMin+","+globalSliderMax+": "+value+":"+i+","+j+","+k);
+
+                                if (globalSliderMin != globalMin || globalSliderMax != globalMax) {
+                                    // 將符合條件的 cube 的位置儲存到 array 中
+                                    filteredPositions.push({ i, j, k });
+                                }
                             }
                         }
                         else
                         {   
-                            // 非遺失值值立方體根據滑動條更新透明度
+                            // 非遺失值立方體根據滑動條更新透明度
                             if (value < globalSliderMin || value > globalSliderMax) {
                                 // 值不在滑動條選擇的範圍內
                                 cube.material.opacity = 0;
                                 cubesOpacity[i][j][k] = 0; // 追蹤透明度值
                                 // console.log(cubesOpacity);
-                                        
                             } else if (globalSliderMin <= value <= globalSliderMax) {
                                 // 值在滑動條選擇的範圍內
-                                if(matchesCategoryConditions && matchesRangeConditions)
+                                if (matchesCategoryConditions && matchesRangeConditions) {
                                     cube.material.opacity = newOpacity;
-                                else
+                                    cubesOpacity[i][j][k] = cube.material.opacity;
+
+                                    // 將符合條件的 cube 的位置儲存到 array 中
+                                    filteredPositions.push({ i, j, k });
+                                } else {
                                     cube.material.opacity = filternewOpacity; 
-                                cubesOpacity[i][j][k] = cube.material.opacity;
-                                //console.log(globalSliderMin+","+globalSliderMax+": "+value+":"+i+","+j+","+k);
+                                    cubesOpacity[i][j][k] = cube.material.opacity;
+                                    //console.log(globalSliderMin+","+globalSliderMax+": "+value+":"+i+","+j+","+k);
+                                }
                             }
                         }
                     }
-
                 }
             })));
+
+            // // 查看位置訊息
+            // console.log(filteredPositions);
+
+            // 呼叫函數創建變數列表
+            transferPositionsToDatatable();
+        }
+
+        // 創建變數列表
+        function transferPositionsToDatatable() {
+            // 查找是否已經存在浮動視窗
+            const existingWindow = document.getElementById('filtersamplelist');
+
+            // 清空目前 filteredColors
+            filteredColors = [];
+
+            // 將 currentCubeColors 轉換為一個位置到顏色的映射
+            const colorMap = {};
+            currentCubeColors.forEach(({ position, color }) => {
+                const key = `${position.i},${position.j},${position.k}`;
+                colorMap[key] = color;
+            });
+
+            // 將 filteredPositions 和 colorMap 結合
+            filteredColors = filteredPositions.map(({ i, j, k }) => {
+                const key = `${i},${j},${k}`;
+                return {
+                    position: { i, j, k },
+                    color: colorMap[key] || 'rgba(255,255,255,0)' // 如果沒有顏色資料則使用預設顏色
+                };
+            });
+
+            // 檢查 filteredColors 是否為空
+            if (filteredColors.length === 0) {
+                // 如果 filteredColors 為空
+                if (existingWindow) {
+                    // 如果已有浮動視窗，則移除它
+                    existingWindow.remove();
+                }
+                // 否則不需要建立任何浮動視窗，函數結束
+                return;
+            } else {
+                // 如果 filteredColors 不為空
+                let table;
+            
+                // 如果 filteredColors 不為空，且如果浮動視窗已存在，直接更新內容；否則建立新視窗
+                if (existingWindow) {
+                    // 找到現有視窗中的表格容器
+                    table = existingWindow.querySelector('table.data-table');
+                    table.innerHTML = ''; // 清空舊的表格內容
+                } else {
+                    // 建立一個表格元素
+                    table = document.createElement('table');
+                    table.classList.add('data-table'); // 新增一個類別以便於樣式調整
+
+                    // 新增邊框樣式
+                    table.style.borderCollapse = 'collapse'; // 確保邊框合併
+                    table.style.width = 'calc(100% - 40px)'; // 表格寬度，減去左右邊距
+                    table.style.margin = '20px auto'; // 上下邊距 20px，左右置中
+
+                    // 使用 createFloatingWindow_samplelist 建立一個浮動視窗來顯示表格
+                    createFloatingWindow_samplelist('filtersamplelist', 'Filtered Sample Table', table, 'auto', 75, 110, 350, 350);
+                }
+
+                // 建立表頭
+                const thead = document.createElement('thead');
+                const headerRow = document.createElement('tr');
+
+                // 設定表頭的欄位名稱
+                [fieldX, fieldY, fieldZ, selectedValueField].forEach(fieldName => {
+                    const th = document.createElement('th');
+                    th.textContent = fieldName;
+
+                    // 新增表頭 cell 的邊框樣式
+                    th.style.border = '1px solid #ddd'; // 設定邊框樣式
+                    th.style.padding = '8px'; // 內邊距
+                    th.style.backgroundColor = '#f2f2f2'; // 表頭背景色
+                    th.style.textAlign = 'left'; // cell 內容左對齊
+                    th.style.fontSize = '13px'; // 表頭字體大小
+
+                    headerRow.appendChild(th);
+                });
+
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // 建立表格主體
+                const tbody = document.createElement('tbody');
+
+                // // 查看結合後之訊息
+                // console.log('filteredColors', filteredColors);
+
+                // 遍歷 filteredColors
+                filteredColors.forEach(({ position, color }) => {
+                    const { i, j, k } = position;
+
+                    // 取得 data_array 中的值
+                    const dataValue = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
+
+                    // 取得各軸類別的值
+                    const xLabel = uniqueX[Xindices[i]];
+                    const yLabel = uniqueY[Yindices[j]];
+                    const zLabel = uniqueZ[Zindices[k]];
+
+                    // 建立表格 row
+                    const row = document.createElement('tr');
+
+                    // 建立並新增 cell (新增儲存格邊框樣式)
+                    const cellX = document.createElement('td');
+                    cellX.textContent = xLabel;
+                    cellX.style.border = '1px solid #ddd'; // cell 邊框
+                    cellX.style.padding = '8px'; // 內邊距
+                    cellX.style.textAlign = 'left'; // cell 內容左對齊
+                    cellX.style.fontSize = '13px'; // 字體大小
+                    row.appendChild(cellX);
+
+                    const cellY = document.createElement('td');
+                    cellY.textContent = yLabel;
+                    cellY.style.border = '1px solid #ddd'; // cell 邊框
+                    cellY.style.padding = '8px'; // 內邊距
+                    cellY.style.textAlign = 'left'; // cell 內容左對齊
+                    cellY.style.fontSize = '13px'; // 字體大小
+                    row.appendChild(cellY);
+
+                    const cellZ = document.createElement('td');
+                    cellZ.textContent = zLabel;
+                    cellZ.style.border = '1px solid #ddd'; // cell 邊框
+                    cellZ.style.padding = '8px'; // 內邊距
+                    cellZ.style.textAlign = 'left'; // cell 內容左對齊
+                    cellZ.style.fontSize = '13px'; // 字體大小
+                    row.appendChild(cellZ);
+
+                    const cellValue = document.createElement('td');
+                    cellValue.textContent = dataValue;
+                    cellValue.style.border = '1px solid #ddd'; // cell 邊框
+                    cellValue.style.padding = '8px'; // 內邊距
+                    cellValue.style.textAlign = 'left'; // cell 內容左對齊
+                    cellValue.style.fontSize = '13px'; // 字體大小
+
+                    // 將 RGB 顏色轉換為 rgba 顏色 (新增透明度)
+                    const rgbaColor = color.replace('rgb', 'rgba').replace(')', `,${.3})`);
+                    cellValue.style.backgroundColor = rgbaColor; // 設定 cell 背景色
+
+                    row.appendChild(cellValue);
+
+                    // 將 row 新增至表格主體
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+            }
         }
 
         // 按下 resetToOriginalCube 按鈕時，將 cube 回復原狀
@@ -3819,6 +4004,12 @@
             }
             clearbar();
             applyChangesBasedOnNewIndices();
+
+            // 自動隱藏表格
+            const existingWindow = document.getElementById('filtersamplelist');
+            if (existingWindow) {
+                existingWindow.remove(); // 移除浮動視窗及其包含的表格
+            }
         });
 
         function clearbar() {
@@ -3826,10 +4017,7 @@
             categoryConditions.clear();
             rangeConditions.clear(); // 用於追蹤選中的範圍 (for histogram)
 
-            // 正確清空 selectedBars 的每個 Set
-            Object.keys(selectedBars).forEach(axis => {
-                selectedBars[axis].clear();
-            });
+            // console.log(categoryConditions);
 
             selectedHistogramBars.clear();
 
@@ -4003,8 +4191,8 @@
                 let columnName = document.querySelector(`#dataPreviewHead th:nth-child(${i + 1})`).textContent;
                 columnNames.push(columnName);
             }
-            // 列印選取的 column 名
-            console.log(`Select${selectNumber} selected columns:`, columnNames.join(", "));
+            // // 列印選取的 column 名
+            // console.log(`Select${selectNumber} selected columns:`, columnNames.join(", "));
         }
 
         // 當文件被選擇後處理 CSV 檔案
@@ -4021,6 +4209,7 @@
                     header: true,
                     complete: function(results) {
                         parsedData = results.data;
+                        // console.log(parsedData);
                         if (parsedData.length === 0) return; // 沒有資料時直接返回
 
                         // 設置行數
@@ -4106,7 +4295,7 @@
                 getSelectedOptions('multiSelectY'),
                 getSelectedOptions('multiSelectZ'),
             ];
-            var selectedValueField = document.getElementById('singleSelect').value;
+            selectedValueField = document.getElementById('singleSelect').value;
 
             // 初始化 cubeSizeX, cubeSizeY, cubeSizeZ 為 1 或使用者指定的值
             cubeSizeX = parseFloat(document.getElementById('cubeSizeX').value) || 1;
@@ -4154,9 +4343,9 @@
             chartContainerZ.style.height = '80%';
 
             // 創建浮動視窗
-            createFloatingWindow_forchart('floatingChartX', 'Bar Chart of  X-axis', chartContainerX, 320, 110, 300, 210);
-            createFloatingWindow_forchart('floatingChartY', 'Bar Chart of  Y-axis', chartContainerY, 320, 340, 300, 210);
-            createFloatingWindow_forchart('floatingChartZ', 'Bar Chart of  Z-axis', chartContainerZ, 320, 570, 300, 210);
+            createFloatingWindow_forchart('floatingChartX', 'Bar Chart of  X-axis', chartContainerX, 320, 'auto', 110, 300, 210);
+            createFloatingWindow_forchart('floatingChartY', 'Bar Chart of  Y-axis', chartContainerY, 320, 'auto', 340, 300, 210);
+            createFloatingWindow_forchart('floatingChartZ', 'Bar Chart of  Z-axis', chartContainerZ, 320, 'auto', 570, 300, 210);
 
             // 更新或繪製長條圖
             updateBarChart('chartX', chartDataX, 'X');
@@ -4189,10 +4378,12 @@
             let { bins, counts } = calculateBinsAndCounts(data_array, globalMin, globalMax);
 
             // 創建浮動視窗
-            createFloatingWindow_forchart('floatingChartHistogram', 'Histogram', Histogram, 1115, 110, 300, 210);
+            createFloatingWindow_forchart('floatingChartHistogram', 'Histogram', Histogram, 'auto', 205, 110, 300, 210);
 
             // 繪製直方圖
             drawHistogram('Histogram', bins, counts);
+
+            // filterCubes();
         });
 
         // 繪製 cube
@@ -4320,7 +4511,7 @@
                     cubes[i][j] = []; // 初始化三維 array
                     cubesOpacity[i][j] = [];
                     for (k = 0; k < numZ; k++) {
-                        cubesOpacity[i][j][k] = .2; // 設初始透明度為 0.2
+                        cubesOpacity[i][j][k] = currentOpacity; // 設初始透明度為 0.2
 
                         // 創建一個具有基本材料的立方體
                         let cubeMaterial = new THREE.MeshBasicMaterial({ 
@@ -4641,6 +4832,16 @@
         }
 
         #hollowSizeValue {
+            margin-left: 6px;
+        }
+
+        #fontSize {
+            width: 160px; /* Adjust the width as needed */
+            border: 1px solid #ced4da; /* Similar to form-control styling for borders */
+            /* margin-bottom: 10px; */
+        }
+
+        #fontSizeValue {
             margin-left: 6px;
         }
 
@@ -5384,7 +5585,8 @@
 
             <!-- Logo For Desktop View -->
             <a class="navbar-brand navbar-brand-desktop" href="index.html">
-                <img class="side-nav-show-on-closed" src="img/gap.gif">
+                <!-- <img class="side-nav-show-on-closed" src="img/gap.gif"> -->
+                <img class="side-nav-show-on-closed" src="img/cube3.ico">
                 <div class="side-nav-hide-on-closed">3D GAP Online <sup>BETA</sup></div>
             </a>
             <!-- End Logo For Desktop View -->
@@ -5461,8 +5663,8 @@
                 <!-- User Avatar -->
                 <!-- <div class="dropdown mx-3 dropdown ml-2">
                     <a id="profileMenuInvoker" class="header-complex-invoker" href="#" aria-controls="profileMenu" aria-haspopup="true" aria-expanded="false" data-unfold-event="click" data-unfold-target="#profileMenu" data-unfold-type="css-animation" data-unfold-duration="300" data-unfold-animation-in="fadeIn" data-unfold-animation-out="fadeOut">
-                        img class="avatar rounded-circle mr-md-2" src="#" alt="John Doe"-->
-                        <!-- <span class="mr-md-2 avatar-placeholder">J</span>
+                        img class="avatar rounded-circle mr-md-2" src="#" alt="John Doe"
+                        <span class="mr-md-2 avatar-placeholder">J</span>
                         <span class="d-none d-md-block">John Doe</span>
                         <i class="gd-angle-down d-none d-md-block ml-2"></i>
                     </a>
@@ -5973,8 +6175,8 @@
                     <li class="side-nav-menu-item">
                         <!-- <a class="side-nav-menu-link" href="users.html">Open File</a> -->
                         <!-- <label for="opacityRange">Opacity：</label> -->
-                        <input type="range" id="opacityRange" min="0.01" max="1" step="0.01" value="0.5">
-                        <span id="opacityValue">0.5</span>
+                        <input type="range" id="opacityRange" min="0.01" max="1" step="0.01" value="0.2">
+                        <span id="opacityValue">0.2</span>
                     </li>
                     <!-- <li class="side-nav-menu-item">
                         <a class="side-nav-menu-link" href="user-edit.html">Add new</a>
@@ -6284,6 +6486,11 @@
                                 <label for="OrthographicCamera">Orthographic Camera</label><br>
                             </form>
                         </div>
+                        <label for="fontSize">Font Size</label>
+                        <br>
+                        <input type="range" id="fontSize" min="1" max="100" value="50" step="1">
+                        <span id="fontSizeValue">50</span>
+                        
                     </li>
                 </ul>
                 <!-- End subInteractive -->
@@ -6306,10 +6513,12 @@
     </div>
 
     <div id="colorbar-container">
-        <div id="colorbar-max-label" class="colorbar-label">Max</div>
+        <div id="colorbar-max-label" class="colorbar-label"></div>
         <div id="colorbar"></div>
-        <div id="colorbar-min-label" class="colorbar-label">Min</div>
+        <div id="colorbar-min-label" class="colorbar-label"></div>
     </div>
+
+    <div id="tableContainer"></div>
 
     <div id="floatingWindowContainer"></div>  <!-- 浮動窗口的容器 -->
 
