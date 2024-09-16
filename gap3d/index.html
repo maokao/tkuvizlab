@@ -10,7 +10,7 @@
 
     <!-- Favicon -->
     <!-- <link rel="Shortcut Icon" type="image/x-icon" href="img/gap.ico"/> -->
-    <link rel="Shortcut Icon" type="image/x-icon" href="img/cube3.ico"/>
+    <link rel="Shortcut Icon" type="image/x-icon" href="img/cube.png"/> <!-- cube3.ico cube4.png -->
 
     <!-- awesome icon -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
@@ -62,6 +62,9 @@
         var globalMin = 0; // 全域最小值
         var globalMax = 100; // 全域最大值
 
+        // for 變數列表 (table)
+        let tbody;
+
         // 數值滑動調之值
         var doubleslidercubesvalue;
 
@@ -97,6 +100,8 @@
 
         // for Z 軸排序
         var Zindices = []; // 用於儲存軸標籤當前 Z 軸 index 的 array
+
+        var displayCondition;
 
         var cellWidth = 24;
 
@@ -165,6 +170,8 @@
         // 設置初始值為聯集
         var selectionType = 'Union';
 
+        var calculationType = 'sum';
+
         var maxDimension; // 找到最大的維度
         
         var distance;
@@ -174,6 +181,9 @@
         var minMaxByUniqueX = {};
         var minMaxByUniqueY = {};
         var minMaxByUniqueZ = {};
+
+        var globalSliderMinforcolor;
+        var globalSliderMaxforcolor;
 
         // 全域變數來保存滑動條的目前值
         var globalSliderMin;
@@ -219,43 +229,121 @@
                     $(ui.handle).find(".ui-slider-value").text(ui.value.toFixed(1));
 
                     // 更新全域變數
-                    globalSliderMin = ui.values[0];
-                    globalSliderMax = ui.values[1];
+                    globalSliderMinforcolor = ui.values[0];
+                    globalSliderMaxforcolor = ui.values[1];
                     
                     // 每次滑動時更新顏色
-                    updateCubeColorsBasedOnSlider(globalSliderMin, globalSliderMax);
+                    updateCubeColorsBasedOnSlider(globalSliderMinforcolor, globalSliderMaxforcolor);
 
-                    // 重置 DisplayCondition 下拉式選單回到預設選項 (Range: Cube)
-                    document.getElementById('DisplayCondition').selectedIndex = 0;
+                    // 每次滑動時更新表格單元格背景色
+                    updateCellColorsBasedOnSlider(globalSliderMinforcolor, globalSliderMaxforcolor);
+
+                    transferPositionsToDatatable();
+
+                    // // 重置 DisplayCondition 下拉式選單回到預設選項 (Range: Cube)
+                    // displayCondition = document.getElementById('DisplayCondition').selectedIndex = 0;
                 }
             });
         });
 
         // 根據滑動條的值更新立方體顏色
         function updateCubeColorsBasedOnSlider(sliderMin, sliderMax) {
+            // 重置 DisplayCondition 下拉式選單回到預設選項 (Range: Cube)
+            displayCondition = document.getElementById('DisplayCondition').selectedIndex = 0;
+
             var reverseColors = document.getElementById('reverseColors').checked; // 取得 reverseColors 的狀態
 
-            scene.traverse(function(object) {
-                if (object instanceof THREE.Mesh) {
-                    var value = object.userData.value; // 立方體的值
-                    var colorScheme = document.getElementById('colorSchemeSelect').value; // 目前選取的顏色方案
-                    var colors = colorSchemes[colorScheme]; // 根據色彩方案取得顏色數組
-                    var minColor = reverseColors ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
-                    var maxColor = reverseColors ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
+            // 遍歷現有的 cubes 並更新顏色
+            for (let i = 0; i < Xindices.length; i++) {
+                for (let j = 0; j < Yindices.length; j++) {
+                    for (let k = 0; k < Zindices.length; k++) {
+                        // 在立方體已經創建的基礎上進行
+                        let cube = cubes[i][j][k]; // 取得現有的立方體
 
-                    if (value < sliderMin) {
-                        // 值小於滑動條最小值
-                        object.material.color.set(minColor);
-                    } else if (value > sliderMax) {
-                        // 值大於滑動條最大值
-                        object.material.color.set(maxColor);
-                    } else {
-                        // 值在滑動條選擇的範圍內
-                        var colorIndex = mapValueToColor(value, colorScheme, sliderMin, sliderMax);
-                        object.material.color.set(colorIndex);
+                        if (cube) {
+                            // 使用排序後的索引從 data_array 取得值
+                            let value = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
+
+                            if (value !== null) {
+                                // 獲取當前選擇的顏色方案
+                                var currentColorScheme = cube.userData.colorScheme || document.getElementById('colorSchemeSelect').value;
+                                var colors = colorSchemes[currentColorScheme]; // 根據色彩方案取得顏色數組
+                                var minColor = reverseColors ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
+                                var maxColor = reverseColors ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
+                                let color;
+
+                                // 根據滑動條更新顏色
+                                if (value < sliderMin) {
+                                    color = minColor;
+                                } else if (value > sliderMax) {
+                                    color = maxColor;
+                                } else {
+                                    // 使用 mapValueToColor 函數更新顏色
+                                    color = mapValueToColor(value, currentColorScheme, sliderMin, sliderMax);
+                                }
+
+                                // 更新立方體的顏色
+                                cube.material.color.set(color);
+                                cube.material.opacity = cubesOpacity[i][j][k]; // 透明度更新為目前透明度
+
+                            } else {
+                                cube.material.opacity = 0; // 空值立方體保持完全透明
+                            }
+
+                            cube.material.transparent = true;
+                            cube.material.needsUpdate = true; // 確保 Three.js 知道需要更新材料
+
+                            // 儲存顏色及位置信息
+                            currentCubeColors.push({
+                                position: { i, j, k },
+                                color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
+                            });
+                        }
                     }
                 }
-            });
+            }
+        }
+
+        // 根據滑動條的值更新表格單元格背景色
+        function updateCellColorsBasedOnSlider(sliderMin, sliderMax) {
+            var reverseColors = document.getElementById('reverseColors').checked; // 取得 reverseColors 的狀態
+
+            if (!tbody) {
+                return; // 停止執行
+            }
+
+            // 遍歷表格中的每一 row
+            const rows = tbody.getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const cellValue = row.getElementsByTagName('td')[3]; // 第四個單元格是數值資料
+
+                // 取出數值
+                const dataValue = parseFloat(cellValue.textContent);
+
+                // 取得目前選擇的顏色方案
+                var colorScheme = document.getElementById('colorSchemeSelect').value;
+                var colors = colorSchemes[colorScheme]; // 根據色彩方案取得顏色數組
+                var minColor = reverseColors ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
+                var maxColor = reverseColors ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
+
+                if (dataValue < sliderMin) {
+                    // 值小於滑動條最小值
+                    cellValue.style.backgroundColor = `rgba(${minColor.r}, ${minColor.g}, ${minColor.b}, .3)`;
+                } else if (dataValue > sliderMax) {
+                    // 值大於滑動條最大值
+                    cellValue.style.backgroundColor = `rgba(${maxColor.r}, ${maxColor.g}, ${maxColor.b}, .3)`;
+                } else {
+                    // 取得 THREE.Color 對象
+                    var newColorforcell = mapValueToColor(dataValue, colorScheme, sliderMin, sliderMax);
+
+                    // 將 THREE.Color 物件轉換為 CSS rgb 顏色格式
+                    var newrgbaColor = `rgba(${Math.floor(newColorforcell.r * 255)}, ${Math.floor(newColorforcell.g * 255)}, ${Math.floor(newColorforcell.b * 255)}, .3)`;
+
+                    // 值在滑動條選擇的範圍內，設定 cell 背景色
+                    cellValue.style.backgroundColor = newrgbaColor;
+                }
+            }
         }
 
         $( function() {
@@ -449,10 +537,6 @@
 
         // 設定相機位置，以便我們可以看到對象
         camera.position.z = 5;
-                
-        //---- functions ----//
-        //---- functions ----//
-        //---- functions ----//
 
         // 提取 data 中所有 column 之唯一值，以創建 data_array
         function getUniqueColumnValues(dataArray, columnName) {
@@ -479,7 +563,7 @@
 
         // 根據所選欄位來填充資料結構
         function fillDataArray(data, dataArray, X, Y, Z, fieldX, fieldY, fieldZ) {
-            var selectedValueField = document.getElementById('singleSelect').value; // 獲取單選下拉式選單中選擇的欄位
+            selectedValueField = document.getElementById('singleSelect').value; // 獲取單選下拉式選單中選擇的欄位
             data.forEach(function(row) {
                 var i = X.indexOf(row[fieldX]);
                 var j = Y.indexOf(row[fieldY]);
@@ -532,7 +616,6 @@
                     });
                 });
             });
-
             // 重新渲染場景以應用透明度更改
             // renderer.render(scene, camera);
         }
@@ -547,12 +630,6 @@
         // 滑動條值改變時呼叫 filterCubes 函數
         document.getElementById('filteropacityRange').addEventListener('input', function() {
             filterCubes();
-            
-            // // 自動隱藏表格
-            // const existingWindow = document.getElementById('filtersamplelist');
-            // if (existingWindow) {
-            //     existingWindow.remove(); // 移除浮動視窗及其包含的表格
-            // }
         });
 
         // 填充下拉式選單選項
@@ -732,7 +809,7 @@
                 case 'GAP_Rainbow':
                     return mapValueTocolorSchemes("GAP_Rainbow", value, min, max);
                 case 'GAP_Blue_White_Red':
-                    return mapValueTocolorSchemes("GAP_Blue_White_Red",value, min, max);
+                    return mapValueTocolorSchemes("GAP_Blue_White_Red", value, min, max);
                 default:
                     return new THREE.Color(0xffffff); // 預設白色
             }
@@ -760,44 +837,44 @@
 
         // 定義顏色方案的映射 (colorbrewer)
         const colorSchemes = {
-        RdYlGn: ['#D73027', '#F46D43', '#FDAE61', '#FEE08B', '#FFFFBF', '#D9EF8B', '#A6D96A', '#66BD63', '#1A9850'],
-        Blues: ['#EFF3FF', '#C6DBEF', '#9ECAE1', '#6BAED6', '#3182BD', '#08519C'],
-        Reds: ['#FFF5F0', '#FEE0D2', '#FCBBA1', '#FC9272', '#FB6A4A', '#EF3B2C', '#CB181D', '#A50F15', '#67000D'],
-        Greys: ['#f7f7f7', '#cccccc', '#969696', '#636363', '#252525'],
-        YlGnBu: ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494'],
-        YlOrRd: ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026'],
-        RdYlBu: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'],
-        RdGy: ['#ef3b2c', '#fcbba1', '#ffffff', '#bababa', '#878787', '#4d4d4d'],
-        RdBu: ['#67001f', '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac', '#053061'],
-        PiYG: ['#d01c8b', '#f1b6da', '#f7f7f7', '#b8e186', '#4dac26'],
-        PRGn: ['#762a83', '#af8dc3', '#e7d4e8', '#d9f0d3', '#7fbf7b', '#1b7837'],
-        BrBG: ['#543005', '#8c510a', '#bf812d', '#dfc27d', '#f6e8c3', '#c7eae5', '#80cdc1', '#35978f', '#01665e', '#003c30'],
-        PuOr: ['#7f3b08', '#b35806', '#e08214', '#fdb863', '#fee0b6', '#d8daeb', '#b2abd2', '#8073ac', '#542788', '#2d004b'],
-        dYlGn: ['#D73027', '#F46D43', '#FDAE61', '#FEE08B', '#FFFFBF', '#D9EF8B', '#A6D96A', '#66BD63', '#1A9850'],
-        YlOrBr: ['#FFFFD4', '#FEE391', '#FEC44F', '#FE9929', '#EC7014', '#CC4C02', '#993404', '#662506'],
-        YlGn: ['#FFFFCC', '#C7E9C0', '#A1D99B', '#74C476', '#41AB5D', '#238B45', '#006D2C', '#00441B'],
-        RdPu: ['#FEEBE2', '#FCC5C0', '#FA9FB5', '#F768A1', '#DD3497', '#AE017E', '#7A0177'],
-        Purples: ['#FCFBFD', '#EFEDF5', '#DADAEB', '#BCBDDC', '#9E9AC8', '#807DBA', '#6A51A3', '#54278F', '#3F007D'],
-        PuRd: ['#F7F4F9', '#E7E1EF', '#D4B9DA', '#C994C7', '#DF65B0', '#E7298A', '#CE1256', '#980043', '#67001F'],
-        PuBuGn: ['#F6EFF7', '#D0D1E6', '#A6BDDB', '#67A9CF', '#3690C0', '#02818A', '#016C59', '#014636'],
-        PuBu: ['#F1EEF6', '#D0D1E6', '#A6BDDB', '#74A9CF', '#3690C0', '#0570B0', '#045A8D', '#023858'],
-        OrRd: ['#FFF7EC', '#FEE8C8', '#FDD49E', '#FDBB84', '#FC8D59', '#EF6548', '#D7301F', '#B30000', '#7F0000'],
-        Oranges: ['#FFF5EB', '#FEE6CE', '#FDD0A2', '#FDAE6B', '#FD8D3C', '#F16913', '#D94801', '#A63603', '#7F2704'],
-        Greens: ['#F7FCF5', '#E5F5E0', '#C7E9C0', '#A1D99B', '#74C476', '#41AB5D', '#238B45', '#006D2C', '#00441B'],
-        GnBu: ['#F7FCF0', '#E0F3DB', '#CCEBC5', '#A8DDB5', '#7BCCC4', '#4EB3D3', '#2B8CBE', '#0868AC', '#084081'],
-        BuPu: ['#EDF8FB', '#BFD3E6', '#9EBCDA', '#8C96C6', '#8C6BB1', '#88419D', '#810F7C', '#4D004B'],
-        BuGn: ['#F0F9E8', '#BAE4BC', '#7BCCC4', '#43A2CA', '#0868AC', '#084081'],
-        Spectral: ['#D53E4F', '#F46D43', '#FDAE61', '#FEE08B', '#FFFFBF', '#E6F598', '#ABDDA4', '#66C2A5', '#3288BD'],
-        Set3: ['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9'],
-        Set2: ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3'],
-        Set1: ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'],
-        Pastel2: ['#b3e2cd', '#fdcdac', '#cbd5e8', '#f4cae4', '#e6f5c9', '#fff2ae', '#f1e2cc', '#cccccc'],
-        Pastel1: ['#fbb4ae', '#b3cde3', '#ccebc5', '#decbe4', '#fed9a6', '#ffffcc', '#e5d8bd', '#fddaec'],
-        Paired: ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00'],
-        Dark2: ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d', '#666666'],
-        Accent: ['#7fc97f', '#beaed4', '#fdc086', '#ffff99', '#386cb0', '#f0027f', '#bf5b17', '#666666'],
-        GAP_Rainbow: ["#00008C", "#004DEB", "#007359", "#66A600", "#B3E600", "#CCF200", "#FFFF00", "#FFE600", "#FFB300", "#FF6600", "#FF0000", "#D90000", "#A60000"],
-        GAP_Blue_White_Red: ["#00006B", "#00009E", "#0000BF", "#0000E8", "#2121FF", "#4A4AFF", "#7A7AFF", "#ADADFF", "#E0E0FF", "#FAFAFF", "#FFFAFA", "#FFC7C7", "#FF9494", "#FF6161", "#FF3838", "#FF0000", "#CF0000", "#AD0000", "#850000", "#520000"],
+            RdYlGn: ['#D73027', '#F46D43', '#FDAE61', '#FEE08B', '#FFFFBF', '#D9EF8B', '#A6D96A', '#66BD63', '#1A9850'],
+            Blues: ['#EFF3FF', '#C6DBEF', '#9ECAE1', '#6BAED6', '#3182BD', '#08519C'],
+            Reds: ['#FFF5F0', '#FEE0D2', '#FCBBA1', '#FC9272', '#FB6A4A', '#EF3B2C', '#CB181D', '#A50F15', '#67000D'],
+            Greys: ['#f7f7f7', '#cccccc', '#969696', '#636363', '#252525'],
+            YlGnBu: ['#ffffcc', '#a1dab4', '#41b6c4', '#2c7fb8', '#253494'],
+            YlOrRd: ['#ffffb2', '#fecc5c', '#fd8d3c', '#f03b20', '#bd0026'],
+            RdYlBu: ['#d73027', '#fc8d59', '#fee090', '#e0f3f8', '#91bfdb', '#4575b4'],
+            RdGy: ['#ef3b2c', '#fcbba1', '#ffffff', '#bababa', '#878787', '#4d4d4d'],
+            RdBu: ['#67001f', '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac', '#053061'],
+            PiYG: ['#d01c8b', '#f1b6da', '#f7f7f7', '#b8e186', '#4dac26'],
+            PRGn: ['#762a83', '#af8dc3', '#e7d4e8', '#d9f0d3', '#7fbf7b', '#1b7837'],
+            BrBG: ['#543005', '#8c510a', '#bf812d', '#dfc27d', '#f6e8c3', '#c7eae5', '#80cdc1', '#35978f', '#01665e', '#003c30'],
+            PuOr: ['#7f3b08', '#b35806', '#e08214', '#fdb863', '#fee0b6', '#d8daeb', '#b2abd2', '#8073ac', '#542788', '#2d004b'],
+            dYlGn: ['#D73027', '#F46D43', '#FDAE61', '#FEE08B', '#FFFFBF', '#D9EF8B', '#A6D96A', '#66BD63', '#1A9850'],
+            YlOrBr: ['#FFFFD4', '#FEE391', '#FEC44F', '#FE9929', '#EC7014', '#CC4C02', '#993404', '#662506'],
+            YlGn: ['#FFFFCC', '#C7E9C0', '#A1D99B', '#74C476', '#41AB5D', '#238B45', '#006D2C', '#00441B'],
+            RdPu: ['#FEEBE2', '#FCC5C0', '#FA9FB5', '#F768A1', '#DD3497', '#AE017E', '#7A0177'],
+            Purples: ['#FCFBFD', '#EFEDF5', '#DADAEB', '#BCBDDC', '#9E9AC8', '#807DBA', '#6A51A3', '#54278F', '#3F007D'],
+            PuRd: ['#F7F4F9', '#E7E1EF', '#D4B9DA', '#C994C7', '#DF65B0', '#E7298A', '#CE1256', '#980043', '#67001F'],
+            PuBuGn: ['#F6EFF7', '#D0D1E6', '#A6BDDB', '#67A9CF', '#3690C0', '#02818A', '#016C59', '#014636'],
+            PuBu: ['#F1EEF6', '#D0D1E6', '#A6BDDB', '#74A9CF', '#3690C0', '#0570B0', '#045A8D', '#023858'],
+            OrRd: ['#FFF7EC', '#FEE8C8', '#FDD49E', '#FDBB84', '#FC8D59', '#EF6548', '#D7301F', '#B30000', '#7F0000'],
+            Oranges: ['#FFF5EB', '#FEE6CE', '#FDD0A2', '#FDAE6B', '#FD8D3C', '#F16913', '#D94801', '#A63603', '#7F2704'],
+            Greens: ['#F7FCF5', '#E5F5E0', '#C7E9C0', '#A1D99B', '#74C476', '#41AB5D', '#238B45', '#006D2C', '#00441B'],
+            GnBu: ['#F7FCF0', '#E0F3DB', '#CCEBC5', '#A8DDB5', '#7BCCC4', '#4EB3D3', '#2B8CBE', '#0868AC', '#084081'],
+            BuPu: ['#EDF8FB', '#BFD3E6', '#9EBCDA', '#8C96C6', '#8C6BB1', '#88419D', '#810F7C', '#4D004B'],
+            BuGn: ['#F0F9E8', '#BAE4BC', '#7BCCC4', '#43A2CA', '#0868AC', '#084081'],
+            Spectral: ['#D53E4F', '#F46D43', '#FDAE61', '#FEE08B', '#FFFFBF', '#E6F598', '#ABDDA4', '#66C2A5', '#3288BD'],
+            Set3: ['#8dd3c7', '#ffffb3', '#bebada', '#fb8072', '#80b1d3', '#fdb462', '#b3de69', '#fccde5', '#d9d9d9'],
+            Set2: ['#66c2a5', '#fc8d62', '#8da0cb', '#e78ac3', '#a6d854', '#ffd92f', '#e5c494', '#b3b3b3'],
+            Set1: ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#ffff33', '#a65628', '#f781bf'],
+            Pastel2: ['#b3e2cd', '#fdcdac', '#cbd5e8', '#f4cae4', '#e6f5c9', '#fff2ae', '#f1e2cc', '#cccccc'],
+            Pastel1: ['#fbb4ae', '#b3cde3', '#ccebc5', '#decbe4', '#fed9a6', '#ffffcc', '#e5d8bd', '#fddaec'],
+            Paired: ['#a6cee3', '#1f78b4', '#b2df8a', '#33a02c', '#fb9a99', '#e31a1c', '#fdbf6f', '#ff7f00'],
+            Dark2: ['#1b9e77', '#d95f02', '#7570b3', '#e7298a', '#66a61e', '#e6ab02', '#a6761d', '#666666'],
+            Accent: ['#7fc97f', '#beaed4', '#fdc086', '#ffff99', '#386cb0', '#f0027f', '#bf5b17', '#666666'],
+            GAP_Rainbow: ["#00008C", "#004DEB", "#007359", "#66A600", "#B3E600", "#CCF200", "#FFFF00", "#FFE600", "#FFB300", "#FF6600", "#FF0000", "#D90000", "#A60000"],
+            GAP_Blue_White_Red: ["#00006B", "#00009E", "#0000BF", "#0000E8", "#2121FF", "#4A4AFF", "#7A7AFF", "#ADADFF", "#E0E0FF", "#FAFAFF", "#FFFAFA", "#FFC7C7", "#FF9494", "#FF6161", "#FF3838", "#FF0000", "#CF0000", "#AD0000", "#850000", "#520000"],
         };
 
         // 顏色映射函數
@@ -919,7 +996,7 @@
         var colorbarMinLabelforcube = document.getElementById('colorbar-min-label');
         var colorbarMaxLabelforcube = document.getElementById('colorbar-max-label');
 
-        // color bar 在資料載入後才出現
+        // colorbar 在資料載入後才出現
         function updateEverycolorthingBasedOnCurrentSettings() {
             var selectedColorScheme = document.getElementById('colorSchemeSelect').value;
             if (isDataLoaded) { // 只有在資料載入後才調用
@@ -935,12 +1012,9 @@
             if (isDataLoaded) {
                 updateEverycolorthingBasedOnCurrentSettings();
 
-                // 從 DOM 取得目前選取的 displayCondition
-                var displayCondition = document.getElementById('DisplayCondition').value;
-
                 applyChangesBasedOnNewIndices();
 
-                filterCubes(); // transferPositionsToDatatable();
+                filterCubes();
             }
         });
 
@@ -950,11 +1024,8 @@
             if (isDataLoaded) {
                 updateEverycolorthingBasedOnCurrentSettings();
 
-                // 從 DOM 取得目前選取的 displayCondition
-                var displayCondition = document.getElementById('DisplayCondition').value;
-
                 applyChangesBasedOnNewIndices();
-
+                
                 filterCubes();
             }
         });
@@ -1073,8 +1144,8 @@
                 }
             }
 
-            // // 在立方體創建後添加軸線，且直接與邊長同步縮放
-            updateAxesStartPoint();
+            // 在立方體創建後添加軸線，且直接與邊長同步縮放
+            // updateAxesStartPoint();
 
             // 呼叫渲染函數來更新場景
             // renderer.render(scene, camera);
@@ -1420,10 +1491,10 @@
             cubeSizeZ = parseFloat(document.getElementById('cubeSizeZ').value);
 
             // 取得目前選擇的欄位 value
-            var valueField = document.getElementById('singleSelect').value;
+            selectedValueField = document.getElementById('singleSelect').value;
 
             // 從 DOM 取得目前選取的 displayCondition
-            var displayCondition = document.getElementById('DisplayCondition').value;
+            displayCondition = document.getElementById('DisplayCondition').value;
 
             // 清空目前顏色 array
             currentCubeColors.length = 0;
@@ -1501,8 +1572,6 @@
                                 currentCubeColors.push({
                                     position: { i, j, k },
                                     color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
-                                    value: value,
-                                    colorScheme: currentColorScheme
                                 });
                             }
                         }
@@ -1539,8 +1608,6 @@
                                 currentCubeColors.push({
                                     position: { i, j, k },
                                     color: cube.material.color.getStyle(), // 轉換為 CSS 顏色字串
-                                    value: value,
-                                    colorScheme: currentColorScheme
                                 });
                             }
                         }
@@ -1585,7 +1652,7 @@
                                 cube.userData.tooltipText = fieldX + "：" + uniqueX[Xindices[i]] + "<br>" +
                                     fieldY + "：" + uniqueY[Yindices[j]] + "<br>" +
                                     fieldZ + "：" + uniqueZ[Zindices[k]] + "<br>" +
-                                    valueField + "：" + value; // 存儲懸浮提示文本
+                                    selectedValueField + "：" + value; // 存儲懸浮提示文本
 
                                 cube.material.transparent = true;
                                 cube.material.needsUpdate = true; // 確保 Three.js 知道需要更新材料
@@ -1599,10 +1666,8 @@
                         }
                     }
                 }
-                // 排序後，根據滑動條當前值重新設定顏色
-                updateCubeColorsBasedOnSlider(globalSliderMin, globalSliderMax);
+                updateCubeColorsBasedOnSlider(globalSliderMinforcolor, globalSliderMaxforcolor);
             }
-
             // 在立方體創建後更新 colorbar
             updateColorbar(currentColorScheme, globalMin, globalMax, colorbarContainerforcube, colorbarforcube, colorbarMinLabelforcube, colorbarMaxLabelforcube);
 
@@ -1624,6 +1689,10 @@
             var handles = $("#double-slider .ui-slider-handle");
             handles.eq(0).find(".ui-slider-value").text(globalMin.toFixed(2));
             handles.eq(1).find(".ui-slider-value").text(globalMax.toFixed(2));
+
+            // 更新全域變數
+            globalSliderMinforcolor = globalMin;
+            globalSliderMaxforcolor = globalMax;
 
             applyChangesBasedOnNewIndices();
 
@@ -1760,31 +1829,37 @@
             updateBarChart('chartZ', chartDataZ, 'Z');
         });
 
-        // 為 X 軸flip下拉式選單新增事件監聽器
+        // 為 X 軸 flip 下拉式選單新增事件監聽器
         document.getElementById('Xflip_side').addEventListener('change', function() {
             now_Xflip_side = this.value;
             updateXOrder();
             applyChangesBasedOnNewIndices();
 
+            filterCubes();
+
             let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType);
             updateBarChart('chartX', chartDataX, 'X');
         });
 
-        // 為 Y 軸flip下拉式選單新增事件監聽器
+        // 為 Y 軸 flip 下拉式選單新增事件監聽器
         document.getElementById('Yflip_side').addEventListener('change', function() {
             now_Yflip_side = this.value;
             updateYOrder();
             applyChangesBasedOnNewIndices();
 
+            filterCubes();
+
             let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType);
             updateBarChart('chartY', chartDataY, 'Y');
         });
 
-        // 為 Z 軸flip下拉式選單新增事件監聽器
+        // 為 Z 軸 flip 下拉式選單新增事件監聽器
         document.getElementById('Zflip_side').addEventListener('change', function() {
             now_Zflip_side = this.value;
             updateZOrder();
             applyChangesBasedOnNewIndices();
+
+            filterCubes();
 
             let chartDataZ = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Z', calculationType);
             updateBarChart('chartZ', chartDataZ, 'Z');
@@ -1802,8 +1877,13 @@
         // 接收一個 event 參數 其中包含了事件的詳細訊息，如：滑鼠的螢幕座標
         function onMouseMove(event) {
             // 將滑鼠位置轉換為歸一化裝置座標 (NDC)
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            var rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // // 將滑鼠位置轉換為歸一化裝置座標 (NDC)
+            // mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            // mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
 
             // 更新射線的起點與方向
             raycaster.setFromCamera(mouse, camera);
@@ -1811,12 +1891,74 @@
             // 射線與物件的交點
             var intersects = raycaster.intersectObjects(cubes.flat().flat(), true);
 
+            // 更新軸線的起點
+            updateAxesStartPoint(intersects);
+
             // 顯示懸浮提示
             showTooltip(event, intersects);
-
-            // 更新軸線的起點
-            updateAxesStartPoint();
         }
+
+
+        // -------------------------------------------------
+        // // 初始化射线投射器和鼠标向量
+        // const raycaster = new THREE.Raycaster();
+        // const mouse = new THREE.Vector2();
+
+        // // 添加鼠标事件监听器
+        // window.addEventListener('click', onMouseClick, false);
+
+        // // 添加一个立方体示例，确保是有效对象
+        // const geometry = new THREE.BoxGeometry(1, 1, 1);
+        // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        // const cube = new THREE.Mesh(geometry, material);
+        // scene.add(cube);
+        // cubes.push(cube);
+
+        // // 选定的平面 'XY', 'YZ' 或 'XZ'
+        // let selectedPlane = 'XY'; // 你可以根据需要改变这个变量
+
+        // function onMouseClick(event) {
+        //     // 计算鼠标在屏幕上的位置
+        //     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        //     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        //     // 更新射线
+        //     raycaster.setFromCamera(mouse, camera);
+
+        //     // 检测与所有小立方体的交集
+        //     const validCubes = cubes.filter(cube => cube !== undefined && cube !== null); // 过滤无效对象
+        //     const intersects = raycaster.intersectObjects(validCubes);
+
+        //     // 过滤只在选定平面上的立方体
+        //     const filteredIntersects = intersects.filter(intersect => {
+        //         const cube = intersect.object;
+        //         if (selectedPlane === 'XY') {
+        //             return Math.abs(cube.position.z) < 0.1; // 假设 Z 近似为 0 的立方体位于 X-Y 平面
+        //         } else if (selectedPlane === 'YZ') {
+        //             return Math.abs(cube.position.x) < 0.1; // 假设 X 近似为 0 的立方体位于 Y-Z 平面
+        //         } else if (selectedPlane === 'XZ') {
+        //             return Math.abs(cube.position.y) < 0.1; // 假设 Y 近似为 0 的立方体位于 X-Z 平面
+        //         }
+        //         return false;
+        //     });
+
+        //     // 检查是否有交集
+        //     if (filteredIntersects.length > 0) {
+        //         // 取第一个交集（最接近相机的）
+        //         const selectedCube = filteredIntersects[0].object;
+
+        //         // 显示相关信息
+        //         showCubeInfo(selectedCube);
+        //     }
+        // }
+
+        // function showCubeInfo(cube) {
+        //     // 在这里显示立方体的相关信息，例如：
+        //     console.log(`Cube Position: ${cube.position.x}, ${cube.position.y}, ${cube.position.z}`);
+        //     // 你可以在这里添加更多的逻辑来展示立方体的其他信息
+        // }
+        // -------------------------------------------------
+
 
         // 依不同軸線之中心點判斷其 Direction
         function updateAxesDirectionBasedOnVertex(closestVertex) {
@@ -1857,7 +1999,7 @@
         }
 
         // 依照鼠標更新軸線之中心點
-        function updateAxesStartPoint() {
+        function updateAxesStartPoint(intersects) {
             if (!updateAxes) return; // 如果 updateAxes 為 false 則不執行更新
 
             // 獲取 Checkbox 的狀態
@@ -1868,12 +2010,6 @@
                 clearAxesLines();
                 return;
             }
-
-            // 更新 raycaster
-            raycaster.setFromCamera(mouse, camera);
-
-            // 欲偵測之物件存放在一陣列中，例如：所有立方體
-            var intersects = raycaster.intersectObjects(cubes.flat().flat(), true);
 
             if (intersects.length > 0) {
                 var intersect = intersects[0]; // 取第一個交點對象
@@ -1941,6 +2077,72 @@
                 });
             }
         }
+
+        // function updateAxesStartPoint(intersects) {
+        //     if (!updateAxes) return; // 如果 updateAxes 为 false 则不执行更新
+
+        //     // 获取 Checkbox 的状态
+        //     var tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
+
+        //     // 如果 Checkbox 未被勾选，则清除现有轴线并退出函数
+        //     if (!tooltipEnabled) {
+        //         clearAxesLines();
+        //         return;
+        //     }
+
+        //     if (intersects.length > 0) {
+        //         var intersect = intersects[0]; // 取第一个交点对象
+        //         var intersectObject = intersect.object; // 取得实际相交的对象
+
+        //         // 确保立方体几何中心是基于其本地坐标系计算的
+        //         var center = new THREE.Vector3();
+        //         intersectObject.geometry.computeBoundingBox();
+        //         intersectObject.geometry.boundingBox.getCenter(center);
+
+        //         // 将中心点转换到世界坐标
+        //         center.applyMatrix4(intersectObject.matrixWorld);
+
+        //         // 调整轴线的长度以适应立方体的大小
+        //         var axisLength = intersectObject.geometry.boundingBox.max.x - intersectObject.geometry.boundingBox.min.x;
+
+        //         // 定义方向向量
+        //         var directionX = new THREE.Vector3(1, 0, 0); // X 轴方向
+        //         var directionY = new THREE.Vector3(0, 1, 0); // Y 轴方向
+        //         var directionZ = new THREE.Vector3(0, 0, 1); // Z 轴方向
+
+        //         // 使用这个中心点作为轴线的起点
+        //         var axesInfo = [
+        //             { color: "#ff0000", direction: directionX, length: axisLength, name: 'axisX' },
+        //             { color: "#00ff00", direction: directionY, length: axisLength, name: 'axisY' },
+        //             { color: "#0000ff", direction: directionZ, length: axisLength, name: 'axisZ' }
+        //         ];
+
+        //         axesInfo.forEach(function(info) {
+        //             // 创建轴线的起点和终点
+        //             var points = [center.clone()];
+        //             var end = center.clone().addScaledVector(info.direction, info.length / 2); // 使用轴线的一半长度
+        //             points.push(end);
+
+        //             // 创建几何和材质
+        //             var geometry = new THREE.BufferGeometry().setFromPoints(points);
+        //             var material = new THREE.LineBasicMaterial({ color: info.color });
+        //             var axis = new THREE.Line(geometry, material);
+        //             axis.name = info.name;
+
+        //             // 移除现有的轴线
+        //             var existingAxis = scene.getObjectByName(info.name);
+        //             if (existingAxis) {
+        //                 scene.remove(existingAxis);
+        //             }
+
+        //             // 添加新的轴线到场景
+        //             scene.add(axis);
+        //         });
+        //     }
+        // }
+
+        
+ 
 
         // 添加軸線 (所有邊)
         function createOrUpdateAxes(numX, numY, numZ, cubeSizeX, cubeSizeY, cubeSizeZ) {
@@ -2271,9 +2473,15 @@
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
                 rpPalette = "GAP_Rainbow";
-                $("#colorforXproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Rainbow']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 3;
+
+                // 計算最大值和最小值，並四捨五入到整數位
+                var maxProxX = Math.round(Math.max(...rowProxData1D));
+                var minProxX = Math.round(Math.min(...rowProxData1D));
             }
             else if(this.value == "pearson_correlation"){
                 var rowProxData1D = runProximity(1, 0, 0, 0);
@@ -2286,9 +2494,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxX = 1;
+                var minProxX = -1;
             }
             else if(this.value == "kendalls_tau"){
                 var rowProxData1D = runProximity(2, 0, 0, 0);
@@ -2301,9 +2515,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxX = 1;
+                var minProxX = -1;
             }
             else if(this.value == "spearman_rank"){
                 var rowProxData1D = runProximity(3, 0, 0, 0);
@@ -2316,9 +2536,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxX = 1;
+                var minProxX = -1;
             }
             else if(this.value == "atan_correlation"){
                 var rowProxData1D = runProximity(4, 0, 0, 0);
@@ -2331,9 +2557,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxX = 1;
+                var minProxX = -1;
             }
             else if(this.value == "city_block"){
                 var rowProxData1D = runProximity(5, 0, 0, 0);
@@ -2346,9 +2578,15 @@
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
                 rpPalette = "GAP_Rainbow";
-                $("#colorforXproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Rainbow']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 3;
+
+                // 計算最大值和最小值，並四捨五入到整數位
+                var maxProxX = Math.round(Math.max(...rowProxData1D));
+                var minProxX = Math.round(Math.min(...rowProxData1D));
             }
             else if(this.value == "abs_pearson_correlation"){
                 var rowProxData1D = runProximity(6, 0, 0, 0);
@@ -2361,9 +2599,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforXproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforXproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforXproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxX = 1;
+                var minProxX = -1;
             }
 
             for(let i = 0; i < numX; i++) {
@@ -2374,10 +2618,6 @@
 
             // console.log(rowProxData1D);
             // console.log('rowProxDataX', rowProxDataX);
-
-            // 計算最大值和最小值，並四捨五入到整數位
-            const maxProxX = Math.round(Math.max(...rowProxData1D));
-            const minProxX = Math.round(Math.min(...rowProxData1D));
 
             // console.log('最大值:', maxProxX);
             // console.log('最小值:', minProxX);
@@ -2462,9 +2702,15 @@
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
                 rpPalette = "GAP_Rainbow";
-                $("#colorforYproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Rainbow']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 3;
+
+                // 計算最大值和最小值，並四捨五入到整數位
+                var maxProxY = Math.round(Math.max(...rowProxData1D));
+                var minProxY = Math.round(Math.min(...rowProxData1D));
             }
             else if(this.value == "pearson_correlation"){
                 var rowProxData1D = runProximity(1, 0, 0, 1);
@@ -2477,9 +2723,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxY = 1;
+                var minProxY = -1;
             }
             else if(this.value == "kendalls_tau"){
                 var rowProxData1D = runProximity(2, 0, 0, 1);
@@ -2492,24 +2744,36 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxY = 1;
+                var minProxY = -1;
             }
             else if(this.value == "spearman_rank"){
                 var rowProxData1D = runProximity(3, 0, 0, 1);
 
                 //var windowID = `window${this.value}forY`;
-                var windowID = `windowProxforY`;v
+                var windowID = `windowProxforY`;
 
                 var title = `${this.value} of Y-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxY = 1;
+                var minProxY = -1;
             }
             else if(this.value == "atan_correlation"){
                 var rowProxData1D = runProximity(4, 0, 0, 1);
@@ -2522,9 +2786,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxY = 1;
+                var minProxY = -1;
             }
             else if(this.value == "city_block"){
                 var rowProxData1D = runProximity(5, 0, 0, 1);
@@ -2537,9 +2807,15 @@
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
                 rpPalette = "GAP_Rainbow";
-                $("#colorforYproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Rainbow']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 3;
+
+                // 計算最大值和最小值，並四捨五入到整數位
+                var maxProxY = Math.round(Math.max(...rowProxData1D));
+                var minProxY = Math.round(Math.min(...rowProxData1D));
             }
             else if(this.value == "abs_pearson_correlation"){
                 var rowProxData1D = runProximity(6, 0, 0, 1);
@@ -2552,9 +2828,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforYproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforYproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforYproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxY = 1;
+                var minProxY = -1;
             }
 
             for(let i = 0; i < numY; i++) {
@@ -2562,10 +2844,6 @@
                     rowProxDataY[i][j] = rowProxData1D[i*numY+j];
                 }
             }
-
-            // 計算最大值和最小值，並四捨五入到整數位
-            const maxProxY = Math.round(Math.max(...rowProxData1D));
-            const minProxY = Math.round(Math.min(...rowProxData1D));
 
             if (d3.select("#"+windowID).empty()) {
                 gapY = new GAP();
@@ -2643,9 +2921,15 @@
                 var colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
                 rpPalette = "GAP_Rainbow";
-                $("#colorforZproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Rainbow']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 3;
+
+                // 計算最大值和最小值，並四捨五入到整數位
+                var maxProxZ = Math.round(Math.max(...rowProxData1D));
+                var minProxZ = Math.round(Math.min(...rowProxData1D));
             }
             else if(this.value == "pearson_correlation"){
                 var rowProxData1D = runProximity(1, 0, 0, 2);
@@ -2658,9 +2942,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxZ = 1;
+                var minProxZ = -1;
             }
             else if(this.value == "kendalls_tau"){
                 var rowProxData1D = runProximity(2, 0, 0, 2);
@@ -2673,9 +2963,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxZ = 1;
+                var minProxZ = -1;
             }
             else if(this.value == "spearman_rank"){
                 var rowProxData1D = runProximity(3, 0, 0, 2);
@@ -2688,9 +2984,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxZ = 1;
+                var minProxZ = -1;
             }
             else if(this.value == "atan_correlation"){
                 var rowProxData1D = runProximity(4, 0, 0, 2);
@@ -2703,9 +3005,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxZ = 1;
+                var minProxZ = -1;
             }
             else if(this.value == "city_block"){
                 var rowProxData1D = runProximity(5, 0, 0, 2);
@@ -2718,9 +3026,15 @@
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
                 rpPalette = "GAP_Rainbow";
-                $("#colorforZproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Rainbow']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Rainbow']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = false;
                 var row_Scale_id = 3;
+
+                // 計算最大值和最小值，並四捨五入到整數位
+                var maxProxZ = Math.round(Math.max(...rowProxData1D));
+                var minProxZ = Math.round(Math.min(...rowProxData1D));
             }
             else if(this.value == "abs_pearson_correlation"){
                 var rowProxData1D = runProximity(6, 0, 0, 0);
@@ -2733,9 +3047,15 @@
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
                 rpPalette = "GAP_Blue_White_Red";
-                $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                // $("#colorforZproximity option[value='GAP_Blue_White_Red']").attr('selected','selected');
+                $("#colorforZproximity option[value='GAP_Blue_White_Red']").prop('selected', true);
+                $("#colorforZproximity").change();
                 var rowIsSimilarity = true;
                 var row_Scale_id = 1;
+
+                // 設定最大值為 1，最小值為 -1
+                var maxProxZ = 1;
+                var minProxZ = -1;
             }
 
             for(let i = 0; i < numZ; i++) {
@@ -2743,10 +3063,6 @@
                     rowProxDataZ[i][j] = rowProxData1D[i*numZ+j];
                 }
             }
-
-            // 計算最大值和最小值，並四捨五入到整數位
-            const maxProxZ = Math.round(Math.max(...rowProxData1D));
-            const minProxZ = Math.round(Math.min(...rowProxData1D));
 
             if (d3.select("#"+windowID).empty()) {
                 gapZ = new GAP();
@@ -2806,7 +3122,7 @@
         });
 
         // 建立浮動視窗
-        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height) { // 'colorforXproximity', 'reverseColorforX'
+        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height) {
             // 建立浮動視窗元素
             const floatWindow = document.createElement('div');
             floatWindow.classList.add('floating-window');
@@ -2959,6 +3275,7 @@
             // 將標籤和 colorbar 加入 colorbarContainer
             colorbarContainer.appendChild(maxLabel);
             colorbarContainer.appendChild(colorbarElement);
+            // colorbarContainer.appendChild(midLabel);
             colorbarContainer.appendChild(minLabel);
 
             // 將內容容器新增到浮動視窗中
@@ -3511,7 +3828,7 @@
                             categoryConditions.add(categoryKey);
                             window[containerId + 'ChartInstance'].data.datasets[0].backgroundColor[i] = selectedColor; // 將顏色變為選取的顏色
                         }
-                        // console.log(categoryConditions);
+                        console.log(categoryConditions);
                     }
                     window[containerId + 'ChartInstance'].update();
 
@@ -3520,20 +3837,6 @@
                 }
             });
             window[containerId + 'ChartInstance'];
-        }
-
-        // 根據點擊的 bar 將條件添加至 categoryConditions
-        function filterCubesbyCategoriesaddinselectedCategories(clickedLabel, axis) {
-            let categoryKey = `${axis}:${clickedLabel}`; // 建立一個唯一標識該類別的鍵
-
-            if (categoryConditions.has(categoryKey)) {
-                // 如果再次點擊了相同的類別，從集合中移除該類別
-                categoryConditions.delete(categoryKey);
-            } else {
-                // 否則，新增該類別到集合中
-                categoryConditions.add(categoryKey);
-            }
-            console.log(categoryConditions);
         }
 
         // 計算 Histogram 用之 bins, counts
@@ -3731,21 +4034,51 @@
                                     'Z': Zindices[k] === selectedIndex
                                 }[axis];
                             });
+
+                            // 移除浮動視窗及其包含的表格
+                            const existingWindow = document.getElementById('filtersamplelist');
+
+                            if (existingWindow) {
+                                existingWindow.remove();
+                            }
                         } else if (selectionType === "Intersection") {
-                            matchesCategoryConditions = [...categoryConditions].every(condition => {
-                                const [axis, label] = condition.split(":");
-                                const selectedIndex = {
-                                    'X': uniqueX.indexOf(label),
-                                    'Y': uniqueY.indexOf(label),
-                                    'Z': uniqueZ.indexOf(label)
-                                }[axis];
-                                return {
-                                    'X': Xindices[i] === selectedIndex,
-                                    'Y': Yindices[j] === selectedIndex,
-                                    'Z': Zindices[k] === selectedIndex
-                                }[axis];
-                            });
+                            // 將 categoryConditions 轉換為 Array 以使用 filter
+                            const categoryConditionsArray = Array.from(categoryConditions);
+
+                            // 對於每個軸分開處理
+                            const xConditions = categoryConditionsArray.filter(condition => condition.startsWith('X:')).map(condition => condition.split(':')[1]);
+                            const yConditions = categoryConditionsArray.filter(condition => condition.startsWith('Y:')).map(condition => condition.split(':')[1]);
+                            const zConditions = categoryConditionsArray.filter(condition => condition.startsWith('Z:')).map(condition => condition.split(':')[1]);
+
+                            // 判斷 x, y, z 軸的條件是否符合
+                            const matchX = xConditions.length === 0 || xConditions.some(label => Xindices[i] === uniqueX.indexOf(label));
+                            const matchY = yConditions.length === 0 || yConditions.some(label => Yindices[j] === uniqueY.indexOf(label));
+                            const matchZ = zConditions.length === 0 || zConditions.some(label => Zindices[k] === uniqueZ.indexOf(label));
+
+                            // 如果 x, y, z 軸條件都滿足則匹配
+                            matchesCategoryConditions = matchX && matchY && matchZ;
+
+                            // 呼叫函數創建變數列表
+                            transferPositionsToDatatable();
                         }
+                        // else if (selectionType === "Intersection") {
+                        //     matchesCategoryConditions = [...categoryConditions].every(condition => {
+                        //         const [axis, label] = condition.split(":");
+                        //         const selectedIndex = {
+                        //             'X': uniqueX.indexOf(label),
+                        //             'Y': uniqueY.indexOf(label),
+                        //             'Z': uniqueZ.indexOf(label)
+                        //         }[axis];
+                        //         return {
+                        //             'X': Xindices[i] === selectedIndex,
+                        //             'Y': Yindices[j] === selectedIndex,
+                        //             'Z': Zindices[k] === selectedIndex
+                        //         }[axis];
+                        //     });
+
+                        //     // 呼叫函數創建變數列表
+                        //     transferPositionsToDatatable();
+                        // }
                     } else if (rangeConditions.size > 0 && categoryConditions.size == 0) { // 檢查數值範圍條件
                         matchesRangeConditions = [...rangeConditions].some(condition => {
                             const [minValue, maxValue] = condition.split("-").map(Number);
@@ -3769,6 +4102,18 @@
                             const [minValue, maxValue] = condition.split("-").map(Number);
                             return cubeValue >= minValue && cubeValue <= maxValue;
                         });
+
+                        // 重置 UnionorIntersection 下拉式選單回到預設選項 (Union)
+                        document.getElementById('UnionorIntersection').selectedIndex = 0;
+
+                        selectionType = 'Union';
+
+                        // 移除浮動視窗及其包含的表格
+                        const existingWindow = document.getElementById('filtersamplelist');
+
+                        if (existingWindow) {
+                            existingWindow.remove();
+                        }
                     }
                     
                     var value = cube.userData.value; // 立方體的值
@@ -3828,9 +4173,6 @@
 
             // // 查看位置訊息
             // console.log(filteredPositions);
-
-            // 呼叫函數創建變數列表
-            transferPositionsToDatatable();
         }
 
         // 創建變數列表
@@ -3912,7 +4254,7 @@
                 table.appendChild(thead);
 
                 // 建立表格主體
-                const tbody = document.createElement('tbody');
+                tbody = document.createElement('tbody');
 
                 // // 查看結合後之訊息
                 // console.log('filteredColors', filteredColors);
@@ -3966,7 +4308,9 @@
 
                     // 將 RGB 顏色轉換為 rgba 顏色 (新增透明度)
                     const rgbaColor = color.replace('rgb', 'rgba').replace(')', `,${.3})`);
-                    cellValue.style.backgroundColor = rgbaColor; // 設定 cell 背景色
+
+                    // 設定初始背景顏色
+                    cellValue.style.backgroundColor = rgbaColor;
 
                     row.appendChild(cellValue);
 
@@ -3977,7 +4321,159 @@
             }
         }
 
-        // 按下 resetToOriginalCube 按鈕時，將 cube 回復原狀
+        //   // 創建變數列表
+        //   function transferPositionsToDatatable() {
+        //     // 查找是否已經存在浮動視窗
+        //     const existingWindow = document.getElementById('filtersamplelist');
+
+        //     // 清空目前 filteredColors
+        //     filteredColors = [];
+
+        //     // 將 currentCubeColors 轉換為一個位置到顏色的映射
+        //     const colorMap = {};
+        //     currentCubeColors.forEach(({ position, color }) => {
+        //         const key = `${position.i},${position.j},${position.k}`;
+        //         colorMap[key] = color;
+        //     });
+
+        //     // 將 filteredPositions 和 colorMap 結合
+        //     filteredColors = filteredPositions.map(({ i, j, k }) => {
+        //         const key = `${i},${j},${k}`;
+        //         return {
+        //             position: { i, j, k },
+        //             color: colorMap[key] || 'rgba(255,255,255,0)' // 如果沒有顏色資料則使用預設顏色
+        //         };
+        //     });
+
+        //     // 檢查 filteredColors 是否為空
+        //     if (filteredColors.length === 0) {
+        //         // 如果 filteredColors 為空
+        //         if (existingWindow) {
+        //             // 如果已有浮動視窗，則移除它
+        //             existingWindow.remove();
+        //         }
+        //         // 否則不需要建立任何浮動視窗，函數結束
+        //         return;
+        //     }
+            
+        //     // 只有在 selectionType === "Intersection" 時才繪製變數列表
+        //     if (selectionType !== "Intersection") {
+        //         // 如果不是 Intersection，則不進行繪製，直接返回
+        //         return;
+        //     }
+
+        //     // 如果 filteredColors 不為空
+        //     let table;
+        
+        //     // 如果 filteredColors 不為空，且如果浮動視窗已存在，直接更新內容；否則建立新視窗
+        //     if (existingWindow) {
+        //         // 找到現有視窗中的表格容器
+        //         table = existingWindow.querySelector('table.data-table');
+        //         table.innerHTML = ''; // 清空舊的表格內容
+        //     } else {
+        //         // 建立一個表格元素
+        //         table = document.createElement('table');
+        //         table.classList.add('data-table'); // 新增一個類別以便於樣式調整
+
+        //         // 新增邊框樣式
+        //         table.style.borderCollapse = 'collapse'; // 確保邊框合併
+        //         table.style.width = 'calc(100% - 40px)'; // 表格寬度，減去左右邊距
+        //         table.style.margin = '20px auto'; // 上下邊距 20px，左右置中
+
+        //         // 使用 createFloatingWindow_samplelist 建立一個浮動視窗來顯示表格
+        //         createFloatingWindow_samplelist('filtersamplelist', 'Filtered Sample Table', table, 'auto', 75, 110, 350, 350);
+        //     }
+
+        //     // 建立表頭
+        //     const thead = document.createElement('thead');
+        //     const headerRow = document.createElement('tr');
+
+        //     // 設定表頭的欄位名稱
+        //     [fieldX, fieldY, fieldZ, selectedValueField].forEach(fieldName => {
+        //         const th = document.createElement('th');
+        //         th.textContent = fieldName;
+
+        //         // 新增表頭 cell 的邊框樣式
+        //         th.style.border = '1px solid #ddd'; // 設定邊框樣式
+        //         th.style.padding = '8px'; // 內邊距
+        //         th.style.backgroundColor = '#f2f2f2'; // 表頭背景色
+        //         th.style.textAlign = 'left'; // cell 內容左對齊
+        //         th.style.fontSize = '13px'; // 表頭字體大小
+
+        //         headerRow.appendChild(th);
+        //     });
+
+        //     thead.appendChild(headerRow);
+        //     table.appendChild(thead);
+
+        //     // 建立表格主體
+        //     tbody = document.createElement('tbody');
+
+        //     // // 查看結合後之訊息
+        //     // console.log('filteredColors', filteredColors);
+
+        //     // 遍歷 filteredColors
+        //     filteredColors.forEach(({ position, color }) => {
+        //         const { i, j, k } = position;
+
+        //         // 取得 data_array 中的值
+        //         const dataValue = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
+
+        //         // 取得各軸類別的值
+        //         const xLabel = uniqueX[Xindices[i]];
+        //         const yLabel = uniqueY[Yindices[j]];
+        //         const zLabel = uniqueZ[Zindices[k]];
+
+        //         // 建立表格 row
+        //         const row = document.createElement('tr');
+
+        //         // 建立並新增 cell (新增儲存格邊框樣式)
+        //         const cellX = document.createElement('td');
+        //         cellX.textContent = xLabel;
+        //         cellX.style.border = '1px solid #ddd'; // cell 邊框
+        //         cellX.style.padding = '8px'; // 內邊距
+        //         cellX.style.textAlign = 'left'; // cell 內容左對齊
+        //         cellX.style.fontSize = '13px'; // 字體大小
+        //         row.appendChild(cellX);
+
+        //         const cellY = document.createElement('td');
+        //         cellY.textContent = yLabel;
+        //         cellY.style.border = '1px solid #ddd'; // cell 邊框
+        //         cellY.style.padding = '8px'; // 內邊距
+        //         cellY.style.textAlign = 'left'; // cell 內容左對齊
+        //         cellY.style.fontSize = '13px'; // 字體大小
+        //         row.appendChild(cellY);
+
+        //         const cellZ = document.createElement('td');
+        //         cellZ.textContent = zLabel;
+        //         cellZ.style.border = '1px solid #ddd'; // cell 邊框
+        //         cellZ.style.padding = '8px'; // 內邊距
+        //         cellZ.style.textAlign = 'left'; // cell 內容左對齊
+        //         cellZ.style.fontSize = '13px'; // 字體大小
+        //         row.appendChild(cellZ);
+
+        //         const cellValue = document.createElement('td');
+        //         cellValue.textContent = dataValue;
+        //         cellValue.style.border = '1px solid #ddd'; // cell 邊框
+        //         cellValue.style.padding = '8px'; // 內邊距
+        //         cellValue.style.textAlign = 'left'; // cell 內容左對齊
+        //         cellValue.style.fontSize = '13px'; // 字體大小
+
+        //         // 將 RGB 顏色轉換為 rgba 顏色 (新增透明度)
+        //         const rgbaColor = color.replace('rgb', 'rgba').replace(')', `,${.3})`);
+
+        //         // 設定初始背景顏色
+        //         cellValue.style.backgroundColor = rgbaColor;
+
+        //         row.appendChild(cellValue);
+
+        //         // 將 row 新增至表格主體
+        //         tbody.appendChild(row);
+        //     });
+        //     table.appendChild(tbody);
+        // }
+
+        // 按下 Reset Filter Setting 按鈕時，將 cube 回復原狀
         document.getElementById('resetToOriginalCube').addEventListener('click', function() {
             for (let i = 0; i < Xindices.length; i++) {
                 for (let j = 0; j < Yindices.length; j++) {
@@ -4003,7 +4499,54 @@
                 }
             }
             clearbar();
+
             applyChangesBasedOnNewIndices();
+
+            // 重置 calculationType 下拉式選單回到預設選項 (sum)
+            document.getElementById('calculationType').selectedIndex = 0;
+
+            calculationType = 'sum';
+
+            // 根據 calculationType 重新繪圖
+            let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType);
+            updateBarChart('chartX', chartDataX, 'X');
+
+            let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType);
+            updateBarChart('chartY', chartDataY, 'Y');
+
+            let chartDataZ = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Z', calculationType);
+            updateBarChart('chartZ', chartDataZ, 'Z');
+            
+            // 重置 UnionorIntersection 下拉式選單回到預設選項 (Union)
+            document.getElementById('UnionorIntersection').selectedIndex = 0;
+
+            selectionType = 'Union';
+
+            // 重置滑動條到原始狀態 (Restricted Display)
+            $("#double-slider").slider("values", [globalMin, globalMax]);
+
+            // 更新滑動條上顯示的標籤 (Restricted Display)
+            $("#double-slider .ui-slider-handle").eq(0).find(".ui-slider-value").text(globalMin.toFixed(1));
+            $("#double-slider .ui-slider-handle").eq(1).find(".ui-slider-value").text(globalMax.toFixed(1));
+
+            // 更新全域變數
+            globalSliderMinforcolor = globalMin;
+            globalSliderMaxforcolor = globalMax;
+
+            // 重置滑動條到原始狀態 (Filter Cubes Value)
+            $("#double-slider-cubesvalue").slider("values", [globalMin, globalMax]);
+
+            // 更新滑動條上顯示的標籤 (Filter Cubes Value)
+            $("#double-slider-cubesvalue .ui-slider-handle").eq(0).find(".ui-slider-value").text(globalMin.toFixed(1));
+            $("#double-slider-cubesvalue .ui-slider-handle").eq(1).find(".ui-slider-value").text(globalMax.toFixed(1));
+
+            // 更新全域變數
+            globalSliderMin = globalMin;
+            globalSliderMax = globalMax;
+
+            // 重置 Filter Cubes Opacity 滑動條和顯示的值
+            document.getElementById('filteropacityRange').value = 0;
+            document.getElementById('filteropacityValue').textContent = 0;
 
             // 自動隱藏表格
             const existingWindow = document.getElementById('filtersamplelist');
@@ -4140,6 +4683,21 @@
             }
         }
 
+        // 檢查是否有 singleSelect 的選項被清除，如果有移除其反白效果
+        function clearSingleSelectHighlight() {
+            var singleSelect = document.getElementById('singleSelect');
+            if (singleSelect.value) {
+                // 清空 singleSelect 的值
+                singleSelect.value = null;
+                // 調用 highlightColumn 移除反白效果
+                highlightColumn('singleSelect', '', 'highlight-color-4');
+                
+                // 同時更新最小最大值顯示為預設或空白
+                document.getElementById('valuemin').textContent = '';
+                document.getElementById('valuemax').textContent = '';
+            }
+        }
+
         // 監聽 discr、conti 之 6 個下拉式選單
         document.addEventListener('DOMContentLoaded', function() {
             // 為每個下拉式選單設定事件監聽器
@@ -4258,8 +4816,7 @@
                             fieldX = this.value;
                             uniqueX = getUniqueColumnValues(parsedData, fieldX);
                             document.getElementById('Xnum').textContent = uniqueX.length; // 在資料小面板中顯示 uniqueX, uniqueY, uniqueZ
-
-                            var minMaxX = findMinMax(parsedData, this.value);
+                            clearSingleSelectHighlight(); // 檢查是否有 singleSelect 的選項被清除，移除其反白效果
                         });
                         document.getElementById('multiSelectY').addEventListener('change', function() {
                             updateSelectOptions('singleSelect', 'multiSelectX', 'multiSelectY', 'multiSelectZ', columnNames);
@@ -4267,6 +4824,7 @@
                             fieldY = this.value;
                             uniqueY = getUniqueColumnValues(parsedData, fieldY);
                             document.getElementById('Ynum').textContent = uniqueY.length;
+                            clearSingleSelectHighlight();
                         });
                         document.getElementById('multiSelectZ').addEventListener('change', function() {
                             updateSelectOptions('singleSelect', 'multiSelectX', 'multiSelectY', 'multiSelectZ', columnNames);
@@ -4274,6 +4832,7 @@
                             fieldZ = this.value;
                             uniqueZ = getUniqueColumnValues(parsedData, fieldZ);
                             document.getElementById('Znum').textContent = uniqueZ.length;
+                            clearSingleSelectHighlight();
                         });
                         document.getElementById('singleSelect').addEventListener('change', function() {
                             highlightColumn('singleSelect', this.value, 'highlight-color-4');
@@ -4296,7 +4855,7 @@
                 getSelectedOptions('multiSelectZ'),
             ];
             selectedValueField = document.getElementById('singleSelect').value;
-
+        
             // 初始化 cubeSizeX, cubeSizeY, cubeSizeZ 為 1 或使用者指定的值
             cubeSizeX = parseFloat(document.getElementById('cubeSizeX').value) || 1;
             cubeSizeY = parseFloat(document.getElementById('cubeSizeY').value) || 1;
@@ -4308,9 +4867,10 @@
 
             clearAllSceneObjects(); // 清除場景中的所有對象 (for 選擇不同映射 column)
             clearAllFloatingWindows(); // 清除所有浮動視窗
+
             processDataAndPlot(parsedData, selectedFields, selectedValueField, cubeSizeX, cubeSizeY, cubeSizeZ);
 
-            let calculationType = 'sum'; // 預設值
+            // let calculationType = 'sum'; // 預設值
 
             // 先利用預設值計算並創建圖表
             let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType); // 為 X 軸計算資料
@@ -4354,7 +4914,7 @@
 
             // 取得計算類型 (sum 或 mean)
             document.getElementById('calculationType').addEventListener('change', function() {
-                const calculationType = this.value;
+                calculationType = this.value;
 
                 let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType); // 為 X 軸計算資料
                 let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType); // 為 Y 軸計算資料
@@ -4417,9 +4977,12 @@
             var min = minMax.min;
             var max = minMax.max;
 
+            // // 將 data_array 展開為一維數組
+            // const flattenedArray = data_array.flat(Infinity); // Infinity 確保無論幾維都能展開為一維
+
             // console.log(minMax);
 
-            // 在此函數內計算並存儲全域最小值和最大值
+            // 存儲全域最小值和最大值
             globalMin = minMax.min;
             globalMax = minMax.max;
 
@@ -4434,6 +4997,9 @@
             var handles = $("#double-slider .ui-slider-handle");
             handles.eq(0).find(".ui-slider-value").text(globalMin.toFixed(2));
             handles.eq(1).find(".ui-slider-value").text(globalMax.toFixed(2));
+
+            globalSliderMinforcolor = globalMin;
+            globalSliderMaxforcolor = globalMax;
 
             // 更新滑動條的最小值和最大值
             $("#double-slider-cubesvalue").slider("option", "min", globalMin);
@@ -4692,10 +5258,7 @@
         .navbar-brand div {
             display: inline-block; /* 確保元素以內聯塊的形式顯示 */
             vertical-align: middle; /* 垂直居中 */
-        }
-
-        .side-nav-hide-on-closed {
-            display: none; /* 預設隱藏 */
+            margin-left: 6px;
         }
 
         /* 如果需要，根據側邊導航的狀態調整顯示 */
@@ -4718,6 +5281,11 @@
         .side-nav-show-on-closed {
             width: 20px; /* 使用百分比，如100% */
             height: auto;
+        }
+
+        /* 在關閉側邊選單的時候，不要顯示 fileInputLabel (Import Data) */
+        .side-nav-closed #fileInputLabel {
+            display: none;
         }
 
         #xAxisCate {
@@ -4933,6 +5501,14 @@
             padding: 0px;
 
         }
+
+        /* .reset-wholeCube-button {
+            cursor: pointer;
+            border: none; /* 移除邊框 */
+            /* background-color: transparent; /* 背景透明 */
+            /* padding: 0px;
+            margin-top: 7px;
+        } */
 
         #sortXOrderSelect {
             width: 140px; /* Adjust the width as needed */
@@ -5586,7 +6162,7 @@
             <!-- Logo For Desktop View -->
             <a class="navbar-brand navbar-brand-desktop" href="index.html">
                 <!-- <img class="side-nav-show-on-closed" src="img/gap.gif"> -->
-                <img class="side-nav-show-on-closed" src="img/cube3.ico">
+                <img class="side-nav-show-on-closed" src="img/cube.png"> <!-- cube3.ico cube4.png -->
                 <div class="side-nav-hide-on-closed">3D GAP Online <sup>BETA</sup></div>
             </a>
             <!-- End Logo For Desktop View -->
@@ -5917,14 +6493,15 @@
                     <button id="cancelButton">Cancel</button>
 
                 </div>
+
                 <button id="fileButton" class="file-button">
                     <i class="fa-solid fa-upload"></i>
                 </button>
-
                 <!-- 隱藏原始的檔案輸入 -->
                 <input type="file" id="fileInput" style="display: none;" />
                 <!-- 顯示一個自訂的標籤或按鈕 -->
                 <label for="fileInput" id="fileInputLabel" style="cursor: pointer;" class="side-nav-fadeout-on-closed media-body">Import Data</label>
+
             </li>
             <!-- End upload data -->
 
@@ -5961,7 +6538,7 @@
                             <button id="resetToOriginalCube" class="reset-Cube-button">
                                 <i class="fa-solid fa-arrow-rotate-left"></i>
                             </button>
-                            <span>Reset to Original Cube</span>
+                            <span>Reset Filter Setting</span>
                         </div>
                         <label for="double-slider">Restricted Display</label>
                         <div>
@@ -6477,6 +7054,11 @@
                             <i class="fa-solid fa-camera-rotate"></i>
                         </button>
                         <span>Reset Camera to Default</span>
+                        <!-- <br>
+                        <button id="resetCube" class="reset-wholeCube-button">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                        <span>Reset To Original Cube</span> -->
                         <br>
                         <div class="radiowhite-background">
                             <form id="PeorOrCamera">
@@ -6486,11 +7068,11 @@
                                 <label for="OrthographicCamera">Orthographic Camera</label><br>
                             </form>
                         </div>
+                        
                         <label for="fontSize">Font Size</label>
                         <br>
                         <input type="range" id="fontSize" min="1" max="100" value="50" step="1">
                         <span id="fontSizeValue">50</span>
-                        
                     </li>
                 </ul>
                 <!-- End subInteractive -->
