@@ -50,6 +50,8 @@
 
 
     <script>
+        var isDataLoaded = false; // 初始時 資料未載入
+
         // 全域解析 (上傳) 之資料
         var parsedData;
 
@@ -58,6 +60,12 @@
 
         // 全域變數來儲存目前的透明度值
         var currentOpacity = 0.2; // 初始值為 0.2
+
+        // 全域變數 for color scheme
+        var currentColorScheme;
+
+        // 全域變數 for reverse color
+        var reverse;
         
         var globalMin = 0; // 全域最小值
         var globalMax = 100; // 全域最大值
@@ -128,7 +136,9 @@
 
         let allowUpdateSizes = true; // 預設允許修改邊長
 
-        let updateAxes = true; // 預設為 true 表示允許更新軸線與軸標籤
+        let allowUpdatehollowSizes = true; // 預設允許分開小立方體
+
+        // let updateAxes = true; // 預設為 true 表示允許更新軸線與軸標籤
 
         // 儲存立方體的透明度狀態 (與 cubes 結構相同)
         let cubesOpacity = [];
@@ -176,7 +186,7 @@
         
         var distance;
 
-        // var newSize = 1;
+        var newSize = 1;
 
         var minMaxByUniqueX = {};
         var minMaxByUniqueY = {};
@@ -196,6 +206,14 @@
         var now_Xflip_side = "";
         var now_Yflip_side = "";
         var now_Zflip_side = "";
+
+        var SliceRange;
+
+        var pancheck;
+
+        var tooltipEnabled;
+
+        var selectedcamera;
     </script>
 
     <script type="module">
@@ -235,13 +253,10 @@
                     // 每次滑動時更新顏色
                     updateCubeColorsBasedOnSlider(globalSliderMinforcolor, globalSliderMaxforcolor);
 
-                    // 每次滑動時更新表格單元格背景色
-                    updateCellColorsBasedOnSlider(globalSliderMinforcolor, globalSliderMaxforcolor);
-
                     transferPositionsToDatatable();
 
-                    // // 重置 DisplayCondition 下拉式選單回到預設選項 (Range: Cube)
-                    // displayCondition = document.getElementById('DisplayCondition').selectedIndex = 0;
+                    // 每次滑動時更新表格單元格背景色
+                    updateCellColorsBasedOnSlider(globalSliderMinforcolor, globalSliderMaxforcolor);
                 }
             });
         });
@@ -251,7 +266,20 @@
             // 重置 DisplayCondition 下拉式選單回到預設選項 (Range: Cube)
             displayCondition = document.getElementById('DisplayCondition').selectedIndex = 0;
 
-            var reverseColors = document.getElementById('reverseColors').checked; // 取得 reverseColors 的狀態
+            // for 禁止使用 and 禁止標誌
+            var displayConditionforban = document.getElementById('DisplayCondition');
+
+            if (sliderMin != globalMin || sliderMax != globalMax) {
+                // 禁止使用 displayCondition 並顯示禁止標誌
+                displayConditionforban.disabled = true;
+                displayConditionforban.style.cursor = 'not-allowed';
+            } else {
+                // 恢復使用 displayCondition 並顯示正常標誌
+                displayConditionforban.disabled = false;
+                displayConditionforban.style.cursor = 'auto';
+            }
+            
+            reverse = document.getElementById('reverseColors').checked; // 取得 reverseColors 的狀態
 
             // 遍歷現有的 cubes 並更新顏色
             for (let i = 0; i < Xindices.length; i++) {
@@ -266,10 +294,10 @@
 
                             if (value !== null) {
                                 // 獲取當前選擇的顏色方案
-                                var currentColorScheme = cube.userData.colorScheme || document.getElementById('colorSchemeSelect').value;
+                                currentColorScheme = cube.userData.colorScheme || document.getElementById('colorSchemeSelect').value;
                                 var colors = colorSchemes[currentColorScheme]; // 根據色彩方案取得顏色數組
-                                var minColor = reverseColors ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
-                                var maxColor = reverseColors ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
+                                var minColor = reverse ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
+                                var maxColor = reverse ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
                                 let color;
 
                                 // 根據滑動條更新顏色
@@ -306,7 +334,7 @@
 
         // 根據滑動條的值更新表格單元格背景色
         function updateCellColorsBasedOnSlider(sliderMin, sliderMax) {
-            var reverseColors = document.getElementById('reverseColors').checked; // 取得 reverseColors 的狀態
+            reverse = document.getElementById('reverseColors').checked; // 取得 reverseColors 的狀態
 
             if (!tbody) {
                 return; // 停止執行
@@ -324,8 +352,8 @@
                 // 取得目前選擇的顏色方案
                 var colorScheme = document.getElementById('colorSchemeSelect').value;
                 var colors = colorSchemes[colorScheme]; // 根據色彩方案取得顏色數組
-                var minColor = reverseColors ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
-                var maxColor = reverseColors ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
+                var minColor = reverse ? colors[colors.length - 1] : colors[0]; // 考慮反轉的最小顏色
+                var maxColor = reverse ? colors[0] : colors[colors.length - 1]; // 考慮反轉的最大顏色
 
                 if (dataValue < sliderMin) {
                     // 值小於滑動條最小值
@@ -466,7 +494,10 @@
 
         // Function to set up the camera based on the selected option
         function setupInitialCamera() {
-            const selectedCamera = document.querySelector('input[name="Camera"]:checked').value;
+            var selectedCamera = document.querySelector('input[name="Camera"]:checked').value;
+
+            // console.log(selectedCamera);
+
             return PeorOrcamera(selectedCamera);
         }
 
@@ -501,7 +532,7 @@
         // 偵測 radio 按鈕的變化
         document.getElementById("PeorOrCamera").addEventListener("change", function(event) {
             // 取得選取的軸
-            let selectedcamera = event.target.value;
+            selectedcamera = event.target.value;
 
             // console.log(selectedcamera);
 
@@ -562,14 +593,16 @@
         }
 
         // 根據所選欄位來填充資料結構
-        function fillDataArray(data, dataArray, X, Y, Z, fieldX, fieldY, fieldZ) {
-            selectedValueField = document.getElementById('singleSelect').value; // 獲取單選下拉式選單中選擇的欄位
+        function fillDataArray(data, dataArray, X, Y, Z, fieldX, fieldY, fieldZ, fieldvalue) {
             data.forEach(function(row) {
                 var i = X.indexOf(row[fieldX]);
                 var j = Y.indexOf(row[fieldY]);
                 var k = Z.indexOf(row[fieldZ]);
+
+                // console.log(i);
+
                 if (i > -1 && j > -1 && k > -1) {
-                    var value = parseFloat(row[selectedValueField]); // 使用所選欄位的值
+                    var value = parseFloat(row[fieldvalue]); // 使用所選欄位的值
                     dataArray[i][j][k] = isNaN(value) ? null : value;
                 }
             });
@@ -581,10 +614,10 @@
             var newOpacity = parseFloat(opacityRange.value);
             document.getElementById('opacityValue').textContent = newOpacity;
 
-            // 更新 filter 掉之 cubes 透明度
-            var filteropacityRange = document.getElementById('filteropacityRange');
-            var filternewOpacity = parseFloat(filteropacityRange.value);
-            document.getElementById('filteropacityValue').textContent = filternewOpacity;
+            // // 更新 filter 掉之 cubes 透明度
+            // var filteropacityRange = document.getElementById('filteropacityRange');
+            // var filternewOpacity = parseFloat(filteropacityRange.value);
+            // document.getElementById('filteropacityValue').textContent = filternewOpacity;
 
             cubes.forEach((cubeRow, i) => {
                 cubeRow.forEach((cubeColumn, j) => {
@@ -600,10 +633,8 @@
                                 //cubesOpacity[i][j][k] = newOpacity; // 追蹤透明度值
                                 if (value < globalSliderMin || value > globalSliderMax) {
                                     // 值不在滑動條選擇的範圍內
-                                    cube.material.opacity = filteropacityValue;
-                                    cubesOpacity[i][j][k] = filteropacityValue; // 追蹤透明度值
-                                    // console.log(cubesOpacity);
-                                    
+                                    cube.material.opacity = 0;
+                                    cubesOpacity[i][j][k] = 0; // 追蹤透明度值
                                 } else if (globalSliderMin <= value <= globalSliderMax) {
                                     // 值在滑動條選擇的範圍內
                                     cube.material.opacity = newOpacity;
@@ -880,7 +911,7 @@
         // 顏色映射函數
         function mapValueTocolorSchemes(schemeName, value, min, max) {
             var colors = colorSchemes[schemeName];
-            var reverse = document.getElementById('reverseColors').checked; // 檢查 checkbox 是否被勾選
+            reverse = document.getElementById('reverseColors').checked; // 檢查 checkbox 是否被勾選
             var normalized = normalize(value, min, max);
             var index = Math.floor(normalized * (colors.length - 1));
 
@@ -907,7 +938,7 @@
 
         // 根據顏色方案獲取漸變樣式的函數
         function getColorGradient(colorScheme, reverseid) {
-            var reverse = document.getElementById(reverseid).checked; // 檢查 checkbox 是否被選中
+            reverse = document.getElementById(reverseid).checked; // 檢查 checkbox 是否被選中
             var direction = reverse ? 'to bottom' : 'to top'; // 根據是否反轉來決定漸變方向
 
             switch (colorScheme) {
@@ -1094,9 +1125,6 @@
         function updateCubeSizesAndPositions() {
             if (!allowUpdateSizes) return; // 如果不允許修改邊長，直接返回
 
-            // 先清除現有的軸線
-            clearAxesLines();
-            
             cubeSizeX = parseFloat(document.getElementById('cubeSizeX').value);
             cubeSizeY = parseFloat(document.getElementById('cubeSizeY').value);
             cubeSizeZ = parseFloat(document.getElementById('cubeSizeZ').value);
@@ -1105,6 +1133,53 @@
             document.getElementById('cubeSizeXValue').textContent = cubeSizeX;
             document.getElementById('cubeSizeYValue').textContent = cubeSizeY;
             document.getElementById('cubeSizeZValue').textContent = cubeSizeZ;
+
+            // ### 禁止分開小立方體
+            if (cubeSizeX == 1 && cubeSizeY == 1 && cubeSizeZ == 1) {
+                allowUpdatehollowSizes = true; // 確保在 cubeSizeX cubeSizeY cubeSizeZ 皆等於 1 時 能分開小立方體
+            } else {
+                allowUpdatehollowSizes = false;
+            }
+
+            // 停用或啟用滑桿
+            hollowSize.disabled = !allowUpdatehollowSizes;
+
+            // 切換禁止鼠標樣式
+            if (allowUpdatehollowSizes) {
+                hollowSize.style.cursor = 'auto';
+            } else {
+                hollowSize.style.cursor = 'not-allowed';
+            }
+
+            // ### 禁止選擇切片
+            // 如果 newSize 不等於 1，禁用 xAxis, yAxis, zAxis 以及 SliceRange
+            if (cubeSizeX != 1 || cubeSizeY != 1 || cubeSizeZ != 1) {
+                document.getElementById('xAxis').disabled = true;
+                document.getElementById('yAxis').disabled = true;
+                document.getElementById('zAxis').disabled = true;
+                document.getElementById('SliceRange').disabled = true;
+
+                // 顯示禁止標誌
+                document.getElementById('xAxis').parentElement.style.cursor = 'not-allowed';
+                document.getElementById('yAxis').parentElement.style.cursor = 'not-allowed';
+                document.getElementById('zAxis').parentElement.style.cursor = 'not-allowed';
+                document.getElementById('SliceRange').style.cursor = 'not-allowed';
+            } else {
+                // 啟用 xAxis, yAxis, zAxis 以及 SliceRange
+                document.getElementById('xAxis').disabled = false;
+                document.getElementById('yAxis').disabled = false;
+                document.getElementById('zAxis').disabled = false;
+                document.getElementById('SliceRange').disabled = false;
+
+                // 恢復正常滑鼠樣式
+                document.getElementById('xAxis').parentElement.style.cursor = 'auto';
+                document.getElementById('yAxis').parentElement.style.cursor = 'auto';
+                document.getElementById('zAxis').parentElement.style.cursor = 'auto';
+                document.getElementById('SliceRange').style.cursor = 'auto';
+            }
+
+            // 先清除現有的軸線
+            clearAxesLines();
 
             for (let i = 0; i < cubes.length; i++) {
                 for (let j = 0; j < cubes[i].length; j++) {
@@ -1512,7 +1587,7 @@
 
                                 if (value !== null) {
                                     // 獲取當前選擇的顏色方案
-                                    var currentColorScheme = document.getElementById('colorSchemeSelect').value;
+                                    currentColorScheme = document.getElementById('colorSchemeSelect').value;
 
                                     // 使用目前類別的最小值和最大值來對應顏色
                                     var color = mapValueToColor(value, currentColorScheme, minMax.min, minMax.max);
@@ -1553,7 +1628,7 @@
                                 let value = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
 
                                 if (value !== null) {
-                                    var currentColorScheme = document.getElementById('colorSchemeSelect').value;
+                                    currentColorScheme = document.getElementById('colorSchemeSelect').value;
                                     var color = mapValueToColor(value, currentColorScheme, minMax.min, minMax.max);
 
                                     // cube.material.opacity = currentOpacity;
@@ -1589,7 +1664,7 @@
                                 let value = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
 
                                 if (value !== null) {
-                                    var currentColorScheme = document.getElementById('colorSchemeSelect').value;
+                                    currentColorScheme = document.getElementById('colorSchemeSelect').value;
                                     var color = mapValueToColor(value, currentColorScheme, minMax.min, minMax.max);
 
                                     // cube.material.opacity = currentOpacity;
@@ -1629,7 +1704,7 @@
 
                                 if (value !== null) {
                                     // 獲取當前選擇的顏色方案
-                                    var currentColorScheme = document.getElementById('colorSchemeSelect').value;
+                                    currentColorScheme = document.getElementById('colorSchemeSelect').value;
                                     // 使用 mapValueToColor 函數和正規化後的值來設置立方體的顏色
                                     color = mapValueToColor(value, currentColorScheme, globalMin, globalMax);
 
@@ -1679,8 +1754,17 @@
         document.getElementById('DisplayCondition').addEventListener('change', function() {
             // 只有在資料載入後才調用
             if (isDataLoaded) {
-                // // 清除 bar chart 設定
             // clearbar();
+
+            if (this.value != 'RangeMatrix') {
+                // 停用滑動條並顯示禁止標誌
+                $("#double-slider").slider("disable"); // 禁用滑動條
+                $("#double-slider").css("cursor", "not-allowed !important"); // 顯示禁止滑鼠樣式
+            } else {
+                // 恢復滑動條啟用狀態
+                $("#double-slider").slider("enable");
+                $("#double-slider").css("cursor", "pointer"); // 滑動條的正常滑鼠樣式
+            }
 
             // 重置滑動條到初始位置
             $("#double-slider").slider("values", [globalMin, globalMax]);
@@ -1892,73 +1976,11 @@
             var intersects = raycaster.intersectObjects(cubes.flat().flat(), true);
 
             // 更新軸線的起點
-            updateAxesStartPoint(intersects);
+            updateAxesStartPoint(intersects, selectedAxis);
 
             // 顯示懸浮提示
             showTooltip(event, intersects);
         }
-
-
-        // -------------------------------------------------
-        // // 初始化射线投射器和鼠标向量
-        // const raycaster = new THREE.Raycaster();
-        // const mouse = new THREE.Vector2();
-
-        // // 添加鼠标事件监听器
-        // window.addEventListener('click', onMouseClick, false);
-
-        // // 添加一个立方体示例，确保是有效对象
-        // const geometry = new THREE.BoxGeometry(1, 1, 1);
-        // const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        // const cube = new THREE.Mesh(geometry, material);
-        // scene.add(cube);
-        // cubes.push(cube);
-
-        // // 选定的平面 'XY', 'YZ' 或 'XZ'
-        // let selectedPlane = 'XY'; // 你可以根据需要改变这个变量
-
-        // function onMouseClick(event) {
-        //     // 计算鼠标在屏幕上的位置
-        //     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        //     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-        //     // 更新射线
-        //     raycaster.setFromCamera(mouse, camera);
-
-        //     // 检测与所有小立方体的交集
-        //     const validCubes = cubes.filter(cube => cube !== undefined && cube !== null); // 过滤无效对象
-        //     const intersects = raycaster.intersectObjects(validCubes);
-
-        //     // 过滤只在选定平面上的立方体
-        //     const filteredIntersects = intersects.filter(intersect => {
-        //         const cube = intersect.object;
-        //         if (selectedPlane === 'XY') {
-        //             return Math.abs(cube.position.z) < 0.1; // 假设 Z 近似为 0 的立方体位于 X-Y 平面
-        //         } else if (selectedPlane === 'YZ') {
-        //             return Math.abs(cube.position.x) < 0.1; // 假设 X 近似为 0 的立方体位于 Y-Z 平面
-        //         } else if (selectedPlane === 'XZ') {
-        //             return Math.abs(cube.position.y) < 0.1; // 假设 Y 近似为 0 的立方体位于 X-Z 平面
-        //         }
-        //         return false;
-        //     });
-
-        //     // 检查是否有交集
-        //     if (filteredIntersects.length > 0) {
-        //         // 取第一个交集（最接近相机的）
-        //         const selectedCube = filteredIntersects[0].object;
-
-        //         // 显示相关信息
-        //         showCubeInfo(selectedCube);
-        //     }
-        // }
-
-        // function showCubeInfo(cube) {
-        //     // 在这里显示立方体的相关信息，例如：
-        //     console.log(`Cube Position: ${cube.position.x}, ${cube.position.y}, ${cube.position.z}`);
-        //     // 你可以在这里添加更多的逻辑来展示立方体的其他信息
-        // }
-        // -------------------------------------------------
-
 
         // 依不同軸線之中心點判斷其 Direction
         function updateAxesDirectionBasedOnVertex(closestVertex) {
@@ -1987,23 +2009,12 @@
             return [directionX, directionY, directionZ];
         }
 
-        // 清除現有的軸線
-        function clearAxesLines() {
-            var axes = ['axisX', 'axisY', 'axisZ'];
-            axes.forEach(function(axisName) {
-                var existingAxis = scene.getObjectByName(axisName);
-                if (existingAxis) {
-                    scene.remove(existingAxis);
-                }
-            });
-        }
-
         // 依照鼠標更新軸線之中心點
-        function updateAxesStartPoint(intersects) {
-            if (!updateAxes) return; // 如果 updateAxes 為 false 則不執行更新
+        function updateAxesStartPoint(intersects, sliceAxis) {
+            // if (!updateAxes) return; // 如果 updateAxes 為 false 則不執行更新
 
             // 獲取 Checkbox 的狀態
-            var tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
+            tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
 
             // 如果 Checkbox 未被勾選 則清除現有軸線並退出函數
             if (!tooltipEnabled) {
@@ -2059,6 +2070,13 @@
                 ];
 
                 axesInfo.forEach(function(info) {
+                    // 根據切片的軸 隱藏相對應之軸線
+                    if ((sliceAxis === 'X' && info.name === 'axisX') ||
+                        (sliceAxis === 'Y' && info.name === 'axisY') ||
+                        (sliceAxis === 'Z' && info.name === 'axisZ')) {
+                        return; // 跳過當前軸線，不繪製
+                    }
+
                     var points = [closestVertex.clone()];
                     var end = closestVertex.clone().addScaledVector(info.direction, info.length);
                     points.push(end);
@@ -2077,73 +2095,7 @@
                 });
             }
         }
-
-        // function updateAxesStartPoint(intersects) {
-        //     if (!updateAxes) return; // 如果 updateAxes 为 false 则不执行更新
-
-        //     // 获取 Checkbox 的状态
-        //     var tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
-
-        //     // 如果 Checkbox 未被勾选，则清除现有轴线并退出函数
-        //     if (!tooltipEnabled) {
-        //         clearAxesLines();
-        //         return;
-        //     }
-
-        //     if (intersects.length > 0) {
-        //         var intersect = intersects[0]; // 取第一个交点对象
-        //         var intersectObject = intersect.object; // 取得实际相交的对象
-
-        //         // 确保立方体几何中心是基于其本地坐标系计算的
-        //         var center = new THREE.Vector3();
-        //         intersectObject.geometry.computeBoundingBox();
-        //         intersectObject.geometry.boundingBox.getCenter(center);
-
-        //         // 将中心点转换到世界坐标
-        //         center.applyMatrix4(intersectObject.matrixWorld);
-
-        //         // 调整轴线的长度以适应立方体的大小
-        //         var axisLength = intersectObject.geometry.boundingBox.max.x - intersectObject.geometry.boundingBox.min.x;
-
-        //         // 定义方向向量
-        //         var directionX = new THREE.Vector3(1, 0, 0); // X 轴方向
-        //         var directionY = new THREE.Vector3(0, 1, 0); // Y 轴方向
-        //         var directionZ = new THREE.Vector3(0, 0, 1); // Z 轴方向
-
-        //         // 使用这个中心点作为轴线的起点
-        //         var axesInfo = [
-        //             { color: "#ff0000", direction: directionX, length: axisLength, name: 'axisX' },
-        //             { color: "#00ff00", direction: directionY, length: axisLength, name: 'axisY' },
-        //             { color: "#0000ff", direction: directionZ, length: axisLength, name: 'axisZ' }
-        //         ];
-
-        //         axesInfo.forEach(function(info) {
-        //             // 创建轴线的起点和终点
-        //             var points = [center.clone()];
-        //             var end = center.clone().addScaledVector(info.direction, info.length / 2); // 使用轴线的一半长度
-        //             points.push(end);
-
-        //             // 创建几何和材质
-        //             var geometry = new THREE.BufferGeometry().setFromPoints(points);
-        //             var material = new THREE.LineBasicMaterial({ color: info.color });
-        //             var axis = new THREE.Line(geometry, material);
-        //             axis.name = info.name;
-
-        //             // 移除现有的轴线
-        //             var existingAxis = scene.getObjectByName(info.name);
-        //             if (existingAxis) {
-        //                 scene.remove(existingAxis);
-        //             }
-
-        //             // 添加新的轴线到场景
-        //             scene.add(axis);
-        //         });
-        //     }
-        // }
-
-        
  
-
         // 添加軸線 (所有邊)
         function createOrUpdateAxes(numX, numY, numZ, cubeSizeX, cubeSizeY, cubeSizeZ) {
             // 取得目前選取的軸
@@ -2202,7 +2154,7 @@
             var tooltip = document.getElementById('tooltip');
 
             // 獲取 Checkbox 的狀態
-            var tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
+            tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
 
             if (!tooltipEnabled) {
                 if (tooltip) {
@@ -2352,15 +2304,33 @@
             });
         }
 
-        // 清除現有的軸線 (for camera)
-        function clearAxesLines_forcamera() {
-            var axes = ['axisX_forcamera', 'axisY_forcamera', 'axisZ_forcamera'];
+        // 清除現有的軸線
+        function clearAxesLines() {
+            var axes = ['axisX', 'axisY', 'axisZ'];
+
             axes.forEach(function(axisName) {
                 var existingAxis = scene.getObjectByName(axisName);
                 if (existingAxis) {
                     scene.remove(existingAxis);
                 }
             });
+
+            // 確保場景重新渲染
+            renderer.render(scene, camera);
+        }
+
+        function clearAxesLines_forallaxis() {
+            var axes = ['edgeX1', 'edgeX2', 'edgeX3', 'edgeX4', 'edgeY1', 'edgeY2', 'edgeY3', 'edgeY4', 'edgeZ1', 'edgeZ2', 'edgeZ3', 'edgeZ4'];
+
+            axes.forEach(function(axisName) {
+                var existingAxis = scene.getObjectByName(axisName);
+                if (existingAxis) {
+                    scene.remove(existingAxis);
+                }
+            });
+
+            // 確保場景重新渲染
+            renderer.render(scene, camera);
         }
 
         // 根據視角更新軸線與軸標籤
@@ -2454,6 +2424,20 @@
             }
             return result;
         }
+
+        // 在頁面載入時停用 color for proximity 的下拉式選單
+        document.addEventListener('DOMContentLoaded', function() {
+            // 禁用整個下拉選單並顯示禁止標誌
+            $("#colorforXproximity").prop('disabled', true).css('cursor', 'not-allowed');
+            $("#reverseColorforX").prop('disabled', true).css('cursor', 'not-allowed');
+
+            $("#colorforYproximity").prop('disabled', true).css('cursor', 'not-allowed');
+            $("#reverseColorforY").prop('disabled', true).css('cursor', 'not-allowed');
+
+            $("#colorforZproximity").prop('disabled', true).css('cursor', 'not-allowed');
+            $("#reverseColorforZ").prop('disabled', true).css('cursor', 'not-allowed');
+
+        });
 
         // 為 proxi MT X 軸下拉式選單新增事件監聽器
         document.getElementById('rowproxX').addEventListener('change', function() {
@@ -2675,7 +2659,6 @@
                 //gapX.redrawHeatmap("mv2", 0, 0, 1, `#${windowID}`);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
                 //gapX.redrawHeatmap("mv11", gap2.yd_X, 0, 11, "#heatmap2");
             }
-
             // order 防呆
             // $("#sortXOrderSelect").prop("disabled",false);
             $("#sortXOrderSelect option[value='averagelinkage']").removeAttr('disabled');
@@ -2894,7 +2877,6 @@
             {
 
             }
-
             // order 防呆
             // $("#sortYOrderSelect").prop("disabled",false);
             $("#sortYOrderSelect option[value='averagelinkage']").removeAttr('disabled');
@@ -3181,6 +3163,38 @@
             // closeButton.style.marginLeft = '10px'; // 給關閉按鈕一點左邊距
             closeButton.onclick = function() {
                 floatWindow.remove();
+                // 按關閉按鈕時，同時禁用 color for proximity
+                $("#"+selectedSchemeforproximity).prop('disabled', true).css('cursor', 'not-allowed');
+                $("#"+reverseColorforproximity).prop('disabled', true).css('cursor', 'not-allowed');
+
+                // 重置 selectedSchemeforproximity 下拉式選單回到預設選項 (GAP_Rainbow)
+                $("#" + selectedSchemeforproximity + " option[value='GAP_Rainbow']").prop('selected', true);
+                $("#" + selectedSchemeforproximity).change();
+
+                // 重置 reverseColorforproximity 狀態
+                document.getElementById(reverseColorforproximity).checked = false;
+
+                // // ### Y
+                // $("#colorforYproximity").prop('disabled', true).css('cursor', 'not-allowed');
+                // $("#reverseColorforY").prop('disabled', true).css('cursor', 'not-allowed');
+
+                // // 重置 colorforYproximity 下拉式選單回到預設選項 (GAP_Rainbow)
+                // $("#colorforYproximity option[value='GAP_Rainbow']").prop('selected', true);
+                // $("#colorforYproximity").change();
+
+                // // 重置 reverseColorforY 狀態
+                // document.getElementById('reverseColorforY').checked = false;
+
+                // // ### Z
+                // $("#colorforZproximity").prop('disabled', true).css('cursor', 'not-allowed');
+                // $("#reverseColorforZ").prop('disabled', true).css('cursor', 'not-allowed');
+
+                // // 重置 colorforZproximity 下拉式選單回到預設選項 (GAP_Rainbow)
+                // $("#colorforZproximity option[value='GAP_Rainbow']").prop('selected', true);
+                // $("#colorforZproximity").change();
+
+                // // 重置 reverseColorforZ 狀態
+                // document.getElementById('reverseColorforZ').checked = false;
             };
             header.appendChild(closeButton);
 
@@ -3288,6 +3302,12 @@
             // 組裝視窗並顯示
             document.getElementById('floatingWindowContainer').appendChild(floatWindow);
             floatWindow.style.display = 'block';
+
+            // 每次建立後啟用 color for proximity
+            if (document.getElementById(windowId)) {
+                $("#"+selectedSchemeforproximity).prop('disabled', false).css('cursor', 'pointer');
+                $("#"+reverseColorforproximity).prop('disabled', false).css('cursor', 'pointer');
+            }
 
             // 設定視窗的初始 z-index
             floatWindow.style.zIndex = highestZIndex++;
@@ -3480,18 +3500,18 @@
 
         // 切片
         function sliceCubeByAxis(axis) {
-            updateAxes = false; // 切片操作時不更新軸線與軸標籤
+            // updateAxes = false; // 切片操作時不更新軸線與軸標籤
 
             clearAxesLines();
-            clearAxesLines_forcamera();
 
-            var SliceRange = document.getElementById('SliceRange');
+            SliceRange = document.getElementById('SliceRange');
             sliceGap = parseFloat(SliceRange.value);
             document.getElementById('SliceValue').textContent = sliceGap;
 
             switch (axis) {
                 case 'X':
                     allowUpdateSizes = false; // 在切片操作時停用修改邊長
+                    allowUpdatehollowSizes = false; // 在切片操作時停用分開所有小立方體
 
                     for (let i = 0; i < cubes.length; i++) {
                         for (let j = 0; j < cubes[i].length; j++) {
@@ -3513,6 +3533,7 @@
                     break;
                 case 'Y':
                     allowUpdateSizes = false;
+                    allowUpdatehollowSizes = false;
 
                     for (let i = 0; i < cubes.length; i++) {
                         for (let j = 0; j < cubes[i].length; j++) {
@@ -3533,7 +3554,8 @@
                     }
                     break;
                 case 'Z':
-                    allowUpdateSizes = false; 
+                    allowUpdateSizes = false;
+                    allowUpdatehollowSizes = false;
                     
                     for (let i = 0; i < cubes.length; i++) {
                         for (let j = 0; j < cubes[i].length; j++) {
@@ -3555,8 +3577,9 @@
                     break;
                 case 'O':
                     allowUpdateSizes = true; // 當選擇回原始 cube 時，回復修改邊長功能
+                    allowUpdatehollowSizes = true; // 當選擇回原始 cube 時，回復分開所有小立方體
 
-                    updateAxes = true; // 當選擇回原始 cube 時，回復軸線功能
+                    // updateAxes = true; // 當選擇回原始 cube 時，回復軸線功能
 
                     for (let i = 0; i < cubes.length; i++) {
                         for (let j = 0; j < cubes[i].length; j++) {
@@ -3577,10 +3600,37 @@
                     }
                     break;
             }
+            // ### for cubesize
+            // 停用或啟用滑桿
+            cubeSizeXslider.disabled = !allowUpdateSizes;
+            cubeSizeYslider.disabled = !allowUpdateSizes;
+            cubeSizeZslider.disabled = !allowUpdateSizes;
+
+            // 切換禁止鼠標樣式
+            if (allowUpdateSizes) {
+                cubeSizeXslider.style.cursor = 'auto';
+                cubeSizeYslider.style.cursor = 'auto';
+                cubeSizeZslider.style.cursor = 'auto';
+            } else {
+                cubeSizeXslider.style.cursor = 'not-allowed';
+                cubeSizeYslider.style.cursor = 'not-allowed';
+                cubeSizeZslider.style.cursor = 'not-allowed';
+            }
+
+            // ### for separate cube
+            // 停用或啟用滑桿
+            hollowSize.disabled = !allowUpdatehollowSizes;
+
+            // 切換禁止鼠標樣式
+            if (allowUpdatehollowSizes) {
+                hollowSize.style.cursor = 'auto';
+            } else {
+                hollowSize.style.cursor = 'not-allowed';
+            }
+
             // 呼叫渲染函數來更新場景
             // renderer.render(scene, camera);
         }
-
 
         // 偵測 radio 按鈕的變化
         document.getElementById("axisSelection").addEventListener("change", function(event) {
@@ -3599,13 +3649,68 @@
 
         // 調整 cube 分開時之大小
         document.getElementById('hollowSize').addEventListener('input', function() {
-            var newSize = this.value;
+            newSize = this.value;
             hollowCube(newSize);
             document.getElementById('hollowSizeValue').textContent = newSize;
+
+            // 如果 newSize 不等於 1，禁用 xAxis, yAxis, zAxis 以及 SliceRange
+            if (newSize != 1) {
+                document.getElementById('xAxis').disabled = true;
+                document.getElementById('yAxis').disabled = true;
+                document.getElementById('zAxis').disabled = true;
+                document.getElementById('SliceRange').disabled = true;
+
+                // 顯示禁止標誌
+                document.getElementById('xAxis').parentElement.style.cursor = 'not-allowed';
+                document.getElementById('yAxis').parentElement.style.cursor = 'not-allowed';
+                document.getElementById('zAxis').parentElement.style.cursor = 'not-allowed';
+                document.getElementById('SliceRange').style.cursor = 'not-allowed';
+            } else {
+                // 啟用 xAxis, yAxis, zAxis 以及 SliceRange
+                document.getElementById('xAxis').disabled = false;
+                document.getElementById('yAxis').disabled = false;
+                document.getElementById('zAxis').disabled = false;
+                document.getElementById('SliceRange').disabled = false;
+
+                // 恢復正常滑鼠樣式
+                document.getElementById('xAxis').parentElement.style.cursor = 'auto';
+                document.getElementById('yAxis').parentElement.style.cursor = 'auto';
+                document.getElementById('zAxis').parentElement.style.cursor = 'auto';
+                document.getElementById('SliceRange').style.cursor = 'auto';
+            }
         });
+
+        // for 停用或啟用滑桿
+        const cubeSizeXslider = document.getElementById('cubeSizeX');
+        const cubeSizeYslider = document.getElementById('cubeSizeY');
+        const cubeSizeZslider = document.getElementById('cubeSizeZ');
 
         // 將 cube 分開
         function hollowCube(newSize) {
+            if (!allowUpdatehollowSizes) return; // 如果不允許分開所有小立方體，直接返回
+
+            if (newSize != 1) {
+                allowUpdateSizes = false;
+            } else {
+                allowUpdateSizes = true; // 確保在 newSize 等於 1 時 也能調整立方體大小
+            }
+
+            // 停用或啟用滑桿
+            cubeSizeXslider.disabled = !allowUpdateSizes;
+            cubeSizeYslider.disabled = !allowUpdateSizes;
+            cubeSizeZslider.disabled = !allowUpdateSizes;
+
+            // 切換禁止鼠標樣式
+            if (allowUpdateSizes) {
+                cubeSizeXslider.style.cursor = 'auto';
+                cubeSizeYslider.style.cursor = 'auto';
+                cubeSizeZslider.style.cursor = 'auto';
+            } else {
+                cubeSizeXslider.style.cursor = 'not-allowed';
+                cubeSizeYslider.style.cursor = 'not-allowed';
+                cubeSizeZslider.style.cursor = 'not-allowed';
+            }
+
             // newSize 為更新之新尺寸
             for (let i = 0; i < cubes.length; i++) {
                 for (let j = 0; j < cubes[i].length; j++) {
@@ -3828,7 +3933,7 @@
                             categoryConditions.add(categoryKey);
                             window[containerId + 'ChartInstance'].data.datasets[0].backgroundColor[i] = selectedColor; // 將顏色變為選取的顏色
                         }
-                        console.log(categoryConditions);
+                        // console.log(categoryConditions);
                     }
                     window[containerId + 'ChartInstance'].update();
 
@@ -3993,6 +4098,12 @@
             filterCubes();
         });
 
+        // 在頁面載入時停用 filteropacityRange
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('filteropacityRange').disabled = true;
+            document.getElementById('filteropacityRange').style.cursor = 'not-allowed';
+        });
+
         // 根據條件更新立方體的顯示狀態
         function filterCubes() {
             // console.log('-------');
@@ -4010,6 +4121,15 @@
             var filteropacityRange = document.getElementById('filteropacityRange');
             var filternewOpacity = parseFloat(filteropacityRange.value);
             document.getElementById('filteropacityValue').textContent = filternewOpacity;
+
+            // for 禁止使用 and 禁止標誌
+            if (categoryConditions.size != 0 || rangeConditions.size != 0) {
+                document.getElementById('filteropacityRange').disabled = false;
+                document.getElementById('filteropacityRange').style.cursor = 'auto';
+            } else {
+                document.getElementById('filteropacityRange').disabled = true;
+                document.getElementById('filteropacityRange').style.cursor = 'not-allowed';
+            }
 
             cubes.forEach((cubeRow, i) => cubeRow.forEach((cubeColumn, j) => cubeColumn.forEach((cube, k) => {
                 if (cube) {
@@ -4035,12 +4155,12 @@
                                 }[axis];
                             });
 
-                            // 移除浮動視窗及其包含的表格
-                            const existingWindow = document.getElementById('filtersamplelist');
+                            // // 移除浮動視窗及其包含的表格
+                            // const existingWindow = document.getElementById('filtersamplelist');
 
-                            if (existingWindow) {
-                                existingWindow.remove();
-                            }
+                            // if (existingWindow) {
+                            //     existingWindow.remove();
+                            // }
                         } else if (selectionType === "Intersection") {
                             // 將 categoryConditions 轉換為 Array 以使用 filter
                             const categoryConditionsArray = Array.from(categoryConditions);
@@ -4057,9 +4177,6 @@
 
                             // 如果 x, y, z 軸條件都滿足則匹配
                             matchesCategoryConditions = matchX && matchY && matchZ;
-
-                            // 呼叫函數創建變數列表
-                            transferPositionsToDatatable();
                         }
                         // else if (selectionType === "Intersection") {
                         //     matchesCategoryConditions = [...categoryConditions].every(condition => {
@@ -4108,12 +4225,12 @@
 
                         selectionType = 'Union';
 
-                        // 移除浮動視窗及其包含的表格
-                        const existingWindow = document.getElementById('filtersamplelist');
+                        // // 移除浮動視窗及其包含的表格
+                        // const existingWindow = document.getElementById('filtersamplelist');
 
-                        if (existingWindow) {
-                            existingWindow.remove();
-                        }
+                        // if (existingWindow) {
+                        //     existingWindow.remove();
+                        // }
                     }
                     
                     var value = cube.userData.value; // 立方體的值
@@ -4138,10 +4255,16 @@
                                 cubesOpacity[i][j][k] = cube.material.opacity; 
                                 //console.log(globalSliderMin+","+globalSliderMax+": "+value+":"+i+","+j+","+k);
 
-                                if (globalSliderMin != globalMin || globalSliderMax != globalMax) {
-                                    // 將符合條件的 cube 的位置儲存到 array 中
-                                    filteredPositions.push({ i, j, k });
+                                if (selectionType === "Intersection") {
+                                    if (globalSliderMin != globalMin || globalSliderMax != globalMax) {
+                                        // 將符合條件的 cube 的位置儲存到 array 中
+                                        filteredPositions.push({ i, j, k });
+                                    }
                                 }
+                                // if (globalSliderMin != globalMin || globalSliderMax != globalMax) {
+                                //     // 將符合條件的 cube 的位置儲存到 array 中
+                                //     filteredPositions.push({ i, j, k });
+                                // }
                             }
                         }
                         else
@@ -4158,11 +4281,16 @@
                                     cube.material.opacity = newOpacity;
                                     cubesOpacity[i][j][k] = cube.material.opacity;
 
-                                    // 將符合條件的 cube 的位置儲存到 array 中
-                                    filteredPositions.push({ i, j, k });
+                                    if (selectionType === "Intersection") {
+                                        // 將符合條件的 cube 的位置儲存到 array 中
+                                        filteredPositions.push({ i, j, k });
+                                    }
+                                    // // 將符合條件的 cube 的位置儲存到 array 中
+                                    // filteredPositions.push({ i, j, k });
                                 } else {
-                                    cube.material.opacity = filternewOpacity; 
+                                    cube.material.opacity = filternewOpacity;
                                     cubesOpacity[i][j][k] = cube.material.opacity;
+
                                     //console.log(globalSliderMin+","+globalSliderMax+": "+value+":"+i+","+j+","+k);
                                 }
                             }
@@ -4170,9 +4298,11 @@
                     }
                 }
             })));
+            // console.log('matchesCategoryConditions', matchesCategoryConditions);
+            // console.log('matchesRangeConditions', matchesRangeConditions);
 
-            // // 查看位置訊息
-            // console.log(filteredPositions);
+            // 呼叫函數創建變數列表
+            transferPositionsToDatatable();
         }
 
         // 創建變數列表
@@ -4321,158 +4451,6 @@
             }
         }
 
-        //   // 創建變數列表
-        //   function transferPositionsToDatatable() {
-        //     // 查找是否已經存在浮動視窗
-        //     const existingWindow = document.getElementById('filtersamplelist');
-
-        //     // 清空目前 filteredColors
-        //     filteredColors = [];
-
-        //     // 將 currentCubeColors 轉換為一個位置到顏色的映射
-        //     const colorMap = {};
-        //     currentCubeColors.forEach(({ position, color }) => {
-        //         const key = `${position.i},${position.j},${position.k}`;
-        //         colorMap[key] = color;
-        //     });
-
-        //     // 將 filteredPositions 和 colorMap 結合
-        //     filteredColors = filteredPositions.map(({ i, j, k }) => {
-        //         const key = `${i},${j},${k}`;
-        //         return {
-        //             position: { i, j, k },
-        //             color: colorMap[key] || 'rgba(255,255,255,0)' // 如果沒有顏色資料則使用預設顏色
-        //         };
-        //     });
-
-        //     // 檢查 filteredColors 是否為空
-        //     if (filteredColors.length === 0) {
-        //         // 如果 filteredColors 為空
-        //         if (existingWindow) {
-        //             // 如果已有浮動視窗，則移除它
-        //             existingWindow.remove();
-        //         }
-        //         // 否則不需要建立任何浮動視窗，函數結束
-        //         return;
-        //     }
-            
-        //     // 只有在 selectionType === "Intersection" 時才繪製變數列表
-        //     if (selectionType !== "Intersection") {
-        //         // 如果不是 Intersection，則不進行繪製，直接返回
-        //         return;
-        //     }
-
-        //     // 如果 filteredColors 不為空
-        //     let table;
-        
-        //     // 如果 filteredColors 不為空，且如果浮動視窗已存在，直接更新內容；否則建立新視窗
-        //     if (existingWindow) {
-        //         // 找到現有視窗中的表格容器
-        //         table = existingWindow.querySelector('table.data-table');
-        //         table.innerHTML = ''; // 清空舊的表格內容
-        //     } else {
-        //         // 建立一個表格元素
-        //         table = document.createElement('table');
-        //         table.classList.add('data-table'); // 新增一個類別以便於樣式調整
-
-        //         // 新增邊框樣式
-        //         table.style.borderCollapse = 'collapse'; // 確保邊框合併
-        //         table.style.width = 'calc(100% - 40px)'; // 表格寬度，減去左右邊距
-        //         table.style.margin = '20px auto'; // 上下邊距 20px，左右置中
-
-        //         // 使用 createFloatingWindow_samplelist 建立一個浮動視窗來顯示表格
-        //         createFloatingWindow_samplelist('filtersamplelist', 'Filtered Sample Table', table, 'auto', 75, 110, 350, 350);
-        //     }
-
-        //     // 建立表頭
-        //     const thead = document.createElement('thead');
-        //     const headerRow = document.createElement('tr');
-
-        //     // 設定表頭的欄位名稱
-        //     [fieldX, fieldY, fieldZ, selectedValueField].forEach(fieldName => {
-        //         const th = document.createElement('th');
-        //         th.textContent = fieldName;
-
-        //         // 新增表頭 cell 的邊框樣式
-        //         th.style.border = '1px solid #ddd'; // 設定邊框樣式
-        //         th.style.padding = '8px'; // 內邊距
-        //         th.style.backgroundColor = '#f2f2f2'; // 表頭背景色
-        //         th.style.textAlign = 'left'; // cell 內容左對齊
-        //         th.style.fontSize = '13px'; // 表頭字體大小
-
-        //         headerRow.appendChild(th);
-        //     });
-
-        //     thead.appendChild(headerRow);
-        //     table.appendChild(thead);
-
-        //     // 建立表格主體
-        //     tbody = document.createElement('tbody');
-
-        //     // // 查看結合後之訊息
-        //     // console.log('filteredColors', filteredColors);
-
-        //     // 遍歷 filteredColors
-        //     filteredColors.forEach(({ position, color }) => {
-        //         const { i, j, k } = position;
-
-        //         // 取得 data_array 中的值
-        //         const dataValue = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
-
-        //         // 取得各軸類別的值
-        //         const xLabel = uniqueX[Xindices[i]];
-        //         const yLabel = uniqueY[Yindices[j]];
-        //         const zLabel = uniqueZ[Zindices[k]];
-
-        //         // 建立表格 row
-        //         const row = document.createElement('tr');
-
-        //         // 建立並新增 cell (新增儲存格邊框樣式)
-        //         const cellX = document.createElement('td');
-        //         cellX.textContent = xLabel;
-        //         cellX.style.border = '1px solid #ddd'; // cell 邊框
-        //         cellX.style.padding = '8px'; // 內邊距
-        //         cellX.style.textAlign = 'left'; // cell 內容左對齊
-        //         cellX.style.fontSize = '13px'; // 字體大小
-        //         row.appendChild(cellX);
-
-        //         const cellY = document.createElement('td');
-        //         cellY.textContent = yLabel;
-        //         cellY.style.border = '1px solid #ddd'; // cell 邊框
-        //         cellY.style.padding = '8px'; // 內邊距
-        //         cellY.style.textAlign = 'left'; // cell 內容左對齊
-        //         cellY.style.fontSize = '13px'; // 字體大小
-        //         row.appendChild(cellY);
-
-        //         const cellZ = document.createElement('td');
-        //         cellZ.textContent = zLabel;
-        //         cellZ.style.border = '1px solid #ddd'; // cell 邊框
-        //         cellZ.style.padding = '8px'; // 內邊距
-        //         cellZ.style.textAlign = 'left'; // cell 內容左對齊
-        //         cellZ.style.fontSize = '13px'; // 字體大小
-        //         row.appendChild(cellZ);
-
-        //         const cellValue = document.createElement('td');
-        //         cellValue.textContent = dataValue;
-        //         cellValue.style.border = '1px solid #ddd'; // cell 邊框
-        //         cellValue.style.padding = '8px'; // 內邊距
-        //         cellValue.style.textAlign = 'left'; // cell 內容左對齊
-        //         cellValue.style.fontSize = '13px'; // 字體大小
-
-        //         // 將 RGB 顏色轉換為 rgba 顏色 (新增透明度)
-        //         const rgbaColor = color.replace('rgb', 'rgba').replace(')', `,${.3})`);
-
-        //         // 設定初始背景顏色
-        //         cellValue.style.backgroundColor = rgbaColor;
-
-        //         row.appendChild(cellValue);
-
-        //         // 將 row 新增至表格主體
-        //         tbody.appendChild(row);
-        //     });
-        //     table.appendChild(tbody);
-        // }
-
         // 按下 Reset Filter Setting 按鈕時，將 cube 回復原狀
         document.getElementById('resetToOriginalCube').addEventListener('click', function() {
             for (let i = 0; i < Xindices.length; i++) {
@@ -4593,12 +4571,41 @@
             }
         }
 
-        // 清除場景中的所有子對象
+        // 清除場景中的所有子對象並釋放內存
         function clearAllSceneObjects() {
             // 遍歷並移除場景中的所有子對象
-            while(scene.children.length > 0){ 
-                scene.remove(scene.children[0]); 
+            scene.children.forEach(object => {
+                // 如果有幾何體，釋放它
+                if (object.geometry) {
+                    object.geometry.dispose();
+                }
+
+                // 如果有材質，釋放它
+                if (object.material) {
+                    if (Array.isArray(object.material)) {
+                        // 如果材質是 array，遍歷釋放
+                        object.material.forEach(material => material.dispose());
+                    } else {
+                        object.material.dispose();
+                    }
+                }
+
+                // 如果有紋理，釋放它
+                if (object.material && object.material.map) {
+                    object.material.map.dispose();
+                }
+
+                // 從場景中移除對象
+                scene.remove(object);
+            });
+
+            // 再次遍歷刪除所有子對象，確保場景完全清空
+            while (scene.children.length > 0) {
+                scene.remove(scene.children[0]);
             }
+
+            // 重新渲染場景以反映更新
+            // renderer.render(scene, camera);
         }
 
         // 清除所有浮動視窗
@@ -4613,6 +4620,18 @@
             }
         }
 
+        // 清除 colorbar
+        function removeColorbar() {
+            var colorbarContainer = document.getElementById('colorbar-container');
+            
+            if (!isDataLoaded) {
+                if (colorbarContainer) {
+                    // 移除 colorbar 容器及其子元素
+                    colorbarContainer.remove();
+                }
+            }
+        }
+    
         // 觸發文件輸入的點擊事件
         document.getElementById('fileButton').addEventListener('click', function() {
             document.getElementById('fileInput').click();
@@ -4753,6 +4772,266 @@
             // console.log(`Select${selectNumber} selected columns:`, columnNames.join(", "));
         }
 
+        // -----------------------------------------------------------
+        // 選擇 Example Data or Import Data 的 radio
+        const defaultRadio = document.getElementById('defaultdata');
+        const defaultDataSelect = document.getElementById('defaultdataselest');
+        const importRadio = document.getElementById('importdata');
+        const fileButton = document.getElementById('fileButton');
+        const fileInput = document.getElementById('fileInput');
+        const fileInputLabel = document.getElementById('fileInputLabel');
+
+        document.addEventListener("DOMContentLoaded", function() {
+
+            // 恢復 radio 狀態
+            const savedRadio = localStorage.getItem('selectedRadio');
+            if (savedRadio) {
+                document.getElementById(savedRadio).checked = true;
+
+                // 檢查 savedRadio 是否是 defaultdata
+                if (savedRadio === 'defaultdata') {
+                    // 把 savedRadio 的值存儲到 defaultRadio 中
+                    defaultRadio.checked = true;
+                } else if (savedRadio === 'importdata') {
+                    importRadio.checked = true;
+                }
+            }
+            console.log(savedRadio);
+
+            // 恢復下拉式選單狀態
+            const savedDropdownValue = localStorage.getItem('selectedDropdown');
+            if (savedDropdownValue) {
+                document.getElementById('defaultdataselest').value = savedDropdownValue;
+            }
+
+            // 阻止 fileButton 的默認提交行為
+            const fileButton = document.getElementById('fileButton');
+            fileButton.addEventListener('click', function(event) {
+                event.preventDefault(); // 阻止默認的表單提交行為
+            });
+            
+            // 初始化根據當前選擇狀態繪製立方體
+            if (defaultRadio.checked) {
+                fileButton.disabled = true;
+                fileButton.style.cursor = 'not-allowed';
+                fileInput.disabled = true;
+                fileInputLabel.style.cursor = 'not-allowed';
+                fileInputLabel.style.opacity = '.5';
+
+                defaultDataSelect.disabled = false;
+                defaultDataSelect.style.cursor = 'auto';
+
+                fetchAndPlotData();
+            } else if (importRadio.checked) {
+                defaultDataSelect.disabled = true;
+                defaultDataSelect.style.cursor = 'not-allowed';
+
+                fileButton.disabled = false;
+                fileButton.style.cursor = 'pointer';
+                fileInput.disabled = false;
+                fileInputLabel.style.cursor = 'pointer';
+                fileInputLabel.style.opacity = '1';
+            }
+
+            // 監聽下拉式選單變化
+            defaultDataSelect.addEventListener('change', function() {
+                // 將選中的 defaultDataSelect 的值保存到 localStorage
+                localStorage.setItem('selectedDropdown', this.value);
+
+                // 重新整理頁面
+                refreshPage();
+
+                fetchAndPlotData(); // 根據下拉式選單選擇不同資料文件
+            });
+
+            // 根據選擇的 radio 更新控件狀態
+            document.querySelectorAll('input[name="datafile"]').forEach(function(radio) {
+                radio.addEventListener("change", function(event) {
+                    // 將選中的 radio 按鈕的值保存到 localStorage
+                    localStorage.setItem('selectedRadio', event.target.id);
+
+                    if (defaultRadio.checked) {
+                        fileButton.disabled = true;
+                        fileButton.style.cursor = 'not-allowed';
+                        fileInput.disabled = true;
+                        fileInputLabel.style.cursor = 'not-allowed';
+                        fileInputLabel.style.opacity = '.5';
+
+                        defaultDataSelect.disabled = false;
+                        defaultDataSelect.style.cursor = 'auto';
+
+                        // 重新整理頁面
+                        refreshPage();
+                    } else if (importRadio.checked) {
+                        defaultDataSelect.disabled = true;
+                        defaultDataSelect.style.cursor = 'not-allowed';
+
+                        fileButton.disabled = false;
+                        fileButton.style.cursor = 'pointer';
+                        fileInput.disabled = false;
+                        fileInputLabel.style.cursor = 'pointer';
+                        fileInputLabel.style.opacity = '1';
+
+                        // 重新整理頁面
+                        refreshPage();
+                    }
+                });
+            });
+        });
+
+        // 重新整理頁面
+        function refreshPage() {
+            window.location.reload();
+        }
+
+        // 讀取 CSV 檔案並繪製立方體 (Example Data)
+        function fetchAndPlotData() {
+            const defaultDataselectedOption = defaultDataSelect.value;
+
+            // 根據選項選擇不同的檔案路徑
+            let filePath;
+
+            if (defaultDataselectedOption === 'airpollution') {
+                filePath = '/GAP3D/data/df_air.csv';
+            } else if (defaultDataselectedOption === 'premierleague') {
+                filePath = '/GAP3D/data/df_football.csv';
+            }
+
+            // 使用 fetch API 讀取 CSV 文件
+            fetch(filePath)
+                .then(response => response.text()) // 讀取文件內容為文字
+                .then(csvData => {
+                    const parsedData = parseCSV(csvData); // 解析 CSV 資料
+
+                    if (parsedData.data.length === 0) {
+                        throw new Error("No data in CSV file");
+                    }
+
+                    // 從解析後的結果提取欄位名和數值
+                    const headers = parsedData.headers; // 取得 CSV 檔案的欄位名
+                    const dataRows = parsedData.data; // 取得 CSV 檔案的數值
+
+                    // 前三個欄位為 selectedFields，第四個欄位為 selectedValueField
+                    var defaultDataselectedFields = [
+                        [headers[0]],
+                        [headers[1]],
+                        [headers[2]],
+                    ];
+                    const defaultDataselectedValueField = headers[3];
+
+                    // console.log(defaultDataselectedFields);
+                    // console.log(defaultDataselectedValueField);
+                    // console.log(dataRows);
+
+                    // 初始化 cubeSizeX, cubeSizeY, cubeSizeZ 為 1 或使用者指定的值
+                    cubeSizeX = parseFloat(document.getElementById('cubeSizeX').value) || 1;
+                    cubeSizeY = parseFloat(document.getElementById('cubeSizeY').value) || 1;
+                    cubeSizeZ = parseFloat(document.getElementById('cubeSizeZ').value) || 1;
+
+                    document.getElementById('cubeSizeX').value = cubeSizeX;
+                    document.getElementById('cubeSizeY').value = cubeSizeY;
+                    document.getElementById('cubeSizeZ').value = cubeSizeZ;
+
+                    // 繪製 cube
+                    processDataAndPlot(dataRows, defaultDataselectedFields, defaultDataselectedValueField, cubeSizeX, cubeSizeY, cubeSizeZ);
+
+                    // 先利用預設值計算並創建圖表
+                    let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType); // 為 X 軸計算資料
+                    let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType); // 為 Y 軸計算資料
+                    let chartDataZ = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Z', calculationType); // 為 Z 軸計算資料
+
+                    // 建立圖表的容器元素
+                    const chartContainerX = document.createElement('div');
+                    const canvasX = document.createElement('canvas');
+                    canvasX.id = 'chartX';
+                    chartContainerX.appendChild(canvasX);
+
+                    const chartContainerY = document.createElement('div');
+                    const canvasY = document.createElement('canvas');
+                    canvasY.id = 'chartY';
+                    chartContainerY.appendChild(canvasY);
+
+                    const chartContainerZ = document.createElement('div');
+                    const canvasZ = document.createElement('canvas');
+                    canvasZ.id = 'chartZ';
+                    chartContainerZ.appendChild(canvasZ);
+
+                    chartContainerX.style.width = '100%';
+                    chartContainerX.style.height = '80%';
+
+                    chartContainerY.style.width = '100%';
+                    chartContainerY.style.height = '80%';
+
+                    chartContainerZ.style.width = '100%';
+                    chartContainerZ.style.height = '80%';
+
+                    // 創建浮動視窗
+                    createFloatingWindow_forchart('floatingChartX', 'Bar Chart of  X-axis', chartContainerX, 320, 'auto', 110, 300, 210);
+                    createFloatingWindow_forchart('floatingChartY', 'Bar Chart of  Y-axis', chartContainerY, 320, 'auto', 340, 300, 210);
+                    createFloatingWindow_forchart('floatingChartZ', 'Bar Chart of  Z-axis', chartContainerZ, 320, 'auto', 570, 300, 210);
+
+                    // 更新或繪製長條圖
+                    updateBarChart('chartX', chartDataX, 'X');
+                    updateBarChart('chartY', chartDataY, 'Y');
+                    updateBarChart('chartZ', chartDataZ, 'Z');
+
+                    // 取得計算類型 (sum 或 mean)
+                    document.getElementById('calculationType').addEventListener('change', function() {
+                        calculationType = this.value;
+
+                        let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType); // 為 X 軸計算資料
+                        let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType); // 為 Y 軸計算資料
+                        let chartDataZ = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Z', calculationType); // 為 Z 軸計算資料
+
+                        // 更新或繪製長條圖
+                        updateBarChart('chartX', chartDataX, 'X');
+                        updateBarChart('chartY', chartDataY, 'Y');
+                        updateBarChart('chartZ', chartDataZ, 'Z');
+                    });
+
+                    const Histogram = document.createElement('div');
+                    const canvas_Histogram = document.createElement('canvas');
+                    canvas_Histogram.id = 'Histogram';
+                    Histogram.appendChild(canvas_Histogram);
+
+                    Histogram.style.width = '100%';
+                    Histogram.style.height = '80%';
+
+                    // 計算 Histogram 用之 bins, counts
+                    let { bins, counts } = calculateBinsAndCounts(data_array, globalMin, globalMax);
+
+                    // 創建浮動視窗
+                    createFloatingWindow_forchart('floatingChartHistogram', 'Histogram', Histogram, 'auto', 205, 110, 300, 210);
+
+                    // 繪製直方圖
+                    drawHistogram('Histogram', bins, counts);
+                })
+                .catch(error => {
+                    console.error('Error fetching or parsing CSV:', error);
+                });
+        }
+
+        // 解析 CSV 檔案
+        function parseCSV(csv) {
+            const rows = csv.split('\n').map(row => row.split(',')); // 按 row 解析
+
+            // 去掉欄位名中的引號，並修剪空白字符
+            const headers = rows[0].map(header => header.replace(/['"]+/g, '').trim()); // 取得欄位名
+
+            // 建構資料列，產生物件 array，每一列與欄位名稱匹配
+            const data = rows.slice(1).map(row => {
+                let rowData = {};
+                row.forEach((cell, index) => {
+                    // 去掉每個單元格中的引號和空白字符
+                    rowData[headers[index]] = cell.trim().replace(/['"]+/g, '');
+                });
+                return rowData; // 傳回包含鍵值對的對象
+            });
+
+            return { headers, data }; // 傳回包含欄位名稱和資料物件的 array
+        }
+        // -----------------------------------------------------------
+
         // 當文件被選擇後處理 CSV 檔案
         document.getElementById('fileInput').addEventListener('change', function(event) {
             if (!this.files || this.files.length === 0) return;
@@ -4846,7 +5125,7 @@
             reader.readAsText(file);
         });
 
-        // 小面板之 ok button = plot button 
+        // 小面板之 ok button = plot button
         document.getElementById('okButton').addEventListener('click', function() {
             // 獲取三個單選下拉式選單中選中的選項
             var selectedFields = [
@@ -4855,6 +5134,9 @@
                 getSelectedOptions('multiSelectZ'),
             ];
             selectedValueField = document.getElementById('singleSelect').value;
+
+            // console.log(selectedFields);
+            // console.log(selectedValueField);
         
             // 初始化 cubeSizeX, cubeSizeY, cubeSizeZ 為 1 或使用者指定的值
             cubeSizeX = parseFloat(document.getElementById('cubeSizeX').value) || 1;
@@ -4869,6 +5151,9 @@
             clearAllFloatingWindows(); // 清除所有浮動視窗
 
             processDataAndPlot(parsedData, selectedFields, selectedValueField, cubeSizeX, cubeSizeY, cubeSizeZ);
+            console.log(isDataLoaded);
+
+            // console.log(parsedData);
 
             // let calculationType = 'sum'; // 預設值
 
@@ -4954,16 +5239,24 @@
             fieldY = fields[1];
             fieldZ = fields[2];
 
+            // console.log(fieldX);
+            // console.log(fieldY);
+            // console.log(fieldZ);
+
             // 處理資料
             uniqueX = getUniqueColumnValues(data, fieldX);
             uniqueY = getUniqueColumnValues(data, fieldY);
             uniqueZ = getUniqueColumnValues(data, fieldZ);
 
+            // console.log(uniqueX);
+            // console.log(uniqueY);
+            // console.log(uniqueZ);
+
             // 初始化資料結構
             data_array = createDataArray(uniqueX, uniqueY, uniqueZ);
 
             // 填充資料結構和 combined_text
-            fillDataArray(data, data_array, uniqueX, uniqueY, uniqueZ, fieldX, fieldY, fieldZ);
+            fillDataArray(data, data_array, uniqueX, uniqueY, uniqueZ, fieldX, fieldY, fieldZ, valueField);
 
             // 填充 2d heatmap 之下拉式菜单
             // fillSelectfor2dheatmap('xAxisCate', uniqueX);
@@ -4986,14 +5279,14 @@
             globalMin = minMax.min;
             globalMax = minMax.max;
 
-            // 更新滑動條的最小值和最大值
+            // 更新滑動條的最小值和最大值 (Restricted Display)
             $("#double-slider").slider("option", "min", globalMin);
             $("#double-slider").slider("option", "max", globalMax);
 
-            // 重置滑動條的目前值到新的最小值和最大值
+            // 重置滑動條的目前值到新的最小值和最大值 (Restricted Display)
             $("#double-slider").slider("values", [globalMin, globalMax]);
 
-            // 同時更新手把上的數值顯示
+            // 同時更新手把上的數值顯示 (Restricted Display)
             var handles = $("#double-slider .ui-slider-handle");
             handles.eq(0).find(".ui-slider-value").text(globalMin.toFixed(2));
             handles.eq(1).find(".ui-slider-value").text(globalMax.toFixed(2));
@@ -5001,14 +5294,14 @@
             globalSliderMinforcolor = globalMin;
             globalSliderMaxforcolor = globalMax;
 
-            // 更新滑動條的最小值和最大值
+            // 更新滑動條的最小值和最大值 (Filter Cubes Value)
             $("#double-slider-cubesvalue").slider("option", "min", globalMin);
             $("#double-slider-cubesvalue").slider("option", "max", globalMax);
 
-            // 重置滑動條的目前值到新的最小值和最大值
+            // 重置滑動條的目前值到新的最小值和最大值 (Filter Cubes Value)
             $("#double-slider-cubesvalue").slider("values", [globalMin, globalMax]);
 
-            // 同時更新手把上的數值顯示
+            // 同時更新手把上的數值顯示 (Filter Cubes Value)
             var handles = $("#double-slider-cubesvalue .ui-slider-handle");
             handles.eq(0).find(".ui-slider-value").text(globalMin.toFixed(2));
             handles.eq(1).find(".ui-slider-value").text(globalMax.toFixed(2));
@@ -5151,8 +5444,6 @@
             isDataLoaded = true; // 資料處理完成，允許更新軸線
         }
 
-        var isDataLoaded = false; // 初始時 資料未載入 (for updateAxesAndLabelByCamera)
-
         // 創建 OrbitControls 讓使用者能夠操作 3D 圖形
         var controls = new OrbitControls(camera, renderer.domElement);
 
@@ -5176,9 +5467,292 @@
             setDefaultCameraPosition();
         });
 
+        // Reset To Original Cube
+        document.getElementById('resetCube').addEventListener('click', function() {
+            ResetToOriginalCube();
+        });
+
+        function ResetToOriginalCube() {
+            // ### Order
+            // 重置 sortXOrderSelect 下拉式選單回到預設選項 (original_X)
+            document.getElementById('sortXOrderSelect').selectedIndex = 0;
+
+            now_sortXOrderSelect = 'original_X';
+
+            // 重置 sortYOrderSelect 下拉式選單回到預設選項 (original_Y)
+            document.getElementById('sortYOrderSelect').selectedIndex = 0;
+
+            now_sortYOrderSelect = 'original_Y';
+
+            // 重置 sortZOrderSelect 下拉式選單回到預設選項 (original_Z)
+            document.getElementById('sortZOrderSelect').selectedIndex = 0;
+
+            now_sortZOrderSelect = 'original_Z';
+
+            updateXOrder();
+            updateYOrder();
+            updateZOrder();
+
+            // ### color
+            // 重置 colorSchemeSelect 下拉式選單回到預設選項 (GAP_Rainbow)
+            document.getElementById('colorSchemeSelect').selectedIndex = 0;
+
+            currentColorScheme = 'GAP_Rainbow';
+
+            // ### reverse color
+            document.getElementById('reverseColors').checked = false;
+
+            // 更新全域變數
+            reverse = false;
+
+            // ### Display Condition
+            // 重置 DisplayCondition 下拉式選單回到預設選項 (RangeMatrix)
+            displayCondition = document.getElementById('DisplayCondition').selectedIndex = 0;
+
+            displayCondition = 'RangeMatrix';
+
+            applyChangesBasedOnNewIndices(displayCondition);
+
+            // ### Opacity
+            // 重置 Opacity 滑動條和顯示的值
+            document.getElementById('opacityRange').value = .2;
+            document.getElementById('opacityValue').textContent = .2;
+
+            // 更新全域變數
+            currentOpacity = .2;
+
+            // ### filter
+            for (let i = 0; i < Xindices.length; i++) {
+                for (let j = 0; j < Yindices.length; j++) {
+                    for (let k = 0; k < Zindices.length; k++) {
+                        // 在立方體已經創建的基礎上進行
+                        let cube = cubes[i][j][k]; // 取得現有的立方體
+
+                        if (cube) {
+                            // 使用排序後的索引從 data_array 取得值
+                            let value = data_array[Xindices[i]][Yindices[j]][Zindices[k]];
+
+                            if (value !== null) {
+
+                                cube.material.opacity = currentOpacity;
+                                // 追蹤透明度值
+                                cubesOpacity[i][j][k] = cube.material.opacity; 
+
+                            } else {
+                                cube.material.opacity = 0; // 空值立方體保持完全透明
+                            }
+                        }
+                    }
+                }
+            }
+            clearbar();
+
+            // 重置 calculationType 下拉式選單回到預設選項 (sum)
+            document.getElementById('calculationType').selectedIndex = 0;
+
+            calculationType = 'sum';
+
+            // 根據 calculationType 重新繪圖
+            let chartDataX = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'X', calculationType);
+            updateBarChart('chartX', chartDataX, 'X');
+
+            let chartDataY = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Y', calculationType);
+            updateBarChart('chartY', chartDataY, 'Y');
+
+            let chartDataZ = calculateDataPoints(data_array, uniqueX, uniqueY, uniqueZ, 'Z', calculationType);
+            updateBarChart('chartZ', chartDataZ, 'Z');
+
+            // 取得浮動視窗
+            const floatWindowforchartX = document.getElementById('floatingChartX');
+            const floatWindowforchartY = document.getElementById('floatingChartY');
+            const floatWindowforchartZ = document.getElementById('floatingChartZ');
+            const floatWindowforcharthis = document.getElementById('floatingChartHistogram');
+
+            // 設置初始位置
+            floatWindowforchartX.style.left = '320px';
+            floatWindowforchartX.style.right = 'autopx';
+            floatWindowforchartX.style.top = '110px';
+            floatWindowforchartX.style.width = '300px';
+            floatWindowforchartX.style.height = '210px';
+
+            floatWindowforchartY.style.left = '320px';
+            floatWindowforchartY.style.right = 'autopx';
+            floatWindowforchartY.style.top = '340px';
+            floatWindowforchartY.style.width = '300px';
+            floatWindowforchartY.style.height = '210px';
+
+            floatWindowforchartZ.style.left = '320px';
+            floatWindowforchartZ.style.right = 'autopx';
+            floatWindowforchartZ.style.top = '570px';
+            floatWindowforchartZ.style.width = '300px';
+            floatWindowforchartZ.style.height = '210px';
+
+            floatWindowforcharthis.style.left = 'autopx';
+            floatWindowforcharthis.style.right = '205px';
+            floatWindowforcharthis.style.top = '110px';
+            floatWindowforcharthis.style.width = '300px';
+            floatWindowforcharthis.style.height = '210px';
+            
+            // 重置 UnionorIntersection 下拉式選單回到預設選項 (Union)
+            document.getElementById('UnionorIntersection').selectedIndex = 0;
+
+            selectionType = 'Union';
+
+            // 重置滑動條到原始狀態 (Restricted Display)
+            $("#double-slider").slider("values", [globalMin, globalMax]);
+
+            // 更新滑動條上顯示的標籤 (Restricted Display)
+            $("#double-slider .ui-slider-handle").eq(0).find(".ui-slider-value").text(globalMin.toFixed(1));
+            $("#double-slider .ui-slider-handle").eq(1).find(".ui-slider-value").text(globalMax.toFixed(1));
+
+            // 更新全域變數
+            globalSliderMinforcolor = globalMin;
+            globalSliderMaxforcolor = globalMax;
+
+            // 重置滑動條到原始狀態 (Filter Cubes Value)
+            $("#double-slider-cubesvalue").slider("values", [globalMin, globalMax]);
+
+            // 更新滑動條上顯示的標籤 (Filter Cubes Value)
+            $("#double-slider-cubesvalue .ui-slider-handle").eq(0).find(".ui-slider-value").text(globalMin.toFixed(1));
+            $("#double-slider-cubesvalue .ui-slider-handle").eq(1).find(".ui-slider-value").text(globalMax.toFixed(1));
+
+            // 更新全域變數
+            globalSliderMin = globalMin;
+            globalSliderMax = globalMax;
+
+            // 重置 Filter Cubes Opacity 滑動條和顯示的值
+            document.getElementById('filteropacityRange').value = 0;
+            document.getElementById('filteropacityValue').textContent = 0;
+
+            // 移除浮動視窗及其包含之變數列表
+            const existingWindow = document.getElementById('filtersamplelist');
+            if (existingWindow) {
+                existingWindow.remove();
+            }
+
+            // ### Proximity
+            // 重置 rowprox 下拉式選單回到預設選項 (null)
+            document.getElementById('rowproxX').value = 'null';
+            document.getElementById('rowproxY').value = 'null';
+            document.getElementById('rowproxZ').value = 'null';
+
+            // 移除浮動視窗及其包含之圖
+            d3.select("#windowProxforX_svg").remove(); // 移除 SVG 圖形
+            d3.select("#windowProxforX").remove(); // 移除浮動視窗
+            d3.select("#colorbarX").remove(); // 移除 colorbarX
+
+            d3.select("#windowProxforY_svg").remove();
+            d3.select("#windowProxforY").remove();
+            d3.select("#colorbarY").remove();
+
+            d3.select("#windowProxforZ_svg").remove();
+            d3.select("#windowProxforZ").remove();
+            d3.select("#colorbarZ").remove();
+
+            // ### Slices
+            // 需直接操作對應單選按鈕的 checked 屬性
+            document.getElementById('oAxis').checked = true;
+
+            // 更新全域變數
+            selectedAxis = 'O';
+            sliceCubeByAxis(selectedAxis);
+
+            // 重置 SliceRange 滑桿值為預設值
+            SliceRange.value = 1; // 將滑桿值設定為初始值
+            SliceValue.textContent = 1; // 同步更新顯示值
+            
+            // ### cube Size
+            // 重置 cubeSize 滑動條和顯示的值
+            document.getElementById('cubeSizeX').value = 1;
+            document.getElementById('cubeSizeXValue').textContent = 1;
+            document.getElementById('cubeSizeY').value = 1;
+            document.getElementById('cubeSizeYValue').textContent = 1;
+            document.getElementById('cubeSizeZ').value = 1;
+            document.getElementById('cubeSizeZValue').textContent = 1;
+            
+            // 更新全域變數
+            cubeSizeX = 1;
+            cubeSizeY = 1;
+            cubeSizeZ = 1;
+
+            updateCubeSizesAndPositions();
+
+            // ### Separate Cube
+            // 重置 hollowSize 滑動條和顯示的值
+            document.getElementById('hollowSize').value = 1;
+            document.getElementById('hollowSizeValue').textContent = 1;
+
+            // 更新全域變數
+            newSize = 1;
+
+            // ### Proximity Matrix color
+            $("#colorforXproximity option[value='GAP_Rainbow']").prop('selected', true);
+            $("#colorforXproximity").change();
+
+            // ### reverse color
+            document.getElementById('reverseColorforX').checked = false;
+
+            $("#colorforYproximity option[value='GAP_Rainbow']").prop('selected', true);
+            $("#colorforYproximity").change();
+
+            // ### reverse color
+            document.getElementById('reverseColorforY').checked = false;
+
+            $("#colorforZproximity option[value='GAP_Rainbow']").prop('selected', true);
+            $("#colorforZproximity").change();
+
+            // ### reverse color
+            document.getElementById('reverseColorforZ').checked = false;
+
+            // ### Pan
+            document.getElementById('panCheckBox').checked = false;
+
+            // 更新全域變數
+            pancheck = false;
+
+            // 手動執行與 change 事件監聽器中相同的邏輯
+            controls.enableRotate = true; // 啟用旋轉
+
+            // ### Show Closest Data on Hover
+            document.getElementById('tooltipCheckbox').checked = false;
+
+            // 更新全域變數
+            tooltipEnabled = false;
+
+            // ### 投影方式
+            document.getElementById('PerspectiveCamera').checked = true;
+
+            selectedcamera = 'Pe';
+
+            // 呼叫 PeorOrcamera 函數，傳入選中的軸
+            camera = PeorOrcamera(selectedcamera);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+
+            setDefaultCameraPosition();
+
+            // renderer.render(scene, camera);
+
+            // 設定控制相機的參數
+            controls.rotateSpeed = .5;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 1.8;
+            controls.noZoom = false;
+            controls.noPan = false;
+
+            animate();
+
+            // ### Font Size
+            // 重置 fontSize 滑動條和顯示的值
+            document.getElementById('fontSize').value = 50; 
+            document.getElementById('fontSize').textContent = 50;
+        }
+
         // Pan
         document.getElementById('panCheckBox').addEventListener('change', function(event) {
-            if (event.target.checked) {
+            pancheck = event.target.checked;
+
+            if (pancheck) {
                 // 當勾選時 禁用旋轉
                 controls.enableRotate = false;
             } else {
@@ -5220,13 +5794,16 @@
           fill: #fff;
           stroke-width: 1.5px;
         }
+
         .node {
           font-size: 13px;
         }
+
         #rowTree .link {
           fill: none;
           stroke-width: 1px;
         }
+
         .file-button {
             cursor: pointer;
             border: none; /* 移除邊框 */
@@ -5237,14 +5814,14 @@
             display: inline-block;
             font-size: 16px;
             margin: 4px 2px;
-            margin-right: 10px;
+            margin-right: 5px;
             position: relative; /* 為懸停文本定位 */
-            margin-left: 22px; /* Space on the left */
+            margin-left: 7px; /* Space on the left */
         }
 
         #fileInputLabel {
             /* margin-right: 50px; */
-            margin-left: 2px;
+            /* margin-left: 2px; */
             color: black; /* 文字顏色 */
         }
 
@@ -5284,9 +5861,9 @@
         }
 
         /* 在關閉側邊選單的時候，不要顯示 fileInputLabel (Import Data) */
-        .side-nav-closed #fileInputLabel {
+        /* .side-nav-closed #fileInputLabel {
             display: none;
-        }
+        } */
 
         #xAxisCate {
             width: 190px; /* Adjust the width as needed */
@@ -5486,6 +6063,16 @@
             border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
         }
 
+        #defaultdataselest {
+            width: 165px;
+            /* height: 2em; */
+            border: 1px solid #ced4da;
+            margin-top: 6px;
+            margin-bottom: 17px;
+            margin-left: 5px;
+            border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
+        }
+
         #UnionorIntersection {
             width: 172px;
             /* height: 2em; */
@@ -5502,13 +6089,13 @@
 
         }
 
-        /* .reset-wholeCube-button {
+        .reset-wholeCube-button {
             cursor: pointer;
             border: none; /* 移除邊框 */
-            /* background-color: transparent; /* 背景透明 */
-            /* padding: 0px;
+            background-color: transparent; /* 背景透明 */
+            padding: 0px;
             margin-top: 7px;
-        } */
+        }
 
         #sortXOrderSelect {
             width: 140px; /* Adjust the width as needed */
@@ -6088,6 +6675,20 @@
             margin-bottom: 15px;
         }
 
+        .datawhite-background {
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            width: 190px;
+            /* display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center; */
+            height: 163px;
+            padding: 8px;
+            margin-bottom: 15px;
+        }
+
         #double-slider {
             width: 190px;
             margin-bottom: 35px;
@@ -6279,7 +6880,7 @@
             <li class="sidebar-heading h6">DATA</li>
             <!-- End Title -->
 
-            <!-- upload data -->
+            <!-- data information -->
             <li class="side-nav-menu-item side-nav-has-menu">
                 <!-- 資料處理面板 -->
                 <div id="dataProcessingPanel" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid #ccc; padding: 20px; z-index: 1000;">
@@ -6491,19 +7092,55 @@
 
                     <button id="okButton">OK</button>
                     <button id="cancelButton">Cancel</button>
-
                 </div>
-
-                <button id="fileButton" class="file-button">
-                    <i class="fa-solid fa-upload"></i>
-                </button>
-                <!-- 隱藏原始的檔案輸入 -->
-                <input type="file" id="fileInput" style="display: none;" />
-                <!-- 顯示一個自訂的標籤或按鈕 -->
-                <label for="fileInput" id="fileInputLabel" style="cursor: pointer;" class="side-nav-fadeout-on-closed media-body">Import Data</label>
-
             </li>
-            <!-- End upload data -->
+            <!-- End data information -->
+
+            <!-- Import data -->
+            <li class="side-nav-menu-item side-nav-has-menu side-nav-opened">
+                <a class="side-nav-menu-link media align-items-center" href="#"
+                data-target="#subdata">
+                <span class="side-nav-menu-icon d-flex mr-3">
+                    <i class="fa-solid fa-folder-open"></i>
+                </span>
+                <span class="side-nav-fadeout-on-closed media-body">Select Data File</span>
+                <span class="side-nav-control-icon d-flex">
+                    <i class="gd-angle-right side-nav-fadeout-on-closed"></i>
+                </span>
+                <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
+                </a>
+                
+                <!-- subdata -->
+                <ul id="subdata" class="side-nav-menu side-nav-menu-second-level mb-0" style="display: block;"> <!-- 確保展開 -->
+                    <li class="side-nav-menu-item">
+                        <div class="datawhite-background">
+                            <form id="dataselection">
+                                <!-- 預設資料 -->
+                                <input type="radio" id="defaultdata" name="datafile" value="defaultdata" checked>
+                                <label for="defaultdata">Example Data</label>
+                                <br>
+                                <select id="defaultdataselest">
+                                    <option value="airpollution" selected>2023 Air Pollution in Taiwan</option>
+                                    <option value="premierleague">23/24 Premier League</option>
+                                </select>
+                                <br>
+                                <!-- 輸入資料 -->
+                                <input type="radio" id="importdata" name="datafile" value="importdata">
+                                <label for="importdata">Import Data</label><br>
+                                <button id="fileButton" class="file-button">
+                                    <i class="fa-solid fa-upload"></i>
+                                </button>
+                                <!-- 隱藏原始的檔案輸入 -->
+                                <input type="file" id="fileInput" style="display: none;" />
+                                <!-- 顯示一個自訂的標籤或按鈕 -->
+                                <label for="fileInput" id="fileInputLabel" style="cursor: pointer;" class="side-nav-fadeout-on-closed media-body">Choose Data</label>
+                            </form>
+                        </div>
+                    </li>
+                </ul>
+                <!-- End subdata -->
+            </li>
+            <!-- End Import data -->
 
             <!-- Filter -->
             <li class="side-nav-menu-item side-nav-has-menu">
@@ -7054,11 +7691,11 @@
                             <i class="fa-solid fa-camera-rotate"></i>
                         </button>
                         <span>Reset Camera to Default</span>
-                        <!-- <br>
+                        <br>
                         <button id="resetCube" class="reset-wholeCube-button">
                             <i class="fa-solid fa-rotate"></i>
                         </button>
-                        <span>Reset To Original Cube</span> -->
+                        <span>Reset To Original Cube</span>
                         <br>
                         <div class="radiowhite-background">
                             <form id="PeorOrCamera">
