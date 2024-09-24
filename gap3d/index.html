@@ -1560,13 +1560,13 @@
         }
 
         // 依據更新後的 indices 重新映射 cube 之顏色
-        function applyChangesBasedOnNewIndices(displayCondition) {
+        function applyChangesBasedOnNewIndices(fieldvalue) {
             cubeSizeX = parseFloat(document.getElementById('cubeSizeX').value);
             cubeSizeY = parseFloat(document.getElementById('cubeSizeY').value);
             cubeSizeZ = parseFloat(document.getElementById('cubeSizeZ').value);
 
             // 取得目前選擇的欄位 value
-            selectedValueField = document.getElementById('singleSelect').value;
+            // selectedValueField = document.getElementById('singleSelect').value;
 
             // 從 DOM 取得目前選取的 displayCondition
             displayCondition = document.getElementById('DisplayCondition').value;
@@ -1727,7 +1727,7 @@
                                 cube.userData.tooltipText = fieldX + "：" + uniqueX[Xindices[i]] + "<br>" +
                                     fieldY + "：" + uniqueY[Yindices[j]] + "<br>" +
                                     fieldZ + "：" + uniqueZ[Zindices[k]] + "<br>" +
-                                    selectedValueField + "：" + value; // 存儲懸浮提示文本
+                                    fieldvalue + "：" + value; // 存儲懸浮提示文本
 
                                 cube.material.transparent = true;
                                 cube.material.needsUpdate = true; // 確保 Three.js 知道需要更新材料
@@ -2314,23 +2314,6 @@
                     scene.remove(existingAxis);
                 }
             });
-
-            // 確保場景重新渲染
-            renderer.render(scene, camera);
-        }
-
-        function clearAxesLines_forallaxis() {
-            var axes = ['edgeX1', 'edgeX2', 'edgeX3', 'edgeX4', 'edgeY1', 'edgeY2', 'edgeY3', 'edgeY4', 'edgeZ1', 'edgeZ2', 'edgeZ3', 'edgeZ4'];
-
-            axes.forEach(function(axisName) {
-                var existingAxis = scene.getObjectByName(axisName);
-                if (existingAxis) {
-                    scene.remove(existingAxis);
-                }
-            });
-
-            // 確保場景重新渲染
-            renderer.render(scene, camera);
         }
 
         // 根據視角更新軸線與軸標籤
@@ -4781,10 +4764,12 @@
         const fileInput = document.getElementById('fileInput');
         const fileInputLabel = document.getElementById('fileInputLabel');
 
-        document.addEventListener("DOMContentLoaded", function() {
+        var savedRadio = sessionStorage.getItem('selectedRadio');
 
+        document.addEventListener("DOMContentLoaded", function() {
             // 恢復 radio 狀態
-            const savedRadio = localStorage.getItem('selectedRadio');
+            savedRadio = sessionStorage.getItem('selectedRadio');
+
             if (savedRadio) {
                 document.getElementById(savedRadio).checked = true;
 
@@ -4796,10 +4781,10 @@
                     importRadio.checked = true;
                 }
             }
-            console.log(savedRadio);
+            // console.log(savedRadio);
 
             // 恢復下拉式選單狀態
-            const savedDropdownValue = localStorage.getItem('selectedDropdown');
+            const savedDropdownValue = sessionStorage.getItem('selectedDropdown');
             if (savedDropdownValue) {
                 document.getElementById('defaultdataselest').value = savedDropdownValue;
             }
@@ -4835,8 +4820,8 @@
 
             // 監聽下拉式選單變化
             defaultDataSelect.addEventListener('change', function() {
-                // 將選中的 defaultDataSelect 的值保存到 localStorage
-                localStorage.setItem('selectedDropdown', this.value);
+                // 將選中的 defaultDataSelect 的值保存到 sessionStorage (localStorage)
+                sessionStorage.setItem('selectedDropdown', this.value);
 
                 // 重新整理頁面
                 refreshPage();
@@ -4847,8 +4832,8 @@
             // 根據選擇的 radio 更新控件狀態
             document.querySelectorAll('input[name="datafile"]').forEach(function(radio) {
                 radio.addEventListener("change", function(event) {
-                    // 將選中的 radio 按鈕的值保存到 localStorage
-                    localStorage.setItem('selectedRadio', event.target.id);
+                    // 將選中的 radio 按鈕的值保存到 sessionStorage
+                    sessionStorage.setItem('selectedRadio', event.target.id);
 
                     if (defaultRadio.checked) {
                         fileButton.disabled = true;
@@ -4892,9 +4877,9 @@
             let filePath;
 
             if (defaultDataselectedOption === 'airpollution') {
-                filePath = 'data/df_air.csv';
+                filePath = '/GAP3D/data/df_air.csv';
             } else if (defaultDataselectedOption === 'premierleague') {
-                filePath = 'data/df_football.csv';
+                filePath = '/GAP3D/data/df_football.csv';
             }
 
             // 使用 fetch API 讀取 CSV 文件
@@ -5151,8 +5136,8 @@
             clearAllFloatingWindows(); // 清除所有浮動視窗
 
             processDataAndPlot(parsedData, selectedFields, selectedValueField, cubeSizeX, cubeSizeY, cubeSizeZ);
-            console.log(isDataLoaded);
-
+            
+            // console.log(isDataLoaded);
             // console.log(parsedData);
 
             // let calculationType = 'sum'; // 預設值
@@ -5436,7 +5421,7 @@
             updateZOrder();
 
             // 調用該函數，並根據目前 indices 映射顏色
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(valueField);
 
             // 調用此函數以設定初始預設相機位置
             setDefaultCameraPosition();
@@ -5511,7 +5496,7 @@
 
             displayCondition = 'RangeMatrix';
 
-            applyChangesBasedOnNewIndices(displayCondition);
+            applyChangesBasedOnNewIndices();
 
             // ### Opacity
             // 重置 Opacity 滑動條和顯示的值
@@ -6061,6 +6046,31 @@
             border: 1px solid #ced4da;
             margin-bottom: 11px;
             border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
+        }
+
+        /* 外圍容器樣式 */
+        .exportselect {
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            width: 190px;
+            /* height: 63px; */
+            padding: 8px;
+        }
+
+        /* 每個選項的基礎樣式 */
+        .exportselect-item {
+            padding: 5px;
+            /* font-family: Arial, sans-serif; */
+            color: black;
+            background-color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        /* 鼠標懸停時的反白樣式 */
+        .exportselect-item:hover {
+            background-color: #f3f5ff; /* 鼠標移上去的背景色 */
         }
 
         #defaultdataselest {
@@ -6686,7 +6696,6 @@
             align-items: center; */
             height: 163px;
             padding: 8px;
-            margin-bottom: 15px;
         }
 
         #double-slider {
@@ -7141,6 +7150,35 @@
                 <!-- End subdata -->
             </li>
             <!-- End Import data -->
+
+            <!-- Export -->
+            <li class="side-nav-menu-item side-nav-has-menu">
+                <a class="side-nav-menu-link media align-items-center" href="#"
+                data-target="#subexport">
+                <span class="side-nav-menu-icon d-flex mr-3">
+                    <i class="fa-solid fa-file-export"></i>
+                </span>
+                <span class="side-nav-fadeout-on-closed media-body">Export</span>
+                <span class="side-nav-control-icon d-flex">
+                    <i class="gd-angle-right side-nav-fadeout-on-closed"></i>
+                </span>
+                <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
+                </a>
+                
+                <!-- subexport -->
+                <ul id="subexport" class="side-nav-menu side-nav-menu-second-level mb-0">
+                    <li class="side-nav-menu-item">
+                        <div class="exportselect">
+                            <div class="exportselect-item">Cube</div>
+                            <div class="exportselect-item">Proximity</div>
+                            <!-- <div class="exportselect-item">Proximity of Y</div>
+                            <div class="exportselect-item">Proximity of Z</div> -->
+                        </div>
+                    </li>
+                </ul>
+                <!-- End subexport -->
+            </li>
+            <!-- End Export -->
 
             <!-- Filter -->
             <li class="side-nav-menu-item side-nav-has-menu">
