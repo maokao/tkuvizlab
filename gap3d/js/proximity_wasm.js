@@ -5,20 +5,56 @@ var Module = typeof Module !== 'undefined' ? Module : {};
 
 var runProximityWASM = Module.cwrap("computeProximity", null, ["number", "number", "number", "number", "number", "number", "number"]); // void function
 
+// 生成之 array 輸出成 txt
+function exportArrayToTxt(array, filename = 'data.txt') {
+    // 檢查是否找到對象
+    if (!array || array.length === 0) {
+        console.log("Element " + filename + " not found.");
+        return;
+    }
+
+    // 檢測 array 維度
+    const isTwoDimensional = Array.isArray(array[0]);
+    let text;
+    if (isTwoDimensional) {
+        // 如果是二維 array 每個 array 元素佔一行 行內元素以 tab 鍵相隔分隔
+        text = array.map(row => row.join('\t')).join('\n');
+    } else {
+        // 如果是一維 array 直接用 tab 鍵連接所有元素
+        text = array.join('\t');
+    }
+
+    // 建立一個 blob 對象 指定內容類型為純文字
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+
+    // 建立一個隱藏的 a 標籤 用於觸發下載
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename; // 設定下載檔案的檔案名
+    document.body.appendChild(a); // 新增 a 標籤到 body
+    a.click(); // 觸發下載
+    document.body.removeChild(a); // 下載後移除 a 標籤
+}
+
 function runProximity(proxType, side, isContainMissingValue, axis) {
   
-        var row_number = 0;
-        var col_number = 0;
-        //var Z_number = numZ;
+        if (axis == 0) {
+            var row_number = numX;
+            var col_number = numY * numZ;
+        } else if (axis == 1) {
+            var row_number = numY;
+            var col_number = numX * numZ;
+        } else {
+            var row_number = numZ;
+            var col_number = numX * numY;
+        }
+        
 
-        //var len = row_number * col_number * Z_number; 
-        var len = numX * numY * numZ;
+        var len = numX * numY * numZ; 
         var inputRawData = new Float64Array(len);
         
         // axis 是一個從 0 到 2 的值，分別代表 X 軸、Y 軸和 Z 軸
         if (axis == 0) { // X 軸
-            row_number = numX;
-            col_number = numY*numZ;
             for(var i = 0; i < numX; i++) {
                 for(var j = 0; j < numY; j++) {
                     for(var k = 0; k < numZ; k++) {
@@ -27,9 +63,9 @@ function runProximity(proxType, side, isContainMissingValue, axis) {
                     }
                 }
             }
+            // console.log(inputRawData);
+            // exportArrayToTxt(inputRawData, 'inputRawDataYZ.txt');
         } else if (axis == 1) { // Y 軸
-            row_number = numY;
-            col_number = numX*numZ;
             for(var j = 0; j < numY; j++) {
                 for(var i = 0; i < numX; i++) {
                     for(var k = 0; k < numZ; k++) {
@@ -38,9 +74,9 @@ function runProximity(proxType, side, isContainMissingValue, axis) {
                     }         
                 }
             }
+            // console.log(inputRawData);
+            // exportArrayToTxt(inputRawData, 'inputRawDataXZ.txt');
         } else { // Z 軸
-            row_number = numZ;
-            col_number = numX*numY;
             for(var k = 0; k < numZ; k++) {
                 for(var i = 0; i < numX; i++) {
                     for(var j = 0; j < numY; j++) {
@@ -49,6 +85,8 @@ function runProximity(proxType, side, isContainMissingValue, axis) {
                     }         
                 }
             }
+            // console.log(inputRawData);
+            // exportArrayToTxt(inputRawData, 'inputRawDataXY.txt');
         }  
 
         var bytes_per_element = inputRawData.BYTES_PER_ELEMENT;   // 8 bytes each element
@@ -63,15 +101,10 @@ function runProximity(proxType, side, isContainMissingValue, axis) {
         var input_ptr = Module._malloc(len * bytes_per_element);
         var output_prox_ptr;
         var prox_len = 0;
-        if(side == 0)
+        if (side == 0)
         {
           output_prox_ptr = Module._malloc(row_number * row_number * 8 );
           prox_len = row_number * row_number;
-        }
-        else
-        {
-          output_prox_ptr = Module._malloc(col_number * col_number * 8 );
-          prox_len = col_number * col_number;
         }
 
         Module.HEAPF64.set(inputRawData, input_ptr / bytes_per_element); // write WASM memory calling the set method of the Float64Array
