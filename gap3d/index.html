@@ -8,6 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
 
+    <!-- Family Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Bodoni+Moda:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@100;300;400;500;550;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Favicon -->
     <!-- <link rel="Shortcut Icon" type="image/x-icon" href="img/gap.ico"/> -->
     <link rel="Shortcut Icon" type="image/x-icon" href="img/cube.png"/> <!-- cube3.ico cube4.png -->
@@ -25,6 +31,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@4.4.2"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
     <script type="text/javascript" src="js/dendrogram.js"></script>
     <script type="text/javascript" src="js/seriation.js"></script>
@@ -59,7 +67,7 @@
         var colCount;
 
         // 全域變數來儲存目前的透明度值
-        var currentOpacity = 0.2; // 初始值為 0.2
+        var currentOpacity = .5; // 初始值為 .5
 
         // 全域變數 for color scheme
         var currentColorScheme;
@@ -133,6 +141,11 @@
         var rowProxDataY = [];
 
         var rowProxDataZ = [];
+
+        // 定義一個變量，用於儲存目前選取的 proximity 資料 (rowProxDataX Y Z)
+        let currentRowProxDataX = null;
+        let currentRowProxDataY = null;
+        let currentRowProxDataZ = null;
 
         let allowUpdateSizes = true; // 預設允許修改邊長
 
@@ -556,7 +569,8 @@
         });
 
         // 創建渲染器
-        var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); // 消除鋸齒、允許設置透明度
+        var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); // 消除鋸齒、允許設置透明度
+
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.getElementById('threejs-container').appendChild(renderer.domElement);
 
@@ -2196,7 +2210,7 @@
         // 添加軸標籤
         function createAxisLabel(text, position, size, axisLabelName) {
             var canvas = document.createElement('canvas'); // 創建一個新的 HTML <canvas> 元素
-            var context = canvas.getContext('2d'); // 獲取該 <canvas> 元素的 2D 繪圖上下文
+            var context = canvas.getContext('2d', { willReadFrequently: true }); // 獲取該 <canvas> 元素的 2D 繪圖上下文
             
             // 根據需要調整字體大小
             var fontSize = parseFloat(document.getElementById('fontSize').value);
@@ -2413,13 +2427,24 @@
             // 禁用整個下拉選單並顯示禁止標誌
             $("#colorforXproximity").prop('disabled', true).css('cursor', 'not-allowed');
             $("#reverseColorforX").prop('disabled', true).css('cursor', 'not-allowed');
+            $("label[for='reverseColorforX']").css({
+                'cursor': 'not-allowed',
+                'opacity': '.5' // 設置透明度
+            });
 
             $("#colorforYproximity").prop('disabled', true).css('cursor', 'not-allowed');
             $("#reverseColorforY").prop('disabled', true).css('cursor', 'not-allowed');
+            $("label[for='reverseColorforY']").css({
+                'cursor': 'not-allowed',
+                'opacity': '.5' // 設置透明度
+            });
 
             $("#colorforZproximity").prop('disabled', true).css('cursor', 'not-allowed');
             $("#reverseColorforZ").prop('disabled', true).css('cursor', 'not-allowed');
-
+            $("label[for='reverseColorforZ']").css({
+                'cursor': 'not-allowed',
+                'opacity': '.5' // 設置透明度
+            });
         });
 
         // 為 proxi MT X 軸下拉式選單新增事件監聽器
@@ -2577,6 +2602,11 @@
                 var minProxX = -1;
             }
 
+            $("label[for='reverseColorforX']").css({
+                'cursor': 'default',
+                'opacity': '1' // 恢復透明度
+            });
+
             for(let i = 0; i < numX; i++) {
                 for(let j = 0; j < numX; j++) {
                     rowProxDataX[i][j] = rowProxData1D[i*numX+j];
@@ -2614,9 +2644,14 @@
                 // 建立 colorbar 的 HTML 元素
                 var colorbarX = document.createElement('div');
 
-                // 呼叫 createFloatingWindow 來創建浮動視窗
-                createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 350, 350);
-
+                // 在資料輸入時才創建浮動視窗
+                if (isDataLoaded) {
+                    // 呼叫 createFloatingWindow 來創建浮動視窗
+                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 430, 380);
+                } else {
+                    return
+                }
+                
                 // 呼叫 funtion 在 windowID 下建立 svg
                 gapX.setupProximityData(`#${windowID}_svg`);
 
@@ -2632,6 +2667,9 @@
                 // console.log(ArrayYZ);
                 // 輸出成 txt
                 // exportArrayToTxt(ArrayYZ, 'ArrayYZ.txt');
+
+                // 更新全域變數
+                currentRowProxDataX = rowProxDataX;
             }
             else
             {
@@ -2805,6 +2843,11 @@
                 var minProxY = -1;
             }
 
+            $("label[for='reverseColorforY']").css({
+                'cursor': 'default',
+                'opacity': '1' // 恢復透明度
+            });
+
             for(let i = 0; i < numY; i++) {
                 for(let j = 0; j < numY; j++) {
                     rowProxDataY[i][j] = rowProxData1D[i*numY+j];
@@ -2835,8 +2878,13 @@
                 // 建立 colorbar 的 HTML 元素
                 var colorbarY = document.createElement('div');
 
-                // 呼叫 createFloatingWindow 來創建浮動視窗
-                createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 350, 350);
+                // 在資料輸入時才創建浮動視窗
+                if (isDataLoaded) {
+                    // 呼叫 createFloatingWindow 來創建浮動視窗
+                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 430, 380);
+                } else {
+                    return
+                }
 
                 // 呼叫 funtion 在 windowID 下建立 svg
                 gapY.setupProximityData(`#${windowID}_svg`);
@@ -2855,6 +2903,9 @@
                 // let ArrayXZ = convert3DArrayTo2D('Y');
                 // console.log(ArrayXZ);
                 // exportArrayToTxt(ArrayXZ, 'ArrayXZ.txt');
+
+                // 更新全域變數
+                currentRowProxDataY = rowProxDataY;
             }
             else
             {
@@ -3023,6 +3074,11 @@
                 var minProxZ = -1;
             }
 
+            $("label[for='reverseColorforZ']").css({
+                'cursor': 'default',
+                'opacity': '1' // 恢復透明度
+            });
+
             for(let i = 0; i < numZ; i++) {
                 for(let j = 0; j < numZ; j++) {
                     rowProxDataZ[i][j] = rowProxData1D[i*numZ+j];
@@ -3053,8 +3109,13 @@
                 // 建立 colorbar 的 HTML 元素
                 var colorbarZ = document.createElement('div');
 
-                // 呼叫 createFloatingWindow 來創建浮動視窗
-                createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 350, 350);
+                // 在資料輸入時才創建浮動視窗
+                if (isDataLoaded) {
+                    // 呼叫 createFloatingWindow 來創建浮動視窗
+                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 430, 380);
+                } else {
+                    return
+                }
 
                 // 呼叫 funtion 在 windowID 下建立 svg
                 gapZ.setupProximityData(`#${windowID}_svg`);
@@ -3071,8 +3132,11 @@
                 gapZ.rowIsSimilarity = rowIsSimilarity;
 
                 // let ArrayXY = convert3DArrayTo2D('Z');
-                // console.log(ArrayXY);
-                // exportArrayToTxt(ArrayXY, 'ArrayXY.txt');
+                // console.log(rowProxDataZ);
+                // exportArrayToTxt(rowProxDataZ, 'ArrayXY.txt');
+
+                // 更新全域變數
+                currentRowProxDataZ = rowProxDataZ;
             }
             else
             {
@@ -3084,6 +3148,30 @@
             $("#sortZOrderSelect option[value='singlelinkage']").removeAttr('disabled');
             $("#sortZOrderSelect option[value='completelinkage']").removeAttr('disabled');
             $("#sortZOrderSelect option[value='r2e']").removeAttr('disabled');
+        });
+
+        // 為 exportProximity 按鈕新增點擊事件，只會執行一次
+        document.getElementById('exportProximity').addEventListener('click', function() {
+            let exported = false; // 標記是否有資料被匯出
+
+            if (currentRowProxDataX) {
+                exportArrayToTxt(currentRowProxDataX, 'Proximity_X.txt');
+                exported = true;
+            }
+
+            if (currentRowProxDataY) {
+                exportArrayToTxt(currentRowProxDataY, 'Proximity_Y.txt');
+                exported = true;
+            }
+
+            if (currentRowProxDataZ) {
+                exportArrayToTxt(currentRowProxDataZ, 'Proximity_Z.txt');
+                exported = true;
+            }
+            // // 如果沒有任何資料被匯出，輸出提示
+            // if (!exported) {
+            //     console.log("No proximity data available for export.");
+            // }
         });
 
         // 建立浮動視窗
@@ -3100,6 +3188,12 @@
             floatWindow.style.top = top + 'px'; // 使用傳入的 top
             floatWindow.style.width = width + 'px'; // 設置初始寬度
             floatWindow.style.height = height + 'px'; // 設置初始高度
+            floatWindow.style.margin = '0'; // 去除任何外邊距
+            floatWindow.style.padding = '0'; // 去除任何內邊距
+            floatWindow.style.flexDirection = 'column'; // 確保標題和內容從上到下排列
+            floatWindow.style.zIndex = '10'; // 確保 floatWindow 在正常層級
+            floatWindow.style.overflow = 'hidden'; // 阻止捲軸出現
+            floatWindow.style.boxSizing = 'border-box'; // 對 floatWindow 也做同樣設置
 
             // 建立視窗頭部 並使用 Flexbox 佈局 (for 拖移)
             const header = document.createElement('div');
@@ -3107,6 +3201,10 @@
             header.style.display = 'flex';
             header.style.justifyContent = 'space-between'; // 在頭部兩端分佈元素
             header.style.alignItems = 'center'; // 垂直居中對齊
+            header.style.margin = '0'; // 去除任何外邊距
+            header.style.padding = '0'; // 去除任何內邊距
+            header.style.position = 'relative';
+            header.style.zIndex = '15'; // 讓標題層級比內容區域高
 
             // 建立標題元素
             const titleElement = document.createElement('span');
@@ -3126,6 +3224,10 @@
                     // 如果已經是最小化狀態，還原視窗
                     floatWindow.style.height = floatWindow.dataset.originalHeight;
                     contentElement.style.display = 'block'; // 再次顯示內容
+                    colorbarElement.style.display = 'block'; // 再次顯示 colorbar
+                    maxLabel.style.display = 'block'; // 顯示最大值標籤
+                    minLabel.style.display = 'block'; // 顯示最小值標籤
+                    floatWindow.style.resize = 'both'; // 允許再次調整視窗大小
                     floatWindow.classList.remove('minimized');
                     toggleButton.textContent = '–'; // 切換回最小化按鈕
                 } else {
@@ -3133,6 +3235,10 @@
                     floatWindow.dataset.originalHeight = floatWindow.style.height; // 儲存原始高度
                     floatWindow.style.height = header.offsetHeight + 'px'; // 設定高度為頭部高度
                     contentElement.style.display = 'none'; // 隱藏內容
+                    colorbarElement.style.display = 'none'; // 隱藏 colorbar
+                    maxLabel.style.display = 'none'; // 隱藏最大值標籤
+                    minLabel.style.display = 'none'; // 隱藏最小值標籤
+                    floatWindow.style.resize = 'none'; // 禁止調整視窗大小
                     floatWindow.classList.add('minimized');
                     toggleButton.textContent = ' + '; // 切換為還原按鈕
                 }
@@ -3143,7 +3249,7 @@
             const closeButton = document.createElement('span');
             closeButton.textContent = '×';
             closeButton.classList.add('close');
-            // closeButton.style.marginLeft = '10px'; // 給關閉按鈕一點左邊距
+            closeButton.style.marginRight = '10px'; // 給關閉按鈕一點左邊距
             closeButton.onclick = function() {
                 floatWindow.remove();
                 // 按關閉按鈕時，同時禁用 color for proximity
@@ -3156,28 +3262,6 @@
 
                 // 重置 reverseColorforproximity 狀態
                 document.getElementById(reverseColorforproximity).checked = false;
-
-                // // ### Y
-                // $("#colorforYproximity").prop('disabled', true).css('cursor', 'not-allowed');
-                // $("#reverseColorforY").prop('disabled', true).css('cursor', 'not-allowed');
-
-                // // 重置 colorforYproximity 下拉式選單回到預設選項 (GAP_Rainbow)
-                // $("#colorforYproximity option[value='GAP_Rainbow']").prop('selected', true);
-                // $("#colorforYproximity").change();
-
-                // // 重置 reverseColorforY 狀態
-                // document.getElementById('reverseColorforY').checked = false;
-
-                // // ### Z
-                // $("#colorforZproximity").prop('disabled', true).css('cursor', 'not-allowed');
-                // $("#reverseColorforZ").prop('disabled', true).css('cursor', 'not-allowed');
-
-                // // 重置 colorforZproximity 下拉式選單回到預設選項 (GAP_Rainbow)
-                // $("#colorforZproximity option[value='GAP_Rainbow']").prop('selected', true);
-                // $("#colorforZproximity").change();
-
-                // // 重置 reverseColorforZ 狀態
-                // document.getElementById('reverseColorforZ').checked = false;
             };
             header.appendChild(closeButton);
 
@@ -3193,31 +3277,49 @@
             const container = document.createElement('div');
 
             container.style.display = 'flex'; // 使用 Flexbox 佈局
-            // container.style.position = 'relative'; // 設定為相對定位，以便 colorbar 使用絕對定位
+            container.style.position = 'relative'; // 設定為相對定位，以便 colorbar 使用絕對定位
             container.style.alignItems = 'center'; // 垂直居中對齊
-            container.style.width = '100%'; // 讓容器填滿視窗寬度
-            container.style.height = '100%'; // 讓容器填滿視窗寬度
+            container.style.width = '99%'; // 讓容器填滿視窗寬度
+            // container.style.height = '99%'; // 讓容器填滿視窗高度
+            container.style.height = `calc(100% - 39px)`; // 設定 container 的高度為視窗高度減去 header 的實際高度
+            container.style.margin = '0'; // 去除任何外邊距
+            container.style.padding = '0'; // 去除任何內邊距
+            // container.style.border = '2px solid red';
 
             // 設定 heatmap 樣式並新增到容器
             contentElement.style.height = '100%'; // 讓內容區域填滿容器高度
-            contentElement.style.width = '100%'; // 讓內容區域填滿容器寬度
+            contentElement.style.width = '99%'; // 讓內容區域填滿容器寬度
+            contentElement.style.margin = '0'; // 去除任何外邊距
+            contentElement.style.padding = '0'; // 去除任何內邊距
             contentElement.id = windowId + "_svg";
+            contentElement.style.overflow = 'hidden'; // 確保內容區域不會超出視窗
+            contentElement.style.boxSizing = 'border-box'; // 包含邊框和 padding 在元素寬高中
+            // contentElement.style.border = '2px solid yellow';
 
             // 建立 colorbar 容器和標籤
             const colorbarContainer = document.createElement('div');
 
             colorbarContainer.id = 'colorbarforprox-container';
-            colorbarContainer.style.flexDirection = 'row'; // 横向排列元素
+            // colorbarContainer.style.flexDirection = 'row'; // 横向排列元素
             colorbarContainer.style.display = 'flex';
-            colorbarContainer.style.alignItems = 'center';
             colorbarContainer.style.position = 'relative';
-            colorbarContainer.style.marginRight = '35px'; // 給標籤留一些空間
+            colorbarContainer.style.marginRight = '30px'; // 給標籤留一些空間
+            colorbarContainer.style.alignItems = 'flex-start'; // 內容從頂部對齊
+            colorbarContainer.style.marginTop = '0'; // 去除上邊距
+            colorbarContainer.style.marginBottom = '0'; // 去除下邊距
+            colorbarContainer.style.padding = '0'; // 去除任何內邊距
+            // colorbarContainer.style.border = '2px solid blue';
 
             // 設定 colorbar 樣式並新增到容器
             colorbarElement.style.width = '20px'; // 設定 colorbar 的寬度
             colorbarElement.style.height = '200px'; // 設定 colorbar 的高度
             colorbarElement.style.border = '1px solid #FFF'; // 設定 colorbar 的邊框樣式
             colorbarElement.style.position = 'relative'; // 設定 colorbar 相對定位，以便標籤使用絕對定位
+            colorbarElement.style.alignItems = 'flex-start'; // 內容從頂部對齊
+            colorbarElement.style.boxSizing = 'border-box'; // 確保 padding 和 border 不會影響佈局
+            colorbarElement.style.marginTop = '0'; // 去除上邊距
+            colorbarElement.style.marginBottom = '0'; // 去除下邊距
+            colorbarElement.style.padding = '0'; // 去除任何內邊距
 
             // 設定顏色方案下拉式選單的監聽器
             const colorforproximity = document.getElementById(selectedSchemeforproximity);
@@ -3254,6 +3356,9 @@
             maxLabel.style.fontSize = '12px';
             maxLabel.style.fontFamily = 'Arial, sans-serif';
             maxLabel.style.textAlign = 'left'; // 標籤靠左顯示
+            maxLabel.style.margin = '0'; // 去除任何外邊距
+            maxLabel.style.padding = '0'; // 去除任何內邊距
+            // maxLabel.style.border = '2px solid gray';
 
             // 建立最小值標籤
             const minLabel = document.createElement('div');
@@ -3268,11 +3373,13 @@
             minLabel.style.fontSize = '12px';
             minLabel.style.fontFamily = 'Arial, sans-serif';
             minLabel.style.textAlign = 'left';
+            minLabel.style.margin = '0'; // 去除任何外邊距
+            minLabel.style.padding = '0'; // 去除任何內邊距
+            // minLabel.style.border = '2px solid gray';s
 
             // 將標籤和 colorbar 加入 colorbarContainer
             colorbarContainer.appendChild(maxLabel);
             colorbarContainer.appendChild(colorbarElement);
-            // colorbarContainer.appendChild(midLabel);
             colorbarContainer.appendChild(minLabel);
 
             // 將內容容器新增到浮動視窗中
@@ -3281,6 +3388,7 @@
 
             // 將內容容器新增到浮動視窗中
             floatWindow.appendChild(container);
+            // floatWindow.appendChild(colorbarContainer);
 
             // 組裝視窗並顯示
             document.getElementById('floatingWindowContainer').appendChild(floatWindow);
@@ -3288,8 +3396,8 @@
 
             // 每次建立後啟用 color for proximity
             if (document.getElementById(windowId)) {
-                $("#"+selectedSchemeforproximity).prop('disabled', false).css('cursor', 'pointer');
-                $("#"+reverseColorforproximity).prop('disabled', false).css('cursor', 'pointer');
+                $("#"+selectedSchemeforproximity).prop('disabled', false).css('cursor', 'auto');
+                $("#"+reverseColorforproximity).prop('disabled', false).css('cursor', 'auto');
             }
 
             // 設定視窗的初始 z-index
@@ -3825,7 +3933,7 @@
                 window[containerId + 'ChartInstance'] = null; // 清空實例
             }
 
-            const ctx = document.getElementById(containerId).getContext('2d');
+            const ctx = document.getElementById(containerId).getContext('2d', { willReadFrequently: true });
 
             // 預設和選取狀態下的顏色
             const defaultColor = 'rgba(133, 163, 245, 0.2)';
@@ -3965,7 +4073,7 @@
 
         // 創建 Histogram
         function drawHistogram(chartId, bins, counts) {
-            const ctx = document.getElementById(chartId).getContext('2d');
+            const ctx = document.getElementById(chartId).getContext('2d', { willReadFrequently: true });
             
             // 如果圖表已經存在，先銷毀它
             if (window[chartId + 'ChartInstance']) {
@@ -4755,7 +4863,6 @@
             // console.log(`Select${selectNumber} selected columns:`, columnNames.join(", "));
         }
 
-        // -----------------------------------------------------------
         // 選擇 Example Data or Import Data 的 radio
         const defaultRadio = document.getElementById('defaultdata');
         const defaultDataSelect = document.getElementById('defaultdataselest');
@@ -5015,7 +5122,6 @@
 
             return { headers, data }; // 傳回包含欄位名稱和資料物件的 array
         }
-        // -----------------------------------------------------------
 
         // 當文件被選擇後處理 CSV 檔案
         document.getElementById('fileInput').addEventListener('change', function(event) {
@@ -5355,7 +5461,7 @@
                     cubes[i][j] = []; // 初始化三維 array
                     cubesOpacity[i][j] = [];
                     for (k = 0; k < numZ; k++) {
-                        cubesOpacity[i][j][k] = currentOpacity; // 設初始透明度為 0.2
+                        cubesOpacity[i][j][k] = currentOpacity; // 設初始透明度為 0.5
 
                         // 創建一個具有基本材料的立方體
                         let cubeMaterial = new THREE.MeshBasicMaterial({ 
@@ -5435,7 +5541,7 @@
         // 設定相機的預設位置和焦點
         function setDefaultCameraPosition() {
             maxDimension = Math.max(numX, numY, numZ); // 找到最大的維度
-            distance = Math.round(maxDimension * 1 / 3 + 1.5); // 設定相機距離
+            distance = Math.round(maxDimension / 2.5 + 1.5); // 設定相機距離
 
             camera.position.set(distance, distance, distance); // 設置相機位置
             camera.lookAt(new THREE.Vector3(numX * cubeSizeX / 2, numY * cubeSizeY / 2, numZ * cubeSizeZ / 2)); // 設定焦點點
@@ -5445,6 +5551,205 @@
 
             // 重新渲染場景
             renderer.render(scene, camera);
+        }
+
+        // 監聽 exportCube 按鈕的點擊事件
+        document.getElementById('exportCube').addEventListener('click', function() {
+            exportSceneToPNG();
+        });
+
+        // 匯出場景為 PNG 圖片並自動下載的函數
+        // function exportSceneToPNG() {
+        //     // 檢查場景是否有任何物件
+        //     if (scene.children.length === 0) {
+        //         console.log("Cube not found or scene is empty.");
+        //         return; // 場景為空，返回不繼續執行
+        //     }
+
+        //     // 渲染當前場景
+        //     renderer.render(scene, camera);
+            
+        //     // 取得渲染器的內容並轉換為 PNG 資料 URL
+        //     var imgData = renderer.domElement.toDataURL('image/png');
+            
+        //     // 建立一個暫時的 <a> 元素用於觸發下載
+        //     var link = document.createElement('a');
+        //     link.href = imgData;
+        //     link.download = 'Cube.png'; // 下載的檔案名稱
+            
+        //     // 觸發點擊事件下載圖片
+        //     link.click();
+        // }
+
+        // 匯出場景為 PNG 圖片並自動下載的函數 with colorbar
+        function exportSceneToPNG() {
+            // 檢查場景是否有任何物件
+            if (scene.children.length === 0) {
+                // console.log("Cube not found or scene is empty.");
+                return; // 場景為空，返回不繼續執行
+            }
+
+            // 渲染當前場景
+            renderer.render(scene, camera);
+
+            // 取得 WebGL 場景渲染結果的影像資料
+            const sceneImageData = renderer.domElement.toDataURL('image/png');
+
+            // 取得 colorbar 和它的高度
+            var colorbarMinLabel = colorbarMinLabelforcube.textContent;
+            var colorbarMaxLabel = colorbarMaxLabelforcube.textContent;
+
+            // 使用 html2canvas 取得 colorbar 的圖像資料
+            html2canvas(colorbarforcube).then(function (colorbarCanvas) {
+                const colorbarImageData = colorbarCanvas.toDataURL('image/png');
+
+                // 建立一個新的 canvas 用於合併場景和 colorbar
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // 設定 canvas 大小，包含場景和 colorbar 的寬高
+                const rendererWidth = renderer.domElement.width;
+                const rendererHeight = renderer.domElement.height;
+                const colorbarWidth = colorbarCanvas.width;
+                const colorbarHeight = colorbarCanvas.height;
+
+                // 調整 canvas 的寬高，包含場景和 colorbar
+                canvas.width = rendererWidth + colorbarWidth + 50; // 場景寬度 + colorbar 寬度 + 空隙
+                canvas.height = Math.max(rendererHeight, colorbarHeight); // 高度取最大值
+
+                // 繪製場景到新的 canvas 上
+                const sceneImage = new Image();
+                sceneImage.src = sceneImageData;
+                sceneImage.onload = function () {
+                    ctx.drawImage(sceneImage, 0, 0, rendererWidth, rendererHeight);
+
+                    // 繪製 colorbar 到場景右側
+                    const colorbarImage = new Image();
+                    colorbarImage.src = colorbarImageData;
+                    colorbarImage.onload = function () {
+                        const colorbarX = rendererWidth;
+                        const colorbarY = (rendererHeight - colorbarHeight) / 2; // colorbar 垂直居中
+
+                        ctx.drawImage(colorbarImage, colorbarX, colorbarY);
+
+                        // 繪製最小值和最大值標籤
+                        ctx.font = "14px Arial";
+                        ctx.fillStyle = "black";
+
+                        // 繪製最大值標籤（在 colorbar 頂部）
+                        ctx.fillText(colorbarMaxLabel, colorbarX + colorbarWidth + 5, colorbarY + 6); // +6 調整字體高度
+
+                        // 繪製最小值標籤（在 colorbar 底部）
+                        ctx.fillText(colorbarMinLabel, colorbarX + colorbarWidth + 5, colorbarY + colorbarHeight + 2);
+
+                        // 匯出最終合併的圖片
+                        const finalImageData = canvas.toDataURL('image/png');
+
+                        // 建立一個 <a> 元素用於觸發下載
+                        const link = document.createElement('a');
+                        link.href = finalImageData;
+                        link.download = 'Cube.png'; // 下載的檔案名稱
+
+                        // 觸發點擊事件下載圖片
+                        link.click();
+                    };
+                };
+            });
+        }
+
+        // 監聽 exportProxImage 按鈕的點擊事件
+        document.getElementById('exportProxImage').addEventListener('click', function() {
+            exportWindowAsImage('windowProxforX', 'ProximityImage_X');
+            exportWindowAsImage('windowProxforY', 'ProximityImage_Y');
+            exportWindowAsImage('windowProxforZ', 'ProximityImage_Z');
+        });
+
+        // 匯出指定視窗的內容為圖片
+        function exportWindowAsImage(windowID, name) {
+            var element = document.getElementById(windowID); // 取得浮動視窗的 DOM 元素
+            
+            // 檢查元素是否存在
+            if (!element) {
+                // console.log("Element " + name + " not found.");
+                return; // 找不到元素直接返回，不觸發錯誤
+            }
+
+            var header = element.querySelector('.window-header'); // 取得標題元素
+
+            // 暫時隱藏標題
+            if (header) {
+                header.style.display = 'none';
+            }
+
+            // 使用 html2canvas 將指定元素渲染為畫布
+            html2canvas(element).then(function(canvas) {
+                // 將畫布轉換為圖片資料 URL
+                var imgData = canvas.toDataURL('image/png');
+
+                // 建立一個 <a> 元素用於觸發下載
+                var link = document.createElement('a');
+                link.href = imgData;
+                link.download = name + '.png'; // 下載的檔案名稱
+
+                // 觸發下載
+                link.click();
+
+                // 恢復標題的顯示
+                if (header) {
+                    header.style.display = 'flex';
+                }
+            }).catch(function(error) {
+                console.error("Error rendering canvas: ", error);
+                // 如果渲染失敗，也要恢復標題顯示
+                if (header) {
+                    header.style.display = 'flex';
+                }
+            });
+        }
+
+        // 監聽 exportChart 按鈕的點擊事件
+        document.getElementById('exportChart').addEventListener('click', function() {
+            // Bar Charts
+            exportChartAsImage('chartX', 'BarChart_X');
+            exportChartAsImage('chartY', 'BarChart_Y');
+            exportChartAsImage('chartZ', 'BarChart_Z');
+
+            // Histogram
+            exportChartAsImage('Histogram', 'Histogram');
+        });
+
+        // 匯出 Chart.js 圖表為 PNG 的函數
+        function exportChartAsImage(containerId, name) {
+            if (window[containerId + 'ChartInstance']) {
+                const chartInstance = window[containerId + 'ChartInstance'];
+                const canvas = chartInstance.canvas;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                // 儲存目前的 canvas 狀態
+                ctx.save();
+
+                // 設定白色背景色
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // 取得圖表的 base64 資料
+                const chartImage = canvas.toDataURL('image/png');
+
+                // 建立一個 <a> 元素用於下載圖片
+                const link = document.createElement('a');
+                link.href = chartImage;
+                link.download = name + '.png'; // 下載的檔案名稱
+
+                // 觸發點擊事件下載圖片
+                link.click();
+
+                // 恢復 canvas 的狀態（去掉白色背景）
+                ctx.restore();
+            }
+            // else {
+            //     console.log("Element " + name + " not found.");
+            // }
         }
 
         // Reset camera to default
@@ -5500,11 +5805,11 @@
 
             // ### Opacity
             // 重置 Opacity 滑動條和顯示的值
-            document.getElementById('opacityRange').value = .2;
-            document.getElementById('opacityValue').textContent = .2;
+            document.getElementById('opacityRange').value = .5;
+            document.getElementById('opacityValue').textContent = .5;
 
             // 更新全域變數
-            currentOpacity = .2;
+            currentOpacity = .5;
 
             // ### filter
             for (let i = 0; i < Xindices.length; i++) {
@@ -5775,6 +6080,12 @@
     </script>
 
     <style>
+        .side-nav-hide-on-closed {
+            font-family: 'Encode Sans', sans-serif; /* Encode Sans  Ubuntu  kanit sans-serif*/
+            font-size: 18px;
+            font-weight: 550;
+        }
+
         .node circle {
           fill: #fff;
           stroke-width: 1.5px;
@@ -5797,7 +6108,7 @@
             text-align: center;
             text-decoration: none;
             display: inline-block;
-            font-size: 16px;
+            /* font-size: 16px; */
             margin: 4px 2px;
             margin-right: 5px;
             position: relative; /* 為懸停文本定位 */
@@ -5870,23 +6181,26 @@
 
         #rowproxX {
             width: 190px; /* Adjust the width as needed */
-            height: 1.8em;
+            /* height: 2em; */
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
             padding: 1px;
             border-radius: 5px !important; /* 使用 !important 來確保樣式被套用 */
+            margin-bottom: 10px;
+            /* font-size: 10px; */
         }
 
         #rowproxY {
             width: 190px; /* Adjust the width as needed */
-            height: 1.8em;
+            /* height: 2em; */
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
             padding: 1px;
             border-radius: 5px !important; /* 使用 !important 來確保樣式被套用 */
+            margin-bottom: 10px;
         }
 
         #rowproxZ {
             width: 190px; /* Adjust the width as needed */
-            height: 1.8em;
+            /* height: 2em; */
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
             padding: 1px;
             border-radius: 5px !important; /* 使用 !important 來確保樣式被套用 */
@@ -5899,20 +6213,18 @@
 
         /* Modify the width of the range input */
         #opacityRange {
-            width: 160px; /* or 100% if you want it to be responsive */
-            /* other styles you want to apply */
+            width: 170px; /* or 100% if you want it to be responsive */
+            margin-bottom: 13px;
         }
 
         /* Modify the width of the range input */
         #filteropacityRange {
-            width: 180px; /* or 100% if you want it to be responsive */
-            /* other styles you want to apply */
+            width: 170px; /* or 100% if you want it to be responsive */
         }
 
         /* Adjust the distance between the range input and its value display */
         #opacityValue {
             margin-left: 6px; /* Adjust as needed */
-            /* other styles you want to apply */
         }
 
         #colorSchemeSelect {
@@ -6113,6 +6425,7 @@
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
             border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
             margin-right: 6px;
+            /* font-size: 16px; */
         }
 
         #sortYOrderSelect {
@@ -6121,6 +6434,7 @@
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
             border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
             margin-right: 6px;
+            /* font-size: 16px; */
         }
 
         #sortZOrderSelect {
@@ -6129,40 +6443,45 @@
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
             border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
             margin-right: 6px;
+            /* font-size: 16px; */
         }
 
         .label-sortXOrderSelect{
             margin-right: 10px;
             position: relative;
             top: 4px; /* 向下移動 */
-            font-size: 17px;
+            /* font-size: 16px; */
         }
 
         .label-sortYOrderSelect{
             margin-right: 10px;
             position: relative;
             top: 4px; /* 向下移動 */
-            font-size: 17px;
+            /* font-size: 16px; */
         }
 
         .label-sortZOrderSelect{
             margin-right: 10px;
             position: relative;
             top: 4px; /* 向下移動 */
-            font-size: 17px;
+            /* font-size: 16px; */
         }
 
         #Xflip_side {
+            line-height: 2em; /* 將行高設為與高度相同，確保文本垂直置中 */
+            vertical-align: middle; /* 垂直對齊置中 */
+
             width: 125px;
-            /* height: 2em; */
+            height: 2em;
             border: 1px solid #ced4da;
             border-radius: 5px;
             margin-right: 2.5px;
+            /* font-size: 16px; */
         }
 
         #Yflip_side {
             width: 125px;
-            /* height: 2em; */
+            height: 2em;
             border: 1px solid #ced4da;
             border-radius: 5px;
             margin-right: 2.5px;
@@ -6170,7 +6489,7 @@
 
         #Zflip_side {
             width: 125px;
-            /* height: 2em; */
+            height: 2em;
             border: 1px solid #ced4da;
             border-radius: 5px;
         }
@@ -6668,7 +6987,7 @@
             width: 190px;
             height: 139px;
             padding: 8px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
         .filterwhite-background {
@@ -6715,7 +7034,7 @@
         .ui-slider-value {
             position: absolute;
             top: 25px; /* 根据需要调整位置 */
-            font-size: 13px;
+            font-size: 12px;
             transform: translateX(-50%); /* 置中對齊 */
         }
 
@@ -6800,7 +7119,7 @@
                     <option value="r2e" disabled>R2E</option>
                     <option value="random_X">Random</option> 
                 </select>
-                <select id="Xflip_side" class="form-control-none form-control-sm" disabled="disabled">
+                <select id="Xflip_side" disabled="disabled">
                     <option value="null" selected>Flip: None</option>
                     <option value="r2e" disabled="disabled">Flip: R2E</option>
                     <option value="uncle">Flip: Uncle</option>
@@ -6819,7 +7138,7 @@
                     <option value="r2e" disabled>R2E</option>
                     <option value="random_Y">Random</option>
                 </select>
-                <select id="Yflip_side" class="form-control-none form-control-sm" disabled="disabled">
+                <select id="Yflip_side" disabled="disabled">
                     <option value="null" selected>Flip: None</option>
                     <option value="r2e" disabled="disabled">Flip: R2E</option>
                     <option value="uncle">Flip: Uncle</option>
@@ -6838,7 +7157,7 @@
                     <option value="r2e" disabled>R2E</option>
                     <option value="random_Z">Random</option>
                 </select>
-                <select id="Zflip_side" class="form-control-none form-control-sm" disabled="disabled">
+                <select id="Zflip_side" disabled="disabled"> <!-- class="form-control-none form-control-sm" -->
                     <option value="null" selected>Flip: None</option>
                     <option value="r2e" disabled="disabled">Flip: R2E</option>
                     <option value="uncle">Flip: Uncle</option>
@@ -7169,72 +7488,16 @@
                 <ul id="subexport" class="side-nav-menu side-nav-menu-second-level mb-0">
                     <li class="side-nav-menu-item">
                         <div class="exportselect">
-                            <div class="exportselect-item">Cube</div>
-                            <div class="exportselect-item">Proximity</div>
-                            <!-- <div class="exportselect-item">Proximity of Y</div>
-                            <div class="exportselect-item">Proximity of Z</div> -->
+                            <div class="exportselect-item" id="exportCube">Cube</div>
+                            <div class="exportselect-item" id="exportProximity">Proximity</div>
+                            <div class="exportselect-item" id="exportProxImage">Proximity Images</div>
+                            <div class="exportselect-item" id="exportChart">Charts</div>
                         </div>
                     </li>
                 </ul>
                 <!-- End subexport -->
             </li>
             <!-- End Export -->
-
-            <!-- Filter -->
-            <li class="side-nav-menu-item side-nav-has-menu">
-                <a class="side-nav-menu-link media align-items-center" href="#"
-                   data-target="#subFilter">
-              <span class="side-nav-menu-icon d-flex mr-3">
-                <i class="fa-solid fa-filter"></i>
-              </span>
-                    <span class="side-nav-fadeout-on-closed media-body">Filter</span>
-                    <span class="side-nav-control-icon d-flex">
-                <i class="gd-angle-right side-nav-fadeout-on-closed"></i>
-              </span>
-                    <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
-                </a>
-
-                <!-- subFilter -->
-                <ul id="subFilter" class="side-nav-menu side-nav-menu-second-level mb-0">
-                    <li class="side-nav-menu-item">
-                        <div class="filterwhite-background">
-                            <!-- for bar chart -->
-                            <label for="calculationType">Aggregation Type</label>
-                            <select id="calculationType">
-                                <option value="sum">sum</option>
-                                <option value="mean">mean</option>
-                            </select>
-                            <label for="UnionorIntersection">Filter Type</label>
-                            <select id="UnionorIntersection">
-                                <option value="Union">Union</option>
-                                <option value="Intersection">Intersection</option>
-                            </select>
-                            <br>
-                            <button id="resetToOriginalCube" class="reset-Cube-button">
-                                <i class="fa-solid fa-arrow-rotate-left"></i>
-                            </button>
-                            <span>Reset Filter Setting</span>
-                        </div>
-                        <label for="double-slider">Restricted Display</label>
-                        <div>
-                            <!-- 新增雙按鈕滑動條的容器 -->
-                            <div id="double-slider"></div>
-                            <span id="range-info"></span>
-                        </div>
-                        <label for="double-slider-cubesvalue">Filter Cubes Value</label>
-                        <div>
-                            <!-- 新增雙按鈕滑動條的容器 -->
-                            <div id="double-slider-cubesvalue"></div>
-                            <span id="range-cubesvalue"></span>
-                        </div> 
-                        <label for="filteropacityRange">Filter Cubes Opacity</label>
-                        <input type="range" id="filteropacityRange" min="0" max="1" step="0.01" value="0">
-                        <span id="filteropacityValue">0</span>
-                    </li>
-                </ul>
-                <!-- End subFilter -->
-            </li>
-            <!-- End Filter -->
 
             <!-- Title -->
             <li class="sidebar-heading h6">SETTINGS</li>
@@ -7289,7 +7552,7 @@
                     <li class="side-nav-menu-item">
                         <!-- <a class="side-nav-menu-link" href="users.html">Open File</a> -->
                         <label for="rowproxX">X Processing</label>
-                        <select id="rowproxX" class="form-control form-control-sm">
+                        <select id="rowproxX"> <!-- class="form-control form-control-sm" -->
                             <option value="null" selected> ----- </option>
                             <optgroup label =  "Continuous">
                             <option value="euclidean_distance">Euclidean Distance</option>
@@ -7314,7 +7577,7 @@
                         </select>
                         
                         <label for="rowproxY">Y Processing</label>
-                        <select id="rowproxY" class="form-control form-control-sm">
+                        <select id="rowproxY">
                             <option value="null" selected> ----- </option>
                             <optgroup label =  "Continuous">
                             <option value="euclidean_distance">Euclidean Distance</option>
@@ -7339,7 +7602,7 @@
                         </select>
                     
                         <label for="rowproxZ">Z Processing</label>
-                        <select id="rowproxZ" class="form-control form-control-sm">
+                        <select id="rowproxZ">
                             <option value="null" selected> ----- </option>
                             <optgroup label =  "Continuous">
                             <option value="euclidean_distance">Euclidean Distance</option>
@@ -7367,48 +7630,64 @@
                 <!-- End Proximity -->
             </li>
 
-            <!-- slice -->
+            <!-- Title -->
+            <li class="sidebar-heading h6">OPTIONS</li>
+            <!-- End Title -->
+
+            <!-- Filter -->
             <li class="side-nav-menu-item side-nav-has-menu">
                 <a class="side-nav-menu-link media align-items-center" href="#"
-                   data-target="#subslice">
+                   data-target="#subFilter">
               <span class="side-nav-menu-icon d-flex mr-3">
-                <i class="fa-solid fa-clone"></i>
+                <i class="fa-solid fa-filter"></i>
               </span>
-                    <span class="side-nav-fadeout-on-closed media-body">Slices</span>
+                    <span class="side-nav-fadeout-on-closed media-body">Filter</span>
                     <span class="side-nav-control-icon d-flex">
                 <i class="gd-angle-right side-nav-fadeout-on-closed"></i>
               </span>
                     <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
                 </a>
 
-                <!-- subslice -->
-                <ul id="subslice" class="side-nav-menu side-nav-menu-second-level mb-0">
+                <!-- subFilter -->
+                <ul id="subFilter" class="side-nav-menu side-nav-menu-second-level mb-0">
                     <li class="side-nav-menu-item">
-                        <div class="Slicewhite-background">
-                            <form id="axisSelection">
-                                <input type="radio" id="xAxis" name="axis" value="X">
-                                <label for="xAxis">X-Slices</label><br>
-                                <input type="radio" id="yAxis" name="axis" value="Y">
-                                <label for="yAxis">Y-Slices</label><br>
-                                <input type="radio" id="zAxis" name="axis" value="Z">
-                                <label for="zAxis">Z-Slices</label><br>
-                                <input type="radio" id="oAxis" name="axis" value="O" checked>
-                                <label for="oAxis">Original Cube</label><br>
-                            </form>
+                        <div class="filterwhite-background">
+                            <!-- for bar chart -->
+                            <label for="calculationType">Aggregation Type</label>
+                            <select id="calculationType">
+                                <option value="sum">sum</option>
+                                <option value="mean">mean</option>
+                            </select>
+                            <label for="UnionorIntersection">Filter Type</label>
+                            <select id="UnionorIntersection">
+                                <option value="Union">Union</option>
+                                <option value="Intersection">Intersection</option>
+                            </select>
+                            <br>
+                            <button id="resetToOriginalCube" class="reset-Cube-button">
+                                <i class="fa-solid fa-arrow-rotate-left"></i>
+                            </button>
+                            <span>Reset Filter Setting</span>
                         </div>
-                        <label for="SliceRange">Slices Gap</label><br>
-                        <input type="range" id="SliceRange" min="1" max="4" step=".1" value="1">
-                        <span id="SliceValue">1</span>
+                        <label for="double-slider">Restricted Display</label>
+                        <div>
+                            <!-- 新增雙按鈕滑動條的容器 -->
+                            <div id="double-slider"></div>
+                            <span id="range-info"></span>
+                        </div>
+                        <label for="double-slider-cubesvalue">Filter Cubes Value</label>
+                        <div>
+                            <!-- 新增雙按鈕滑動條的容器 -->
+                            <div id="double-slider-cubesvalue"></div>
+                            <span id="range-cubesvalue"></span>
+                        </div>
                     </li>
                 </ul>
-                <!-- End subslice -->
+                <!-- End subFilter -->
             </li>
-            <!-- End slice -->
+            <!-- End Filter -->
 
-            <!-- Title -->
-            <li class="sidebar-heading h6">OPTIONS</li>
-            <!-- End Title -->
-
+            <!-- Opacity -->
             <li class="side-nav-menu-item side-nav-has-menu">
                 <a class="side-nav-menu-link media align-items-center" href="#"
                    data-target="#subOpacity">
@@ -7425,19 +7704,20 @@
                 <!-- subOpacity -->
                 <ul id="subOpacity" class="side-nav-menu side-nav-menu-second-level mb-0">
                     <li class="side-nav-menu-item">
-                        <!-- <a class="side-nav-menu-link" href="users.html">Open File</a> -->
-                        <!-- <label for="opacityRange">Opacity：</label> -->
-                        <input type="range" id="opacityRange" min="0.01" max="1" step="0.01" value="0.2">
-                        <span id="opacityValue">0.2</span>
+                        <label for="opacityRange">Cubes Opacity</label>
+                        <input type="range" id="opacityRange" min="0.01" max="1" step="0.01" value="0.5">
+                        <span id="opacityValue">0.5</span>
+                        <br>
+                        <label for="filteropacityRange">Filtered Cubes Opacity</label>
+                        <input type="range" id="filteropacityRange" min="0" max="1" step="0.01" value="0">
+                        <span id="filteropacityValue">0</span>
                     </li>
-                    <!-- <li class="side-nav-menu-item">
-                        <a class="side-nav-menu-link" href="user-edit.html">Add new</a>
-                    </li> -->
                 </ul>
                 <!-- End subOpacity -->
             </li>
+            <!-- End Opacity -->
 
-            <!-- colour -->
+            <!-- color -->
             <li class="side-nav-menu-item side-nav-has-menu">
                 <a class="side-nav-menu-link media align-items-center" href="#"
                    data-target="#subcolour">
@@ -7451,7 +7731,7 @@
                     <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
                 </a>
 
-                <!-- subcolour -->
+                <!-- subcolor -->
                 <ul id="subcolour" class="side-nav-menu side-nav-menu-second-level mb-0">
                     <li class="side-nav-menu-item">
                         <div class="colorwhite-background">
@@ -7656,9 +7936,47 @@
                         </div>
                     </li>
                 </ul>
-                <!-- End subcolour -->
+                <!-- End subcolor -->
             </li>
-            <!-- End colour -->
+            <!-- End color -->
+
+            <!-- slice -->
+            <li class="side-nav-menu-item side-nav-has-menu">
+                <a class="side-nav-menu-link media align-items-center" href="#"
+                   data-target="#subslice">
+              <span class="side-nav-menu-icon d-flex mr-3">
+                <i class="fa-solid fa-clone"></i>
+              </span>
+                    <span class="side-nav-fadeout-on-closed media-body">Slices</span>
+                    <span class="side-nav-control-icon d-flex">
+                <i class="gd-angle-right side-nav-fadeout-on-closed"></i>
+              </span>
+                    <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
+                </a>
+
+                <!-- subslice -->
+                <ul id="subslice" class="side-nav-menu side-nav-menu-second-level mb-0">
+                    <li class="side-nav-menu-item">
+                        <div class="Slicewhite-background">
+                            <form id="axisSelection">
+                                <input type="radio" id="xAxis" name="axis" value="X">
+                                <label for="xAxis">X-Slices</label><br>
+                                <input type="radio" id="yAxis" name="axis" value="Y">
+                                <label for="yAxis">Y-Slices</label><br>
+                                <input type="radio" id="zAxis" name="axis" value="Z">
+                                <label for="zAxis">Z-Slices</label><br>
+                                <input type="radio" id="oAxis" name="axis" value="O" checked>
+                                <label for="oAxis">Original Cube</label><br>
+                            </form>
+                        </div>
+                        <label for="SliceRange">Slices Gap</label><br>
+                        <input type="range" id="SliceRange" min="1" max="4" step=".1" value="1">
+                        <span id="SliceValue">1</span>
+                    </li>
+                </ul>
+                <!-- End subslice -->
+            </li>
+            <!-- End slice -->
 
             <!-- size -->
             <li class="side-nav-menu-item side-nav-has-menu">
@@ -7780,29 +8098,19 @@
     <div id="floatingWindowContainer"></div>  <!-- 浮動窗口的容器 -->
 
     <!-- Footer -->
-    <!-- <footer class="small p-3 px-md-4 mt-auto">
-        <div class="row justify-content-between">
-            <div class="col-lg text-center text-lg-left mb-3 mb-lg-0">
-                <ul class="list-dot list-inline mb-0">
-                    <li class="list-dot-item list-dot-item-not list-inline-item mr-lg-2"><a class="link-dark" href="#">FAQ</a></li>
-                    <li class="list-dot-item list-inline-item mr-lg-2"><a class="link-dark" href="#">Support</a></li>
-                    <li class="list-dot-item list-inline-item mr-lg-2"><a class="link-dark" href="#">Contact us</a></li>
-                </ul>
-            </div>
-
-            <div class="col-lg text-center mb-3 mb-lg-0">
-                <ul class="list-inline mb-0">
-                    <li class="list-inline-item mx-2"><a class="link-muted" href="#"><i class="gd-twitter-alt"></i></a></li>
-                    <li class="list-inline-item mx-2"><a class="link-muted" href="#"><i class="gd-facebook"></i></a></li>
-                    <li class="list-inline-item mx-2"><a class="link-muted" href="#"><i class="gd-github"></i></a></li>
-                </ul>
-            </div>
-
-            <div class="col-lg text-center text-lg-right">
-                &copy; 2019 Graindashboard. All Rights Reserved.
+    <footer class="small p-3 px-md-4 mt-auto" style="position: fixed; right: 0; bottom: 0; text-align: right;">
+        <div class="row justify-content-end">
+            <div class="col-lg text-center text-lg-right mb-3 mb-lg-0" style="font-size: 10px; color: #acacac;">
+                &copy; Lab for Information Visualzation
+                <br>
+                Institute of Statistical Science, Academia Sinica
+                <br>
+                Department of Statistics, Tamkang University
+                <br>
+                Web Design By Shu-Yu Lin, Chiun-How Kao 2024
             </div>
         </div>
-    </footer> -->
+    </footer>
     <!-- End Footer -->
 </main>
 </body>
