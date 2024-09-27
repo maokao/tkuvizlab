@@ -1175,8 +1175,17 @@
 
                 // 顯示禁止標誌
                 document.getElementById('xAxis').parentElement.style.cursor = 'not-allowed';
+                document.querySelector('label[for="xAxis"]').style.cursor = 'not-allowed';
+                document.querySelector('label[for="xAxis"]').style.opacity = '.5';
+
                 document.getElementById('yAxis').parentElement.style.cursor = 'not-allowed';
+                document.querySelector('label[for="yAxis"]').style.cursor = 'not-allowed';
+                document.querySelector('label[for="yAxis"]').style.opacity = '.5';
+
                 document.getElementById('zAxis').parentElement.style.cursor = 'not-allowed';
+                document.querySelector('label[for="zAxis"]').style.cursor = 'not-allowed';
+                document.querySelector('label[for="zAxis"]').style.opacity = '.5';
+
                 document.getElementById('SliceRange').style.cursor = 'not-allowed';
             } else {
                 // 啟用 xAxis, yAxis, zAxis 以及 SliceRange
@@ -1187,8 +1196,16 @@
 
                 // 恢復正常滑鼠樣式
                 document.getElementById('xAxis').parentElement.style.cursor = 'auto';
+                document.querySelector('label[for="xAxis"]').style.cursor = 'auto';
+                document.querySelector('label[for="xAxis"]').style.opacity = '1';
+
                 document.getElementById('yAxis').parentElement.style.cursor = 'auto';
+                document.querySelector('label[for="yAxis"]').style.cursor = 'auto';
+                document.querySelector('label[for="yAxis"]').style.opacity = '1';
+
                 document.getElementById('zAxis').parentElement.style.cursor = 'auto';
+                document.querySelector('label[for="zAxis"]').style.cursor = 'auto';
+                document.querySelector('label[for="zAxis"]').style.opacity = '1';
                 document.getElementById('SliceRange').style.cursor = 'auto';
             }
 
@@ -1989,8 +2006,12 @@
             // 射線與物件的交點
             var intersects = raycaster.intersectObjects(cubes.flat().flat(), true);
 
-            // 更新軸線的起點
-            updateAxesStartPoint(intersects, selectedAxis);
+            // If apply sepaprate cabe, use updateAxesBasedOnCubeCenter; otherwise use updateAxesStartPoint
+            if (newSize != 1) {
+                updateAxesBasedOnCubeCenter(intersects, cubeSizeX, cubeSizeY, cubeSizeZ);
+            } else {
+                updateAxesStartPoint(intersects, selectedAxis);
+            }
 
             // 顯示懸浮提示
             showTooltip(event, intersects);
@@ -2010,17 +2031,62 @@
             var directionZ = new THREE.Vector3(0, 0, 1); // Z 軸方向
 
             // 如果頂點的 X Y Z 座標不等於中心的 X Y Z 座標 翻轉該軸方向
-            if (closestVertex.x !== center.x) {
+            if (closestVertex.x < 0) {
                 directionX.negate(); // 翻轉 X 軸方向
             }
-            if (closestVertex.y !== center.y) {
+            if (closestVertex.y < 0) {
                 directionY.negate(); // 翻轉 Y 軸方向
             }
-            if (closestVertex.z !== center.z) {
+            if (closestVertex.z < 0) {
                 directionZ.negate(); // 翻轉 Z 軸方向
             }
 
             return [directionX, directionY, directionZ];
+        }
+
+        // 依不同軸線之中心點判斷其 Length
+        function updateAxesLengthBasedOnVertex(closestVertex) {
+            // 計算原始軸線之中心點
+            var halfSizeX = numX * cubeSizeX / 2;
+            var halfSizeY = numY * cubeSizeY / 2;
+            var halfSizeZ = numZ * cubeSizeZ / 2;
+            var center = new THREE.Vector3(-halfSizeX, -halfSizeY, -halfSizeZ);
+
+            // 初始化 axisLengthX、axisLengthY、axisLengthZ
+            var axisLengthX = numX * cubeSizeX + .05;
+            var axisLengthY = numY * cubeSizeY + .05;
+            var axisLengthZ = numZ * cubeSizeZ + .05;
+
+            // 初始化 differenceX、differenceY、differenceZ
+            var differenceX = 0;
+            var differenceY = 0;
+            var differenceZ = 0;
+
+            // 如果頂點的 X Y Z 座標不等於中心的 X Y Z 座標 翻轉該軸方向
+            if (closestVertex.x < 0) {
+                differenceX = closestVertex.x - center.x;
+                axisLengthX = Math.abs(differenceX);
+            } else {
+                differenceX = closestVertex.x + center.x;
+                axisLengthX = Math.abs(differenceX);
+            }
+            if (closestVertex.y < 0) {
+                differenceY = closestVertex.y - center.y;
+                axisLengthY = Math.abs(differenceY);
+            } else {
+                differenceY = closestVertex.y + center.y;
+                axisLengthY = Math.abs(differenceY);
+            }
+
+            if (closestVertex.z < 0) {
+                differenceZ = closestVertex.z - center.z;
+                axisLengthZ = Math.abs(differenceZ);
+            }else {
+                differenceZ = closestVertex.z + center.z;
+                axisLengthZ = Math.abs(differenceZ);
+            }
+
+            return [axisLengthX, axisLengthY, axisLengthZ];
         }
 
         // 依照鼠標更新軸線之中心點
@@ -2035,6 +2101,14 @@
                 clearAxesLines();
                 return;
             }
+
+            // 移除由 updateAxesBasedOnCubeCenter 創建的軸線
+            ['axisX_positive', 'axisX_negative', 'axisY_positive', 'axisY_negative', 'axisZ_positive', 'axisZ_negative'].forEach(function(axisName) {
+                var existingAxis = scene.getObjectByName(axisName);
+                if (existingAxis) {
+                    scene.remove(existingAxis);
+                }
+            });
 
             if (intersects.length > 0) {
                 var intersect = intersects[0]; // 取第一個交點對象
@@ -2061,21 +2135,17 @@
                     return vertex.distanceTo(intersect.point) < closest.distanceTo(intersect.point) ? vertex : closest;
                 }, vertices[0]);
 
-                // 計算原始軸線之中心點
+                // 計算原始軸線之中心點 (左下)
                 var halfSizeX = numX * cubeSizeX / 2;
                 var halfSizeY = numY * cubeSizeY / 2;
                 var halfSizeZ = numZ * cubeSizeZ / 2;
                 var center = new THREE.Vector3(-halfSizeX, -halfSizeY, -halfSizeZ);
 
-                // 計算新的中心點與原始中心點之間的差
-                var difference = new THREE.Vector3().subVectors(closestVertex, center);
-
-                var axisLengthX = Math.abs(difference.x);
-                var axisLengthY = Math.abs(difference.y);
-                var axisLengthZ = Math.abs(difference.z);
-                
                 // 使用更新後之 Direction
                 var [directionX, directionY, directionZ] = updateAxesDirectionBasedOnVertex(closestVertex);
+
+                // 使用更新後之 Length
+                var [axisLengthX, axisLengthY, axisLengthZ] = updateAxesLengthBasedOnVertex(closestVertex);
 
                 var axesInfo = [
                     { color: "#0f0f0f", direction: directionX, length: axisLengthX, name: 'axisX' },
@@ -2106,6 +2176,96 @@
                     }
 
                     scene.add(axis);
+                });
+            }
+        }
+
+        // 依照鼠標更新軸線之中心點 for separate cubes
+        function updateAxesBasedOnCubeCenter(intersects, cubeSizeX, cubeSizeY, cubeSizeZ) {
+            // 獲取 Checkbox 的狀態
+            const tooltipEnabled = document.getElementById('tooltipCheckbox').checked;
+
+            // 如果 Checkbox 未被勾選 則清除現有軸線並退出函數
+            if (!tooltipEnabled) {
+                clearAxesLines(); // 清除現有軸線
+                return;
+            }
+
+            // 移除由 updateAxesStartPoint 創建的軸線
+            ['axisX', 'axisY', 'axisZ'].forEach(function(axisName) {
+                var existingAxis = scene.getObjectByName(axisName);
+                if (existingAxis) {
+                    scene.remove(existingAxis);
+                }
+            });
+
+            // 如果有交點
+            if (intersects.length > 0) {
+                const intersect = intersects[0]; // 取得第一個交點對象
+                const cube = intersect.object; // 取得與鼠標交互的小立方體
+
+                // 計算小立方體的中心點
+                const cubeCenter = new THREE.Vector3();
+                cube.geometry.computeBoundingBox(); // 計算立方體的包圍盒
+                cube.geometry.boundingBox.getCenter(cubeCenter); // 取得中心點
+                cubeCenter.applyMatrix4(cube.matrixWorld); // 將中心點轉換為世界座標
+
+                // 計算每個軸線的長度和方向
+                var [axisLengthX, axisLengthY, axisLengthZ] = updateAxesLengthBasedOnVertex(cubeCenter);
+                var [directionX, directionY, directionZ] = updateAxesDirectionBasedOnVertex(cubeCenter);
+
+                // 計算反方向軸線的長度
+                const fullLengthX = numX * cubeSizeX;
+                const fullLengthY = numY * cubeSizeY;
+                const fullLengthZ = numZ * cubeSizeZ;
+
+                const axisLengthXNegative = fullLengthX - axisLengthX;
+                const axisLengthYNegative = fullLengthY - axisLengthY;
+                const axisLengthZNegative = fullLengthZ - axisLengthZ;
+
+                // 定義三個方向的軸線，以及它們的反方向
+                const axesInfo = [
+                    { color: "#0f0f0f", direction: directionX, length: axisLengthX, lengthNegative: axisLengthXNegative, name: 'axisX' },
+                    { color: "#0f0f0f", direction: directionY, length: axisLengthY, lengthNegative: axisLengthYNegative, name: 'axisY' },
+                    { color: "#0f0f0f", direction: directionZ, length: axisLengthZ, lengthNegative: axisLengthZNegative, name: 'axisZ' }
+                ];
+
+                // 遍歷每個軸線，繪製線段，包含正反方向
+                axesInfo.forEach(function(info) {
+                    // 正方向
+                    var pointsPositive = [cubeCenter.clone()];
+                    var endPositive = cubeCenter.clone().addScaledVector(info.direction, info.length);
+                    pointsPositive.push(endPositive);
+
+                    var geometryPositive = new THREE.BufferGeometry().setFromPoints(pointsPositive);
+                    var materialPositive = new THREE.LineBasicMaterial({ color: info.color });
+                    var axisPositive = new THREE.Line(geometryPositive, materialPositive);
+                    axisPositive.name = info.name + '_positive';
+
+                    // 反方向
+                    var pointsNegative = [cubeCenter.clone()];
+                    var endNegative = cubeCenter.clone().addScaledVector(info.direction.clone().negate(), info.lengthNegative);
+                    pointsNegative.push(endNegative);
+
+                    var geometryNegative = new THREE.BufferGeometry().setFromPoints(pointsNegative);
+                    var materialNegative = new THREE.LineBasicMaterial({ color: info.color });
+                    var axisNegative = new THREE.Line(geometryNegative, materialNegative);
+                    axisNegative.name = info.name + '_negative';
+
+                    // 檢查現有場景中是否已存在相同名稱的軸線，如果有，先移除
+                    var existingAxisPositive = scene.getObjectByName(info.name + '_positive');
+                    if (existingAxisPositive) {
+                        scene.remove(existingAxisPositive);
+                    }
+
+                    var existingAxisNegative = scene.getObjectByName(info.name + '_negative');
+                    if (existingAxisNegative) {
+                        scene.remove(existingAxisNegative);
+                    }
+
+                    // 將新的軸線添加到場景
+                    scene.add(axisPositive);
+                    scene.add(axisNegative);
                 });
             }
         }
@@ -2196,8 +2356,29 @@
                 var intersect = intersects[0]; // 取得最近的交點對象
                 if (intersect.object.userData.tooltipText) {
                     tooltip.innerHTML = intersect.object.userData.tooltipText;
-                    tooltip.style.left = (event.clientX + 15) + 'px'; // 滑鼠右側 15 像素處顯示懸浮提示
-                    tooltip.style.top = (event.clientY + 15) + 'px'; // 滑鼠下方 15 像素處顯示懸浮提示
+                    // 使懸浮提示根據頂點座標改變位置
+                    const tooltipWidth = tooltip.offsetWidth; // 懸浮提示的寬度
+                    const tooltipHeight = tooltip.offsetHeight; // 懸浮提示的高度
+
+                    // tooltip.style.left = (event.clientX + 15) + 'px'; // 滑鼠右側 15 像素處顯示懸浮提示
+                    // tooltip.style.top = (event.clientY + 15) + 'px'; // 滑鼠下方 15 像素處顯示懸浮提示
+
+                    tooltip.style.left = (event.clientX - (tooltipWidth / 2)) + 'px'; // 水平居中於滑鼠
+                    tooltip.style.top = (event.clientY - 70) + 'px'; // 在滑鼠正上方顯示，距離 10 像素
+
+                    // console.log(closestVertex.x);
+                    // // 判斷最近頂點的 X, Y, Z 是否皆大於 0
+                    // if (closestVertex.x < 0 && closestVertex.y < 0 && closestVertex.z < 0) {
+                    //     console.log('Tooltip on left'); // 調試輸出提示框位置
+                    //     // 懸浮提示顯示在滑鼠左側
+                    //     tooltip.style.left = (event.clientX - tooltipWidth - 15) + 'px'; // 滑鼠左側 15 像素處顯示
+                    // } else {
+                    //     console.log('Tooltip on right'); // 調試輸出提示框位置
+                    //     // 懸浮提示顯示在滑鼠右側
+                    //     tooltip.style.left = (event.clientX + 15) + 'px'; // 滑鼠右側 15 像素處顯示
+                    // }
+                    // tooltip.style.top = (event.clientY + 15) + 'px'; // 滑鼠下方 15 像素處顯示懸浮提示
+
                     tooltip.style.display = 'block';
                 } else {
                     tooltip.style.display = 'none';
@@ -2370,15 +2551,26 @@
         // 生成二維 array (X * (Y * Z)、Y * (X * Z)、Z * (X * Y))
         function convert3DArrayTo2D(axis) {
             let result = []; // 最終的二維 array
+            let header = []; // 用於儲存列標籤
+            let rowLabels = []; // 用於儲存行標籤
 
             if (axis === 'X') {
+                // 添加 Z 軸作為列標籤 (X * (Y * Z))
+                header.push(''); // 第一個空白單元格作為行標籤和列標籤的交叉點
+                for (let j = 0; j < uniqueY.length; j++) {
+                    for (let k = 0; k < uniqueZ.length; k++) {
+                        header.push(`${uniqueY[j]}-${uniqueZ[k]}`); // Y-Z 標籤
+                    }
+                }
+                result.push(header);
+
                 // 遍歷 X 軸
                 for (let i = 0; i < data_array.length; i++) {
-                    let row = []; // 用於儲存目前i下之所有 Y * Z 合併後的資料
+                    let row = []; // 用於儲存目前 i 下所有 Y * Z 合併後的資料
+                    row.push(uniqueX[i]); // 添加 X 軸標籤作為行標籤
 
                     // 遍歷 Y 軸
                     for (let j = 0; j < data_array[i].length; j++) {
-                        
                         // 遍歷 Z 軸
                         for (let k = 0; k < data_array[i][j].length; k++) {
                             row.push(data_array[i][j][k]); // 將 Y 軸和 Z 軸的資料加入 array 中
@@ -2387,35 +2579,51 @@
                     result.push(row); // 將目前 array 新增至結果 array 中
                 }
             } else if (axis === 'Y') {
+                // 添加 X 和 Z 作為列標籤 (Y * (X * Z))
+                header.push('');
+                for (let i = 0; i < uniqueX.length; i++) {
+                    for (let k = 0; k < uniqueZ.length; k++) {
+                        header.push(`${uniqueX[i]}-${uniqueZ[k]}`);
+                    }
+                }
+                result.push(header);
+
                 // 遍歷 Y 軸
                 for (let j = 0; j < data_array[0].length; j++) {
                     let row = [];
+                    row.push(uniqueY[j]); // 添加 Y 軸標籤作為行標籤
 
                     // 遍歷 X 軸
                     for (let i = 0; i < data_array.length; i++) {
-                        
                         // 遍歷 Z 軸
                         for (let k = 0; k < data_array[i][j].length; k++) {
                             row.push(data_array[i][j][k]);
                         }
                     }
-
                     result.push(row);
                 }
             } else if (axis === 'Z') {
+                // 添加 X 和 Y 作為列標籤 (Z * (X * Y))
+                header.push('');
+                for (let i = 0; i < uniqueX.length; i++) {
+                    for (let j = 0; j < uniqueY.length; j++) {
+                        header.push(`${uniqueX[i]}-${uniqueY[j]}`);
+                    }
+                }
+                result.push(header);
+
                 // 遍歷 Z 軸
                 for (let k = 0; k < data_array[0][0].length; k++) {
                     let row = [];
+                    row.push(uniqueZ[k]); // 添加 Z 軸標籤作為行標籤
 
                     // 遍歷 X 軸
                     for (let i = 0; i < data_array.length; i++) {
-                        
                         // 遍歷 Y 軸
                         for (let j = 0; j < data_array[i].length; j++) {
                             row.push(data_array[i][j][k]);
                         }
                     }
-
                     result.push(row);
                 }
             }
@@ -2460,7 +2668,7 @@
                 var windowID = `windowProxforX`;
 
                 // 設置浮動視窗標題
-                var title = `${this.value} of X-axis`;
+                var title = `Euclidean Distance of X-axis`;
 
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
@@ -2481,7 +2689,7 @@
                 //var windowID = `window${this.value}forX`;
                 var windowID = `windowProxforX`;
 
-                var title = `${this.value} of X-axis`;
+                var title = `Pearson's Correlation of X-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2502,7 +2710,7 @@
                 //var windowID = `window${this.value}forX`;
                 var windowID = `windowProxforX`;
 
-                var title = `${this.value} of X-axis`;
+                var title = `Kendall's tau of X-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2523,7 +2731,7 @@
                 //var windowID = `window${this.value}forX`;
                 var windowID = `windowProxforX`;
 
-                var title = `${this.value} of X-axis`;
+                var title = `Spearman's Rank of X-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2544,7 +2752,7 @@
                 //var windowID = `window${this.value}forX`;
                 var windowID = `windowProxforX`;
 
-                var title = `${this.value} of X-axis`;
+                var title = `atan Correlation of X-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2565,7 +2773,7 @@
                 //var windowID = `window${this.value}forX`;
                 var windowID = `windowProxforX`;
 
-                var title = `${this.value} of X-axis`;
+                var title = `City-Block (L1) of X-axis`;
 
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
@@ -2586,7 +2794,7 @@
                 //var windowID = `window${this.value}forX`;
                 var windowID = `windowProxforX`;
 
-                var title = `${this.value} of X-axis`;
+                var title = `abs(Pearson's Correlation) of X-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2663,7 +2871,7 @@
                 gapX.isRowProxfirst = false;
                 gapX.rowIsSimilarity = rowIsSimilarity;
 
-                let ArrayYZ = convert3DArrayTo2D('X');
+                // let ArrayYZ = convert3DArrayTo2D('X');
                 // console.log(ArrayYZ);
                 // 輸出成 txt
                 // exportArrayToTxt(ArrayYZ, 'ArrayYZ.txt');
@@ -2701,7 +2909,7 @@
                 var windowID = `windowProxforY`;
 
                 // 設置浮動視窗標題
-                var title = `${this.value} of Y-axis`;
+                var title = `Euclidean Distance of Y-axis`;
 
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
@@ -2722,7 +2930,7 @@
                 //var windowID = `window${this.value}forY`;
                 var windowID = `windowProxforY`;
 
-                var title = `${this.value} of Y-axis`;
+                var title = `Pearson's Correlation of Y-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2743,7 +2951,7 @@
                 //var windowID = `window${this.value}forY`;
                 var windowID = `windowProxforY`;
 
-                var title = `${this.value} of Y-axis`;
+                var title = `Kendall's tau of Y-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2764,7 +2972,7 @@
                 //var windowID = `window${this.value}forY`;
                 var windowID = `windowProxforY`;
 
-                var title = `${this.value} of Y-axis`;
+                var title = `Spearman's Rank of Y-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2785,7 +2993,7 @@
                 //var windowID = `window${this.value}forY`;
                 var windowID = `windowProxforY`;
 
-                var title = `${this.value} of Y-axis`;
+                var title = `atan Correlation of Y-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2806,7 +3014,7 @@
                 //var windowID = `window${this.value}forY`;
                 var windowID = `windowProxforY`;
 
-                var title = `${this.value} of Y-axis`;
+                var title = `City-Block (L1) of Y-axis`;
 
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
@@ -2827,7 +3035,7 @@
                 //var windowID = `window${this.value}forY`;
                 var windowID = `windowProxforY`;
 
-                var title = `${this.value} of Y-axis`;
+                var title = `abs(Pearson's Correlation) of Y-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2932,7 +3140,7 @@
                 var windowID = `windowProxforZ`;
 
                 // 設置浮動視窗標題
-                var title = `${this.value} of Z-axis`;
+                var title = `Euclidean Distance of Z-axis`;
 
                 var colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
@@ -2953,7 +3161,7 @@
                 //var windowID = `window${this.value}forZ`;
                 var windowID = `windowProxforZ`;
 
-                var title = `${this.value} of Z-axis`;
+                var title = `Pearson's Correlation of Z-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2974,7 +3182,7 @@
                 //var windowID = `window${this.value}forZ`;
                 var windowID = `windowProxforZ`;
 
-                var title = `${this.value} of Z-axis`;
+                var title = `Kendall's tau of Z-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -2995,7 +3203,7 @@
                 //var windowID = `window${this.value}forZ`;
                 var windowID = `windowProxforZ`;
 
-                var title = `${this.value} of Z-axis`;
+                var title = `Spearman's Rank of Z-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -3016,7 +3224,7 @@
                 //var windowID = `window${this.value}forZ`;
                 var windowID = `windowProxforZ`;
 
-                var title = `${this.value} of Z-axis`;
+                var title = `atan Correlation of Z-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -3037,7 +3245,7 @@
                 //var windowID = `window${this.value}forZ`;
                 var windowID = `windowProxforZ`;
 
-                var title = `${this.value} of Z-axis`;
+                var title = `City-Block (L1) of Z-axis`;
 
                 colorID = d3.interpolateSpectral;
                 // rpPalette = "Spectral";
@@ -3058,7 +3266,7 @@
                 //var windowID = `window${this.value}forZ`;
                 var windowID = `windowProxforZ`;
 
-                var title = `${this.value} of Z-axis`;
+                var title = `abs(Pearson's Correlation) of Z-axis`;
 
                 colorID = d3.interpolateRdBu;
                 // rpPalette = "RdBu";
@@ -3150,22 +3358,84 @@
             $("#sortZOrderSelect option[value='r2e']").removeAttr('disabled');
         });
 
+        // array 輸出 txt for export proximity
+        function exportArrayToTxt(array, axis, filename) {
+            // 檢查是否找到對象
+            if (!array || array.length === 0) {
+                // console.log("Element " + filename + " not found.");
+                return;
+            }
+
+            // 檢測 array 維度
+            const isTwoDimensional = Array.isArray(array[0]);
+            let text = '';
+
+            // 處理 uniqueX, uniqueY, uniqueZ，將空白字符替換成 '_'
+            const cleanLabels = (labels) => labels.map(label => label.replace(/\s+/g, '_'));
+
+            // 根據 axis 添加對應的標籤，並處理空白字符
+            if (axis === 'X') {
+                const processedUniqueX = cleanLabels(uniqueX); // 處理空白字符
+                text += '\t' + processedUniqueX.join('\t') + '\n'; // 添加 column 標題
+            } else if (axis === 'Y') {
+                const processedUniqueY = cleanLabels(uniqueY); // 處理空白字符
+                text += '\t' + processedUniqueY.join('\t') + '\n'; // 添加 column 標題
+            } else if (axis === 'Z') {
+                const processedUniqueZ = cleanLabels(uniqueZ); // 處理空白字符
+                text += '\t' + processedUniqueZ.join('\t') + '\n'; // 添加 column 標題
+            }
+
+            // 將 array 中的資料加入到文本內容
+            if (isTwoDimensional) {
+                // 如果是二維 array 每個 array 元素佔一列 列內元素以 tab 鍵分隔
+                array.forEach((row, index) => {
+                    let rowLabel = ''; // 用於儲存列標籤
+                    if (axis === 'X') {
+                        const processedUniqueX = cleanLabels(uniqueX); // 處理空白字符
+                        rowLabel = processedUniqueX[index]; // 用 X 軸的標籤作為 row 標籤
+                    } else if (axis === 'Y') {
+                        const processedUniqueY = cleanLabels(uniqueY); // 處理空白字符
+                        rowLabel = processedUniqueY[index]; // 用 Y 軸的標籤作為 row 標籤
+                    } else if (axis === 'Z') {
+                        const processedUniqueZ = cleanLabels(uniqueZ); // 處理空白字符
+                        rowLabel = processedUniqueZ[index]; // 用 Z 軸的標籤作為 row 標籤
+                    }
+                    text += rowLabel + '\t' + row.join('\t') + '\n'; // 加上 row 標籤和該列資料
+                });
+            } else {
+                // 如果是一維 array 直接用 tab 鍵連接所有元素
+                text = array.join('\t');
+            }
+
+            // 建立一個 blob 對象 指定內容類型為純文字
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+
+            // 建立一個隱藏的 a 標籤 用於觸發下載
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename; // 設定下載檔案的檔案名
+            document.body.appendChild(a); // 新增 a 標籤到 body
+            a.click(); // 觸發下載
+            document.body.removeChild(a); // 下載後移除 a 標籤
+        }
+
+
         // 為 exportProximity 按鈕新增點擊事件，只會執行一次
         document.getElementById('exportProximity').addEventListener('click', function() {
             let exported = false; // 標記是否有資料被匯出
 
             if (currentRowProxDataX) {
-                exportArrayToTxt(currentRowProxDataX, 'Proximity_X.txt');
+                exportArrayToTxt(currentRowProxDataX, 'X', 'Proximity_X.txt');
                 exported = true;
             }
 
             if (currentRowProxDataY) {
-                exportArrayToTxt(currentRowProxDataY, 'Proximity_Y.txt');
+                exportArrayToTxt(currentRowProxDataY, 'Y', 'Proximity_Y.txt');
                 exported = true;
             }
 
             if (currentRowProxDataZ) {
-                exportArrayToTxt(currentRowProxDataZ, 'Proximity_Z.txt');
+                exportArrayToTxt(currentRowProxDataZ, 'Z', 'Proximity_Z.txt');
                 exported = true;
             }
             // // 如果沒有任何資料被匯出，輸出提示
@@ -3201,8 +3471,8 @@
             header.style.display = 'flex';
             header.style.justifyContent = 'space-between'; // 在頭部兩端分佈元素
             header.style.alignItems = 'center'; // 垂直居中對齊
-            header.style.margin = '0'; // 去除任何外邊距
-            header.style.padding = '0'; // 去除任何內邊距
+            // header.style.margin = '0'; // 去除任何外邊距
+            // header.style.padding = '0'; // 去除任何內邊距
             header.style.position = 'relative';
             header.style.zIndex = '15'; // 讓標題層級比內容區域高
 
@@ -3753,8 +4023,17 @@
 
                 // 顯示禁止標誌
                 document.getElementById('xAxis').parentElement.style.cursor = 'not-allowed';
+                document.querySelector('label[for="xAxis"]').style.cursor = 'not-allowed';
+                document.querySelector('label[for="xAxis"]').style.opacity = '.5';
+
                 document.getElementById('yAxis').parentElement.style.cursor = 'not-allowed';
+                document.querySelector('label[for="yAxis"]').style.cursor = 'not-allowed';
+                document.querySelector('label[for="yAxis"]').style.opacity = '.5';
+
                 document.getElementById('zAxis').parentElement.style.cursor = 'not-allowed';
+                document.querySelector('label[for="zAxis"]').style.cursor = 'not-allowed';
+                document.querySelector('label[for="zAxis"]').style.opacity = '.5';
+
                 document.getElementById('SliceRange').style.cursor = 'not-allowed';
             } else {
                 // 啟用 xAxis, yAxis, zAxis 以及 SliceRange
@@ -3765,8 +4044,17 @@
 
                 // 恢復正常滑鼠樣式
                 document.getElementById('xAxis').parentElement.style.cursor = 'auto';
+                document.querySelector('label[for="xAxis"]').style.cursor = 'auto';
+                document.querySelector('label[for="xAxis"]').style.opacity = '1';
+
                 document.getElementById('yAxis').parentElement.style.cursor = 'auto';
+                document.querySelector('label[for="yAxis"]').style.cursor = 'auto';
+                document.querySelector('label[for="yAxis"]').style.opacity = '1';
+
                 document.getElementById('zAxis').parentElement.style.cursor = 'auto';
+                document.querySelector('label[for="zAxis"]').style.cursor = 'auto';
+                document.querySelector('label[for="zAxis"]').style.opacity = '1';
+
                 document.getElementById('SliceRange').style.cursor = 'auto';
             }
         });
@@ -6368,6 +6656,7 @@
             width: 190px;
             /* height: 63px; */
             padding: 8px;
+            /* margin-top: 10px; */
         }
 
         /* 每個選項的基礎樣式 */
@@ -6383,6 +6672,156 @@
         /* 鼠標懸停時的反白樣式 */
         .exportselect-item:hover {
             background-color: #f3f5ff; /* 鼠標移上去的背景色 */
+        }
+
+        /* exportHelp */
+        .exporthelp-icon {
+            position: absolute;
+            /* top: 1px; */
+            right: 31px;
+            margin-top: 0;
+            cursor: pointer;
+        }
+
+        .exporthelp-icon i {
+            font-size: 14px; /* 調整圖示大小 */
+            color: #007bff; /* 調整圖示顏色 */
+        }
+
+        .exporthelp-icon i:hover {
+            color: #0056b3 !important; /* 懸停時的顏色 */
+        }
+
+        /* Tooltip for exportHelp styling */
+        .exporthelp-icon .tooltipforexporthelp-content {
+            visibility: hidden;
+            background-color: rgba(0, 0, 0, .82); /* 設置透明度 */
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            width: 220px;
+            top: 100%;
+            left: 50%;
+            margin-left: -197px; /* Use half of the width, to center the tooltip */
+            position: absolute;
+            z-index: 1;
+            pointer-events: none; /* 禁用 span 的滑鼠事件 */
+        }
+
+        /* Show the tooltip text when you mouse over the tooltip container */
+        .exporthelp-icon:hover .tooltipforexporthelp-content {
+            visibility: visible;
+        }
+
+        .exporthelp-icon .tooltipforexporthelp-content::after {
+            content: " ";
+            position: absolute;
+            bottom: 100%;  /* At the top of the tooltip */
+            left: 89%;
+            margin-left: -5px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: transparent transparent rgba(0, 0, 0, .82) transparent;
+        }
+
+        /* orderhelp */
+        .orderhelp-icon {
+            cursor: pointer;
+            position: relative; /* 設定相對定位，以確保 tooltip 以它為基準 */
+        }
+
+        .orderhelp-icon i {
+            font-size: 14px; /* 調整圖示大小 */
+            color: #007bff; /* 調整圖示顏色 */
+        }
+
+        .orderhelp-icon i:hover {
+            color: #0056b3 !important; /* 懸停時的顏色 */
+        }
+
+        /* Tooltip for orderHelp styling */
+        .orderhelp-icon .tooltipfororderhelp-content {
+            visibility: hidden;
+            width: 180px;
+            background-color: rgba(0, 0, 0, .82); /* 設置透明度 */
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            top: 100%;
+            left: 50%;
+            margin-left: -90px; /* Use half of the width, to center the tooltip */
+            position: absolute;
+            z-index: 1;
+            pointer-events: none; /* 禁用 span 的滑鼠事件 */
+        }
+
+        /* Show the tooltip text when you mouse over the tooltip container */
+        .orderhelp-icon:hover .tooltipfororderhelp-content {
+            visibility: visible;
+        }
+
+        .orderhelp-icon .tooltipfororderhelp-content::after {
+            content: " ";
+            position: absolute;
+            bottom: 100%;  /* At the top of the tooltip */
+            left: 50%;
+            margin-left: -5px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: transparent transparent rgba(0, 0, 0, .82) transparent;
+        }
+
+        /* Hoverhelp */
+        .Hoverhelp-icon {
+            cursor: pointer;
+            position: relative; /* 設定相對定位，以確保 tooltip 以它為基準 */
+            margin-left: 3px;
+            /* margin-top: 1px; */
+            display: inline-block;
+        }
+
+        .Hoverhelp-icon i {
+            font-size: 14px; /* 調整圖示大小 */
+            color: #007bff; /* 調整圖示顏色 */
+        }
+
+        .Hoverhelp-icon i:hover {
+            color: #0056b3 !important; /* 懸停時的顏色 */
+        }
+
+        /* Tooltip for HoverHelp styling */
+        .Hoverhelp-icon .tooltipforHoverhelp-content {
+            visibility: hidden;
+            background-color: rgba(0, 0, 0, .82); /* 設置透明度 */
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            width: 220px;
+            top: 100%;
+            left: 50%;
+            margin-left: -188px; /* Use half of the width, to center the tooltip */
+            position: absolute;
+            z-index: 1;
+            pointer-events: none; /* 禁用 span 的滑鼠事件 */
+        }
+
+        /* Show the tooltip text when you mouse over the tooltip container */
+        .Hoverhelp-icon:hover .tooltipforHoverhelp-content {
+            visibility: visible;
+        }
+
+        .Hoverhelp-icon .tooltipforHoverhelp-content::after {
+            content: " ";
+            position: absolute;
+            bottom: 100%;  /* At the top of the tooltip */
+            left: 84.6%;
+            margin-left: -5px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: transparent transparent rgba(0, 0, 0, .82) transparent;
         }
 
         #defaultdataselest {
@@ -6492,6 +6931,7 @@
             height: 2em;
             border: 1px solid #ced4da;
             border-radius: 5px;
+            margin-right: 12px;
         }
 
         .dropdown-separator {
@@ -7163,6 +7603,11 @@
                     <option value="uncle">Flip: Uncle</option>
                     <option value="grandpa">Flip: GrandPa</option>
                 </select>
+                <!-- Tooltip for orderHelp -->
+                <div class="orderhelp-icon" id="orderHelp">
+                    <i class="fa-solid fa-question-circle"></i>
+                    <span class="tooltipfororderhelp-content" style="font-size: 14px;">Please apply the Proximity features before ordering.</span>
+                </div>
                 <!-- End Order -->
 
                 <!-- User Avatar -->
@@ -7483,10 +7928,15 @@
                 </span>
                 <span class="side-nav__indicator side-nav-fadeout-on-closed"></span>
                 </a>
-                
+
                 <!-- subexport -->
                 <ul id="subexport" class="side-nav-menu side-nav-menu-second-level mb-0">
                     <li class="side-nav-menu-item">
+                        <!-- Tooltip for exportHelp -->
+                        <div class="exporthelp-icon" id="exporthelp">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <span class="tooltipforexporthelp-content" style="font-size: 14px;">When exporting Proximity Images and Charts, please ensure that the windows are properly adjusted for the best result.</span>
+                        </div>
                         <div class="exportselect">
                             <div class="exportselect-item" id="exportCube">Cube</div>
                             <div class="exportselect-item" id="exportProximity">Proximity</div>
@@ -8041,7 +8491,12 @@
                         <label for="panControl">Pan</label>
                         <br>
                         <input type="checkbox" id="tooltipCheckbox" name="tooltipCheckbox">
-                        <label for="tooltipCheckbox">Show Closest Data on Hover</label>
+                        <label for="tooltipCheckbox">Show Data on Hover</label>
+                        <!-- Tooltip for orderHelp -->
+                        <div class="Hoverhelp-icon" id="Hoverhelp">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <span class="tooltipforHoverhelp-content" style="font-size: 14px;">If the Slices features or the Separate Cube slider is applied, hovering will display information for the individual inner cubes.</span>
+                        </div>
                         <br>
                         <button id="resetCameraIcon" class="reset-camera-button">
                             <i class="fa-solid fa-camera-rotate"></i>
