@@ -91,6 +91,8 @@
 
         var selectedValueField;
 
+        var globalvaluedfields; // for tooltip
+
         var numX, numY, numZ, cubeSizeX, cubeSizeY, cubeSizeZ;
 
         var fontSize;
@@ -1057,7 +1059,7 @@
             if (isDataLoaded) {
                 updateEverycolorthingBasedOnCurrentSettings();
 
-                applyChangesBasedOnNewIndices();
+                applyChangesBasedOnNewIndices(globalvaluedfields);
 
                 filterCubes();
             }
@@ -1069,7 +1071,7 @@
             if (isDataLoaded) {
                 updateEverycolorthingBasedOnCurrentSettings();
 
-                applyChangesBasedOnNewIndices();
+                applyChangesBasedOnNewIndices(globalvaluedfields);
                 
                 filterCubes();
             }
@@ -1809,7 +1811,7 @@
             globalSliderMinforcolor = globalMin;
             globalSliderMaxforcolor = globalMax;
 
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
             }
@@ -1848,7 +1850,7 @@
             }
         
             updateXOrder();
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
             
@@ -1891,7 +1893,7 @@
             }
 
             updateYOrder();
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
 
@@ -1933,7 +1935,7 @@
                 now_Zflip_side = "null";
             }
             updateZOrder();
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
 
@@ -1948,7 +1950,7 @@
         document.getElementById('Xflip_side').addEventListener('change', function() {
             now_Xflip_side = this.value;
             updateXOrder();
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
 
@@ -1960,7 +1962,7 @@
         document.getElementById('Yflip_side').addEventListener('change', function() {
             now_Yflip_side = this.value;
             updateYOrder();
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
 
@@ -1972,7 +1974,7 @@
         document.getElementById('Zflip_side').addEventListener('change', function() {
             now_Zflip_side = this.value;
             updateZOrder();
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             filterCubes();
 
@@ -2114,6 +2116,11 @@
                 var intersect = intersects[0]; // 取第一個交點對象
                 var intersectObject = intersect.object; // 取得實際相交的對象
 
+                // 檢查 cube 的透明度是否為 0，如果為 0 則不繪製軸線
+                if (intersectObject.material.opacity === 0) {
+                    return;
+                }
+
                 intersectObject.geometry.computeBoundingBox();
 
                 // 計算大立方體的所有頂點
@@ -2203,6 +2210,11 @@
             if (intersects.length > 0) {
                 const intersect = intersects[0]; // 取得第一個交點對象
                 const cube = intersect.object; // 取得與鼠標交互的小立方體
+
+                // 檢查 cube 的透明度是否為 0，如果為 0 則不繪製軸線
+                if (cube.material.opacity === 0) {
+                    return;
+                }
 
                 // 計算小立方體的中心點
                 const cubeCenter = new THREE.Vector3();
@@ -2354,6 +2366,13 @@
 
             if (intersects.length > 0) {
                 var intersect = intersects[0]; // 取得最近的交點對象
+                const cube = intersect.object; // 取得與鼠標交互的小立方體
+
+                // 檢查 cube 的透明度是否為 0，如果為 0 則不繪製軸線
+                if (cube.material.opacity === 0) {
+                    return;
+                }
+
                 if (intersect.object.userData.tooltipText) {
                     tooltip.innerHTML = intersect.object.userData.tooltipText;
                     // 使懸浮提示根據頂點座標改變位置
@@ -2375,48 +2394,115 @@
             }
         }
 
+        // // 添加軸標籤
+        // function createAxisLabel(text, position, size, axisLabelName) {
+        //     var canvas = document.createElement('canvas'); // 創建一個新的 HTML <canvas> 元素
+        //     var context = canvas.getContext('2d', { willReadFrequently: true }); // 獲取該 <canvas> 元素的 2D 繪圖上下文
+            
+        //     // 根據需要調整字體大小
+        //     var fontSize = parseFloat(document.getElementById('fontSize').value);
+        //     // 更新顯示值
+        //     document.getElementById('fontSizeValue').textContent = fontSize;
+        //     context.clearRect(0, 0, canvas.width, canvas.height);
+
+        //     finalFontSize = 110 - fontSize;
+
+        //     // 設定字體大小為 fontSize 像素，並且選擇字體樣式為 Arial
+        //     context.font = `${finalFontSize}px Arial` ;
+
+        //     context.fillStyle = 'rgba(92, 92, 92, 1.0)'; // 文字顏色：深灰色 (完全不透明) #5C5C5C
+
+        //     // 計算文本寬度並根據此來設定 canvas 寬度
+        //     var textWidth = context.measureText(text).width;
+        //     canvas.width = 1000; // 設定固定的 canvas 寬度
+        //     canvas.height = finalFontSize * 2; // 高度足夠容納文本
+
+        //     context.textAlign = 'center'; // 將文本對齊方式：'center' 'right'
+        //     context.textBaseline = 'middle'; // 設定文本基線為 'middle'，確保文本垂直居中
+        //     context.fillText(text, canvas.width / 2, canvas.height / 2); // 在 <canvas> 上繪製實心的文本
+
+        //     // 從剛才繪製的 <canvas> 創建一個新的 Three.js 材質的貼圖 (texture)
+        //     var texture = new THREE.CanvasTexture(canvas);
+        //     texture.minFilter = THREE.LinearFilter;
+        //     texture.needsUpdate = true;
+
+        //     // 創建一個 SpriteMaterial，它是一種用於創建具有純色或貼圖的矩形平面的材質
+        //     var material = new THREE.SpriteMaterial({
+        //         map: texture,
+        //         depthTest: false // 添加這個屬性禁用深度測試
+        //     });
+
+        //     var sprite = new THREE.Sprite(material); // 使用該材質來創建一個 THREE.Sprite
+        //     sprite.position.copy(position); // 將 sprite 的位置設定為傳入的 position
+        //     sprite.scale.set(size * canvas.width / canvas.height, size, 1); // 調整標籤尺寸
+        //     sprite.name = axisLabelName; // 為軸標籤設定一個唯一的名稱
+
+        //     scene.add(sprite);
+        // }
+
+        // 繪製軸標籤文本
+        function drawText(text, context, canvas, fontSize, fontStyle, fontColor) {
+            context.clearRect(0, 0, canvas.width, canvas.height); // 清空畫布
+
+            // 計算文本寬度並根據此來設定 canvas 寬度
+            var textWidth = context.measureText(text).width;
+            // canvas.width = textWidth + 20; // 根據文字寬度調整 canvas 大小
+            canvas.width = 1000; // 設定固定的 canvas 寬度
+            canvas.height = fontSize * 2; // 高度足夠容納文本
+
+            context.font = `20px ${fontStyle}`;
+
+            context.fillStyle = fontColor; // 設定顏色
+            context.textAlign = 'center'; // 將文本對齊方式：'center' 'right'
+            context.textBaseline = 'middle'; // 設定文本基線為 'middle'，確保文本垂直居中
+            context.fillText(text, canvas.width / 2, canvas.height / 2); // 在 <canvas> 上繪製實心的文本
+        }
+
         // 添加軸標籤
         function createAxisLabel(text, position, size, axisLabelName) {
             var canvas = document.createElement('canvas'); // 創建一個新的 HTML <canvas> 元素
             var context = canvas.getContext('2d', { willReadFrequently: true }); // 獲取該 <canvas> 元素的 2D 繪圖上下文
-            
+
             // 根據需要調整字體大小
             var fontSize = parseFloat(document.getElementById('fontSize').value);
-            // 更新顯示值
-            document.getElementById('fontSizeValue').textContent = fontSize;
-            context.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('fontSizeValue').textContent = fontSize; // 更新顯示值
 
-            finalFontSize = 105 - fontSize;
+            var finalFontSize = 80 - fontSize;
 
-            // 設定字體大小為 fontSize 像素，並且選擇字體樣式為 Arial
-            context.font = `${finalFontSize}px Arial`;
-            context.fillStyle = 'rgba(92, 92, 92, 1.0)'; // 文字顏色：深灰色 (完全不透明) #5C5C5C
+            // 
+            var fontStyle = document.getElementById('fontStyle').value;
 
-            // 計算文本寬度並根據此來設定 canvas 寬度
-            var textWidth = context.measureText(text).width;
-            canvas.width = 1000; // 設定固定的 canvas 寬度
-            canvas.height = finalFontSize * 2; // 高度足夠容納文本
-            context.textAlign = 'center'; // 將文本對齊方式：'center' 'right'
-            context.textBaseline = 'middle'; // 設定文本基線為 'middle'，確保文本垂直居中
-            context.fillText(text, canvas.width / 2, canvas.height / 2); // 在 <canvas> 上繪製實心的文本
+            // 根據需要調整字體顏色
+            var fontColor = document.getElementById('FontColor').value;
+
+            // 繪製軸標籤文本
+            drawText(text, context, canvas, finalFontSize, fontStyle, fontColor);
 
             // 從剛才繪製的 <canvas> 創建一個新的 Three.js 材質的貼圖 (texture)
             var texture = new THREE.CanvasTexture(canvas);
-            texture.minFilter = THREE.LinearFilter;
             texture.needsUpdate = true;
 
             // 創建一個 SpriteMaterial，它是一種用於創建具有純色或貼圖的矩形平面的材質
-            var material = new THREE.SpriteMaterial({
-                map: texture,
-                depthTest: false // 添加這個屬性禁用深度測試
-            });
+            var material = new THREE.SpriteMaterial({ map: texture, depthTest: false }); // 添加 depthTest 屬性禁用深度測試
+            var sprite = scene.getObjectByName(axisLabelName); // 使用該材質來創建一個 THREE.Sprite
 
-            var sprite = new THREE.Sprite(material); // 使用該材質來創建一個 THREE.Sprite
-            sprite.position.copy(position); // 將 sprite 的位置設定為傳入的 position
-            sprite.scale.set(size * canvas.width / canvas.height, size, 1); // 調整標籤尺寸
-            sprite.name = axisLabelName; // 為軸標籤設定一個唯一的名稱
+            if (!sprite) {
+                sprite = new THREE.Sprite(material);
+                sprite.position.copy(position); // 將 sprite 的位置設定為傳入的 position
+                sprite.scale.set(size * canvas.width / canvas.height, size, 1); // 調整標籤尺寸
+                // sprite.scale.set(size * 2 * canvas.width / canvas.height, size * 2, 1); // 放大 2 倍
+                sprite.name = axisLabelName; // 為軸標籤設定一個唯一的名稱
+                scene.add(sprite);
+            } else {
+                sprite.material.map = texture;
+                sprite.material.needsUpdate = true;
+            }
 
-            scene.add(sprite);
+            // // 監聽顏色選擇器變化，重新繪製文字
+            // document.getElementById('FontColor').addEventListener('input', () => {
+            //     var newColor = document.getElementById('FontColor').value;
+            //     drawText(text, context, canvas, finalFontSize, newColor); // 重新繪製文字
+            // });
         }
 
         // 移除軸標籤 (可只移除一個軸)
@@ -4544,24 +4630,6 @@
                             // 如果 x, y, z 軸條件都滿足則匹配
                             matchesCategoryConditions = matchX && matchY && matchZ;
                         }
-                        // else if (selectionType === "Intersection") {
-                        //     matchesCategoryConditions = [...categoryConditions].every(condition => {
-                        //         const [axis, label] = condition.split(":");
-                        //         const selectedIndex = {
-                        //             'X': uniqueX.indexOf(label),
-                        //             'Y': uniqueY.indexOf(label),
-                        //             'Z': uniqueZ.indexOf(label)
-                        //         }[axis];
-                        //         return {
-                        //             'X': Xindices[i] === selectedIndex,
-                        //             'Y': Yindices[j] === selectedIndex,
-                        //             'Z': Zindices[k] === selectedIndex
-                        //         }[axis];
-                        //     });
-
-                        //     // 呼叫函數創建變數列表
-                        //     transferPositionsToDatatable();
-                        // }
                     } else if (rangeConditions.size > 0 && categoryConditions.size == 0) { // 檢查數值範圍條件
                         matchesRangeConditions = [...rangeConditions].some(condition => {
                             const [minValue, maxValue] = condition.split("-").map(Number);
@@ -4844,7 +4912,7 @@
             }
             clearbar();
 
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             // 重置 calculationType 下拉式選單回到預設選項 (sum)
             document.getElementById('calculationType').selectedIndex = 0;
@@ -5284,7 +5352,9 @@
                         [headers[1]],
                         [headers[2]],
                     ];
-                    const defaultDataselectedValueField = headers[3];
+                    var defaultDataselectedValueField = headers[3];
+
+                    globalvaluedfields = defaultDataselectedValueField; // for tooltip
 
                     // console.log(defaultDataselectedFields);
                     // console.log(defaultDataselectedValueField);
@@ -5500,6 +5570,8 @@
                 getSelectedOptions('multiSelectZ'),
             ];
             selectedValueField = document.getElementById('singleSelect').value;
+
+            globalvaluedfields = selectedValueField;
 
             // console.log(selectedFields);
             // console.log(selectedValueField);
@@ -6076,7 +6148,7 @@
 
             displayCondition = 'RangeMatrix';
 
-            applyChangesBasedOnNewIndices();
+            applyChangesBasedOnNewIndices(globalvaluedfields);
 
             // ### Opacity
             // 重置 Opacity 滑動條和顯示的值
@@ -6307,10 +6379,16 @@
 
             animate();
 
-            // ### Font Size
+            // ### Font
             // 重置 fontSize 滑動條和顯示的值
-            document.getElementById('fontSize').value = 50; 
-            document.getElementById('fontSize').textContent = 50;
+            document.getElementById('fontSize').value = 25;
+            document.getElementById('fontSize').textContent = 25;
+
+            // 重置 fontStyle
+            document.getElementById('fontStyle').value = 'Arial';
+
+            // 重置 fontColor
+            document.getElementById('FontColor').value = '#0f0f0f';
         }
 
         // Pan
@@ -6553,13 +6631,67 @@
         }
 
         #fontSize {
-            width: 160px; /* Adjust the width as needed */
+            width: 165px; /* Adjust the width as needed */
             border: 1px solid #ced4da; /* Similar to form-control styling for borders */
-            /* margin-bottom: 10px; */
+            /* margin-bottom: 11px; */
         }
 
         #fontSizeValue {
             margin-left: 6px;
+        }
+
+        #FontColor {
+            width: 190px;
+            border: none;
+            padding: 0;
+            margin: 0;
+            margin-bottom: 10px;
+        }
+
+        #fontStyle {
+            width: 190px;
+            margin-bottom: 13px;
+            margin-top: 4px;
+            border: 1px solid #ced4da; /* Similar to form-control styling for borders */
+            border-radius: 5px; /* 加入圓角，根據需要調整圓角大小 */
+        }
+
+        /* 設定下拉選單中每個選項的字型 */
+        #fontStyle option[value="Arial"] {
+            font-family: Arial, sans-serif;
+        }
+        #fontStyle option[value="Source Sans Pro"] {
+            font-family: 'Source Sans Pro', sans-serif;
+        }
+        #fontStyle option[value="Encode Sans"] {
+            font-family: 'Encode Sans', sans-serif;
+        }
+        #fontStyle option[value="Verdana"] {
+            font-family: Verdana, sans-serif;
+        }
+        #fontStyle option[value="Tahoma"] {
+            font-family: Tahoma, sans-serif;
+        }
+        #fontStyle option[value="Times New Roman"] {
+            font-family: 'Times New Roman', serif;
+        }
+        #fontStyle option[value="Georgia"] {
+            font-family: Georgia, serif;
+        }
+        #fontStyle option[value="Courier New"] {
+            font-family: 'Courier New', monospace;
+        }
+        #fontStyle option[value="Lucida Console"] {
+            font-family: 'Lucida Console', monospace;
+        }
+        #fontStyle option[value="Comic Sans MS"] {
+            font-family: 'Comic Sans MS', sans-serif;
+        }
+        #fontStyle option[value="Trebuchet MS"] {
+            font-family: 'Trebuchet MS', sans-serif;
+        }
+        #fontStyle option[value="Impact"] {
+            font-family: Impact, sans-serif;
         }
 
         #colorbar-container {
@@ -8474,10 +8606,29 @@
                 <!-- subfont -->
                 <ul id="subfont" class="side-nav-menu side-nav-menu-second-level mb-0">
                     <li class="side-nav-menu-item">
-                        <label for="fontSize">Font Size</label>
+                        <label for="fontStyle">Font Style</label>
                         <br>
-                        <input type="range" id="fontSize" min="1" max="100" value="50" step="1">
-                        <span id="fontSizeValue">50</span>
+                        <select id="fontStyle">
+                            <option value="Arial">Arial</option>
+                            <option value="Source Sans Pro">Source Sans Pro</option>
+                            <option value="Encode Sans">Encode Sans</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Tahoma">Tahoma</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                            <option value="Georgia">Georgia</option>
+                            <option value="Courier New">Courier New</option>
+                            <option value="Lucida Console">Lucida Console</option>
+                            <option value="Comic Sans MS">Comic Sans MS</option>
+                            <option value="Trebuchet MS">Trebuchet MS</option>
+                            <option value="Impact">Impact</option>
+                        </select>
+                        <br>
+                        <label for="FontColor">Font Color</label>
+                        <br>
+                        <input type="color" id="FontColor" name="FontColor" value="#0f0f0f"><label for="fontSize">Font Size</label>
+                        <br>
+                        <input type="range" id="fontSize" min="1" max="50" value="25" step="1">
+                        <span id="fontSizeValue">25</span>
                     </li>
                 </ul>
                 <!-- End subfont -->
