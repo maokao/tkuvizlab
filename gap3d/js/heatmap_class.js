@@ -4037,9 +4037,9 @@ setupHeatmap2(nowdata, nowID, x, y, mode, heatmapId, colorID) {
                 else if(mode == 1)
                     return self.cellHeight;
                 else if(mode == 11)
-                    return self.ycov_cellHeight;
+                    return self.cellHeight;
                 else if(mode == 12)
-                    return self.ycov_cellHeight;
+                    return self.cellHeight;
                 else if(mode == 13)
                     return self.xcov_cellHeight;
                 else if(mode == 14)
