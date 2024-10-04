@@ -4218,7 +4218,7 @@ setupProximityData(heatmapId)
         viewerHeight = d3.select(heatmapId).node().offsetHeight;
     }
     
-    console.log(viewerHeight);
+    //console.log(viewerHeight);
     //if(viewerWidth/$(document).width() > viewerHeight/$(document).height())
     //    this.scaleP = (viewerWidth*3/4)/$(document).width();
     //else
@@ -4235,7 +4235,9 @@ setupProximityData(heatmapId)
         self.cellHeight = self.cellWidth;    
     }
 
-    this.viewerPosLeft = (viewerWidth-this.scaleP*this.row_number*this.cellHeight)/2;
+    //this.viewerPosLeft = (viewerWidth-this.scaleP*this.row_number*this.cellWidth)/2;
+    //this.viewerPosTop = (viewerHeight-this.scaleP*this.row_number*this.cellHeight)/2;
+    this.viewerPosLeft = 40+this.yd*this.ycov_cellWidth;
     this.viewerPosTop = (viewerHeight-this.scaleP*this.row_number*this.cellHeight)/2;
 /*
     function zoom() {

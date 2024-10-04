@@ -2931,6 +2931,16 @@
                 // 設定 row_number
                 gapX.row_number = numX;
 
+                // 設定 yd
+                if(xd_num>0)
+                {
+                    gapX.yd = xd_num;
+                    gapX.ydData = xd;
+                    gapX.yd_cate_col = xd_cate_col;
+                    gapX.yd_name = xd_name;
+                    gapX.yd_X = gapX.yc_X -10-gapX.yd*gapX.ycov_cellWidth;
+                }
+
                 gapX.row_Scale_id = row_Scale_id;
 
                 gapX.rpPalette = rpPalette;
@@ -2977,11 +2987,6 @@
                 //Xd
                 if(xd_num>0)
                 {
-                    gapX.yd = xd_num;
-                    gapX.ydData = xd;
-                    gapX.yd_cate_col = xd_cate_col;
-                    gapX.yd_name = xd_name;
-                    gapX.yd_X = gapX.yc_X -10-gapX.yd*12;
                     gapX.setupHeatmap2(gapX.ydData,"mv11",gapX.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
                     gapX.setupydLabel(gapX.yd_X-gapX.col_fontsize/2, -5, `#${windowID}`);
                 }
@@ -3180,6 +3185,16 @@
                 // 設定 row_number
                 gapY.row_number = numY;
 
+                // 設定Yd
+                if(yd_num>0)
+                {
+                    gapY.yd = yd_num;
+                    gapY.ydData = yd;
+                    gapY.yd_cate_col = yd_cate_col;
+                    gapY.yd_name = yd_name;
+                    gapY.yd_X = gapY.yc_X -10-gapY.yd*gapY.ycov_cellWidth;
+                }
+
                 gapY.row_Scale_id = row_Scale_id;
 
                 gapY.rpPalette = rpPalette;
@@ -3228,11 +3243,6 @@
                 //Yd
                 if(yd_num>0)
                 {
-                    gapY.yd = yd_num;
-                    gapY.ydData = yd;
-                    gapY.yd_cate_col = yd_cate_col;
-                    gapY.yd_name = yd_name;
-                    gapY.yd_X = gapY.yc_X -10-gapY.yd*12;
                     gapY.setupHeatmap2(gapY.ydData,"mv11",gapY.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
                     gapY.setupydLabel(gapY.yd_X-gapY.col_fontsize/2, -5, `#${windowID}`);
                 }
@@ -3426,6 +3436,16 @@
                 // 設定 row_number
                 gapZ.row_number = numZ;
 
+                // 設定zd
+                if(zd_num>0)
+                {
+                    gapZ.yd = zd_num;
+                    gapZ.ydData = zd;
+                    gapZ.yd_cate_col = zd_cate_col;
+                    gapZ.yd_name = zd_name;
+                    gapZ.yd_X = gapZ.yc_X -10-gapZ.yd*gapZ.ycov_cellWidth;
+                }
+
                 gapZ.row_Scale_id = row_Scale_id;
 
                 gapZ.rpPalette = rpPalette;
@@ -3474,11 +3494,6 @@
                 //zd
                 if(zd_num>0)
                 {
-                    gapZ.yd = zd_num;
-                    gapZ.ydData = zd;
-                    gapZ.yd_cate_col = zd_cate_col;
-                    gapZ.yd_name = zd_name;
-                    gapZ.yd_X = gapZ.yc_X -10-gapZ.yd*12;
                     gapZ.setupHeatmap2(gapZ.ydData,"mv11",gapZ.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
                     gapZ.setupydLabel(gapZ.yd_X-gapZ.col_fontsize/2, -5, `#${windowID}`);
                 }
