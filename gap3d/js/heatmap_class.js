@@ -3448,21 +3448,21 @@ redrawHeatmap(nowID, x, y, mode, heatmapId) {
                 {
                     var row = parseInt(d3.select(this).attr("id"));
                     if(self.rowOrderId == "r2e")
-                        return self.row_r2e_order.indexOf(row) * self.ycov_cellHeight;
+                        return self.row_r2e_order.indexOf(row) * self.cellHeight;
                     else if (self.rowOrderId == "sortinit_row")
-                        return row * self.ycov_cellHeight;
+                        return row * self.cellHeight;
                     else
-                        return self.row_output_order_array.indexOf(row) * self.ycov_cellHeight;
+                        return self.row_output_order_array.indexOf(row) * self.cellHeight;
                 }
                 else if(mode == 12) //self.yc
                 {
                     var row = parseInt(d3.select(this).attr("id"));
                     if(self.rowOrderId == "r2e")
-                        return self.row_r2e_order.indexOf(row) * self.ycov_cellHeight;
+                        return self.row_r2e_order.indexOf(row) * self.cellHeight;
                     else if (self.rowOrderId == "sortinit_row")
-                        return row * self.ycov_cellHeight;
+                        return row * self.cellHeight;
                     else
-                        return self.row_output_order_array.indexOf(row) * self.ycov_cellHeight;
+                        return self.row_output_order_array.indexOf(row) * self.cellHeight;
                 }
                 else if(mode == 13) //self.xd
                 {
@@ -3555,11 +3555,11 @@ redrawHeatmap(nowID, x, y, mode, heatmapId) {
                     //var temp_x = $("#"+nowID)[0].getAttribute("x");
                     var temp_x = $(heatmapId+" #"+nowID)[0].getAttribute("x")
                     if(self.rowOrderId == "r2e")
-                        return "translate(0," + self.row_r2e_order.indexOf(row) * self.ycov_cellHeight + ")";
+                        return "translate(0," + self.row_r2e_order.indexOf(row) * self.cellHeight + ")";
                     else if (self.rowOrderId == "sortinit_row")
-                        return "translate(" + 0 + "," + (i* self.ycov_cellHeight) + ")"; 
+                        return "translate(" + 0 + "," + (i* self.cellHeight) + ")"; 
                     else
-                        return "translate(0," + self.row_output_order_array.indexOf(row) * self.ycov_cellHeight + ")";
+                        return "translate(0," + self.row_output_order_array.indexOf(row) * self.cellHeight + ")";
                 }
                 else if(mode == 12) //self.yc
                 {
@@ -3567,11 +3567,11 @@ redrawHeatmap(nowID, x, y, mode, heatmapId) {
                     var temp_x = $("#mv12")[0].getAttribute("x");
                     var temp_x = $(heatmapId+" #mv12")[0].getAttribute("x")
                     if(self.rowOrderId == "r2e")
-                        return "translate(0," + self.row_r2e_order.indexOf(row) * self.ycov_cellHeight + ")";
+                        return "translate(0," + self.row_r2e_order.indexOf(row) * self.cellHeight + ")";
                     else if (self.rowOrderId == "sortinit_row")
-                        return "translate(" + 0 + "," + (i* self.ycov_cellHeight) + ")"; 
+                        return "translate(" + 0 + "," + (i* self.cellHeight) + ")"; 
                     else
-                        return "translate(0," + self.row_output_order_array.indexOf(row) * self.ycov_cellHeight + ")";
+                        return "translate(0," + self.row_output_order_array.indexOf(row) * self.cellHeight + ")";
                 }
                 else if(mode == 13) //self.xd
                 {
@@ -3668,9 +3668,9 @@ redrawHeatmap(nowID, x, y, mode, heatmapId) {
                 else if(mode == 1)
                     return self.cellHeight;
                 else if(mode == 11)
-                    return self.ycov_cellHeight;
+                    return self.cellHeight;
                 else if(mode == 12)
-                    return self.ycov_cellHeight;
+                    return self.cellHeight;
                 else if(mode == 13)
                     return self.xcov_cellHeight;
                 else if(mode == 14)
