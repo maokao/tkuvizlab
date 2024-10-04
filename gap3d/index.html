@@ -229,6 +229,28 @@
         var tooltipEnabled;
 
         var selectedcamera;
+
+        var xd = [];
+        var xc = [];
+        var yd = [];
+        var yc = [];
+        var zd = [];
+        var zc = [];
+        var xd_cate_col = [];
+        var yd_cate_col = [];
+        var zd_cate_col = [];
+        var xd_name = [];
+        var xc_name = [];
+        var yd_name = [];
+        var yc_name = [];
+        var zd_name = [];
+        var zc_name = [];
+        var xd_num = 0;
+        var yd_num = 0;
+        var zd_num = 0;
+        var xc_num = 0;
+        var yc_num = 0;
+        var zc_num = 0;
     </script>
 
     <script type="module">
@@ -1378,7 +1400,7 @@
                 gapX.rowOrderId = XsortOrder;
                 var windowID = "#windowProxforX";
                 gapX.redrawHeatmap("mv2", 0, 0, 1, windowID);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
-                if(gapX.yd_X>0)
+                if(gapX.yd>0)
                     gapX.redrawHeatmap("mv11", gapX.yd_X, 0, 11, windowID); 
                 gapX.redrawRowLabels(windowID);
             }
@@ -1483,8 +1505,8 @@
                 gapY.rowOrderId = YsortOrder;
                 var windowID = "#windowProxforY";
                 gapY.redrawHeatmap("mv2", 0, 0, 1, windowID);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
-                if(gapY.yd_X>0)
-                    gapY.redrawHeatmap("mv11", gapY.yd_Y, 0, 11, windowID); 
+                if(gapY.yd>0)
+                    gapY.redrawHeatmap("mv11", gapY.yd_X, 0, 11, windowID); 
                 gapY.redrawRowLabels(windowID);
             }
 
@@ -1584,8 +1606,8 @@
                 gapZ.rowOrderId = ZsortOrder;
                 var windowID = "#windowProxforZ";
                 gapZ.redrawHeatmap("mv2", 0, 0, 1, windowID);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
-                if(gapZ.yd_X>0)
-                    gapZ.redrawHeatmap("mv11", gapZ.yd_Y, 0, 11, windowID); 
+                if(gapZ.yd>0)
+                    gapZ.redrawHeatmap("mv11", gapZ.yd_X, 0, 11, windowID); 
                 gapZ.redrawRowLabels(windowID);
             }
 
@@ -2940,7 +2962,7 @@
                 gapX.setupHeatmap2(gapX.rowProxData,"mv2", 0, 0, 1, `#${windowID}`, colorID);
 
                 gapX.row_name = uniqueX;
-                gapX.setupProxLabel(`#${windowID}`);
+                //gapX.setupProxLabel(`#${windowID}`);
                 gapX.isRowProxfirst = false;
                 gapX.rowIsSimilarity = rowIsSimilarity;
 
@@ -2951,6 +2973,21 @@
 
                 // 更新全域變數
                 currentRowProxDataX = rowProxDataX;
+
+                //Xd
+                if(xd_num>0)
+                {
+                    gapX.yd = xd_num;
+                    gapX.ydData = xd;
+                    gapX.yd_cate_col = xd_cate_col;
+                    gapX.yd_name = xd_name;
+                    gapX.yd_X = gapX.yc_X -10-gapX.yd*12;
+                    gapX.setupHeatmap2(gapX.ydData,"mv11",gapX.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
+                    gapX.setupydLabel(gapX.yd_X-gapX.col_fontsize/2, -5, `#${windowID}`);
+                }
+
+                //畫出X proximity的label
+                gapX.setupProxLabel(`#${windowID}`);
             }
             else
             {
@@ -3177,7 +3214,7 @@
                 gapY.setupHeatmap2(gapY.rowProxData,"mv2", 0, 0, 1, `#${windowID}`, colorID);
 
                 gapY.row_name = uniqueY;
-                gapY.setupProxLabel(`#${windowID}`);
+                
                 gapY.isRowProxfirst = false;
                 gapY.rowIsSimilarity = rowIsSimilarity;
 
@@ -3187,6 +3224,21 @@
 
                 // 更新全域變數
                 currentRowProxDataY = rowProxDataY;
+
+                //Yd
+                if(yd_num>0)
+                {
+                    gapY.yd = yd_num;
+                    gapY.ydData = yd;
+                    gapY.yd_cate_col = yd_cate_col;
+                    gapY.yd_name = yd_name;
+                    gapY.yd_X = gapY.yc_X -10-gapY.yd*12;
+                    gapY.setupHeatmap2(gapY.ydData,"mv11",gapY.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
+                    gapY.setupydLabel(gapY.yd_X-gapY.col_fontsize/2, -5, `#${windowID}`);
+                }
+
+                //畫出Y proximity的label
+                gapY.setupProxLabel(`#${windowID}`);
             }
             else
             {
@@ -3408,7 +3460,7 @@
                 gapZ.setupHeatmap2(gapZ.rowProxData,"mv2", 0, 0, 1, `#${windowID}`, colorID);
 
                 gapZ.row_name = uniqueZ;
-                gapZ.setupProxLabel(`#${windowID}`);
+                //gapZ.setupProxLabel(`#${windowID}`);
                 gapZ.isRowProxfirst = false;
                 gapZ.rowIsSimilarity = rowIsSimilarity;
 
@@ -3418,6 +3470,21 @@
 
                 // 更新全域變數
                 currentRowProxDataZ = rowProxDataZ;
+
+                //zd
+                if(zd_num>0)
+                {
+                    gapZ.yd = zd_num;
+                    gapZ.ydData = zd;
+                    gapZ.yd_cate_col = zd_cate_col;
+                    gapZ.yd_name = zd_name;
+                    gapZ.yd_X = gapZ.yc_X -10-gapZ.yd*12;
+                    gapZ.setupHeatmap2(gapZ.ydData,"mv11",gapZ.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
+                    gapZ.setupydLabel(gapZ.yd_X-gapZ.col_fontsize/2, -5, `#${windowID}`);
+                }
+
+                //畫出Z proximity的label
+                gapZ.setupProxLabel(`#${windowID}`);
             }
             else
             {
@@ -5189,10 +5256,21 @@
 
                     // 蒐集選取的 column 名
                     logSelectedColumnNames(highlightIndex, selectValue, i);
+                    // console.log(selectedColumns[`select${i}`]); // selectedColumns.select1
                 }
                 highlightIndex += selectValue; // 更新下一個 highlight column 的起始索引
             }
         }
+
+        // 定義一個物件來儲存每個 Select 的 columnNames (1: Xd、2: Xc、3: Yd、4: Yc、5: Zd、6: Zc)
+        let selectedColumns = {
+            select1: [],
+            select2: [],
+            select3: [],
+            select4: [],
+            select5: [],
+            select6: []
+        };
 
         // 蒐集選取的 column 名
         function logSelectedColumnNames(startIndex, count, selectNumber) {
@@ -5202,9 +5280,261 @@
                 let columnName = document.querySelector(`#dataPreviewHead th:nth-child(${i + 1})`).textContent;
                 columnNames.push(columnName);
             }
-            // // 列印選取的 column 名
+
+            // 根據 selectNumber 儲存到對應的 key 中
+            selectedColumns[`select${selectNumber}`] = columnNames;
+
+            // 列印選取的 column 名
             // console.log(`Select${selectNumber} selected columns:`, columnNames.join(", "));
         }
+
+        // 這個物件將用來存儲對應的資料
+        let selectedData = {
+            select1: [],
+            select2: [],
+            select3: [],
+            select4: [],
+            select5: [],
+            select6: []
+        };
+        
+        // 用來存儲重新編碼的類別映射
+        let categoryMapping = {};
+
+        // // 依據欄位名稱，從 parsedData 中提取對應的資料，並對 select1, select3, select5 重新編碼
+        // function extractDataBasedOnSelectedColumns() {
+        //     for (let i = 1; i <= 6; i++) {
+        //         // 取得每個 select 中的欄位名稱陣列
+        //         let columns = selectedColumns[`select${i}`];
+        //         selectedData[`select${i}`] = [];
+
+        //         // 只有 select1, select3, select5 需要重新編碼
+        //         if (i === 1 || i === 3 || i === 5) {
+        //             categoryMapping[`select${i}`] = {}; // 初始化類別映射表
+
+        //             // 建立每個欄位的類別重新編碼映射
+        //             columns.forEach(columnName => {
+        //                 let uniqueValues = [...new Set(parsedData.map(row => row[columnName]))]; // 找到欄位的唯一值
+        //                 // console.log(uniqueValues);
+        //                 uniqueValues.forEach((value, index) => {
+        //                     categoryMapping[`select${i}`][value] = index; // 從 0 開始編碼
+        //                 });
+        //             });
+
+        //             // 遍歷 parsedData 的每一列，並根據欄位名稱提取對應的資料
+        //             parsedData.forEach(row => {
+        //                 let rowData = {};
+        //                 columns.forEach(columnName => {
+        //                     let originalValue = row[columnName];
+        //                     let recodedValue = categoryMapping[`select${i}`][originalValue]; // 重新編碼
+        //                     rowData[columnName] = recodedValue;
+        //                 });
+        //                 // 將提取的資料 push 到對應的 select array 中
+        //                 selectedData[`select${i}`].push(rowData);
+        //             });
+
+        //         } else {
+        //             // 不需要重新編碼，直接提取資料
+        //             parsedData.forEach(row => {
+        //                 let rowData = {};
+        //                 columns.forEach(columnName => {
+        //                     rowData[columnName] = row[columnName]; // 保持原始資料
+        //                 });
+        //                 // 將提取的資料 push 到對應的 select array 中
+        //                 selectedData[`select${i}`].push(rowData);
+        //             });
+        //         }
+        //     }
+        //     // 列印 selectedData 和 categoryMapping 來檢查結果
+        //     console.log('Re-coded Selected Data:', selectedData);
+        //     console.log('Category Mapping:', categoryMapping);
+        // }
+
+        // 依據欄位名稱，從 parsedData 中提取對應的資料，並對 select1, select3, select5 重新編碼
+        function extractDataBasedOnSelectedColumns() {
+            for (let i = 1; i <= 6; i++) {
+                // 取得每個 select 中的欄位名稱陣列
+                let columns = selectedColumns[`select${i}`];
+                selectedData[`select${i}`] = [];
+
+                // 如果 columns 為空，不進行後續操作
+                if (!columns || columns.length === 0) {
+                    continue; // 略過該 select 的處理
+                }
+
+                // 確定要加入的前置欄位（依據 select1/2, select3/4, select5/6）
+                let prefixField;
+                if (i === 1 || i === 2) {
+                    prefixField = fieldX;
+                } else if (i === 3 || i === 4) {
+                    prefixField = fieldY;
+                } else if (i === 5 || i === 6) {
+                    prefixField = fieldZ;
+                }
+
+                // 只有 select1, select3, select5 需要重新編碼
+                if (i === 1 || i === 3 || i === 5) {
+                    categoryMapping[`select${i}`] = {}; // 初始化類別映射表
+
+                    // 建立每個欄位的類別重新編碼映射
+                    columns.forEach(columnName => {
+                        let uniqueValues = [...new Set(parsedData.map(row => row[columnName]))]; // 找到欄位的唯一值
+                        uniqueValues.forEach((value, index) => {
+                            categoryMapping[`select${i}`][value] = index; // 從 0 開始編碼
+                        });
+                    });
+
+                    // 遍歷 parsedData 的每一列，並根據欄位名稱提取對應的資料
+                    let uniqueSet = new Set();
+                    parsedData.forEach(row => {
+                        let rowData = {};
+                        if (prefixField) {
+                            rowData[prefixField] = row[prefixField]; // 加入前置欄位的資料
+                        }
+                        columns.forEach(columnName => {
+                            let originalValue = row[columnName];
+                            let recodedValue = categoryMapping[`select${i}`][originalValue]; // 重新編碼
+                            rowData[columnName] = recodedValue;
+                        });
+
+                        // 使用 JSON.stringify 將每個 rowData 轉換為字符串來確保唯一性
+                        let rowDataString = JSON.stringify(rowData);
+                        if (!uniqueSet.has(rowDataString)) {
+                            uniqueSet.add(rowDataString); // 添加到唯一集合中
+                            selectedData[`select${i}`].push(rowData); // 只有當不重複時才 push 資料
+                        }
+                    });
+
+                    if(i == 1)
+                    {                        
+                        for(let j = 0; j < selectedData[`select${i}`].length; j++)
+                        {
+                            let tmpArray = [];
+                            columns.forEach(columnName => {
+                                tmpArray.push(selectedData[`select${i}`][j][columnName]);                             
+                            });
+                            xd.push(tmpArray);
+                        }
+
+                        columns.forEach(columnName => {
+                            let tmpArray = [];
+                            for(let key in categoryMapping[`select${i}`])
+                            {
+                                tmpArray.push(categoryMapping[`select${i}`][key]); 
+                            }
+                            xd_cate_col.push(tmpArray);
+                            xd_name.push(columnName);
+                        });
+                        xd_num = columns.length;
+                    }
+                    else if(i == 3)
+                    {                        
+                        for(let j = 0; j < selectedData[`select${i}`].length; j++)
+                        {
+                            let tmpArray = [];
+                            columns.forEach(columnName => {
+                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                            });
+                            yd.push(tmpArray);
+                        }
+                        
+                        columns.forEach(columnName => {
+                            let tmpArray = [];
+                            for(let key in categoryMapping[`select${i}`])
+                            {
+                                tmpArray.push(categoryMapping[`select${i}`][key]); 
+                            }
+                            yd_cate_col.push(tmpArray);
+                            yd_name.push(columnName);
+                        });
+                        yd_num = columns.length;
+                    }
+                    else
+                    {                        
+                        for(let j = 0; j < selectedData[`select${i}`].length; j++)
+                        {
+                            let tmpArray = [];
+                            columns.forEach(columnName => {
+                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                            });
+                            zd.push(tmpArray);
+                        }
+                        
+                        columns.forEach(columnName => {
+                            let tmpArray = [];
+                            for(let key in categoryMapping[`select${i}`])
+                            {
+                                tmpArray.push(categoryMapping[`select${i}`][key]); 
+                            }
+                            zd_cate_col.push(tmpArray);
+                            zd_name.push(columnName);
+                        });
+                        zd_num = columns.length;
+                    }
+
+                } else {
+                    // 不需要重新編碼，直接提取資料
+                    let uniqueSet = new Set();
+                    parsedData.forEach(row => {
+                        let rowData = {};
+                        if (prefixField) {
+                            rowData[prefixField] = row[prefixField]; // 加入前置欄位的資料
+                        }
+                        columns.forEach(columnName => {
+                            rowData[columnName] = row[columnName]; // 保持原始資料
+                        });
+
+                        // 使用 JSON.stringify 將每個 rowData 轉換為字符串來確保唯一性
+                        let rowDataString = JSON.stringify(rowData);
+                        if (!uniqueSet.has(rowDataString)) {
+                            uniqueSet.add(rowDataString); // 添加到唯一集合中
+                            selectedData[`select${i}`].push(rowData); // 只有當不重複時才 push 資料
+                        }
+                    });
+
+                    if(i == 2)
+                    {                        
+                        for(let j = 0; j < selectedData[`select${i}`].length; j++)
+                        {
+                            let tmpArray = [];
+                            columns.forEach(columnName => {
+                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                            });
+                            xc.push(tmpArray);
+                        }
+                        
+                    }
+                    else if(i == 4)
+                    {                        
+                        for(let j = 0; j < selectedData[`select${i}`].length; j++)
+                        {
+                            let tmpArray = [];
+                            columns.forEach(columnName => {
+                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                            });
+                            yc.push(tmpArray);
+                        }
+                        
+                    }
+                    else
+                    {                        
+                        for(let j = 0; j < selectedData[`select${i}`].length; j++)
+                        {
+                            let tmpArray = [];
+                            columns.forEach(columnName => {
+                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                            });
+                            zc.push(tmpArray);
+                        }
+                        
+                    }
+                }
+            }
+            // 列印 selectedData 和 categoryMapping 來檢查結果
+            console.log('Re-coded Selected Data:', selectedData);
+            console.log('Category Mapping:', categoryMapping);
+        }
+
 
         // 選擇 Example Data or Import Data 的 radio
         const defaultRadio = document.getElementById('defaultdata');
@@ -5468,7 +5798,7 @@
             return { headers, data }; // 傳回包含欄位名稱和資料物件的 array
         }
 
-        // 當文件被選擇後處理 CSV 檔案
+        // 當文件被選擇後處理 CSV 檔案 for import data
         document.getElementById('fileInput').addEventListener('change', function(event) {
             if (!this.files || this.files.length === 0) return;
             var file = event.target.files[0];
@@ -5587,6 +5917,9 @@
 
             clearAllSceneObjects(); // 清除場景中的所有對象 (for 選擇不同映射 column)
             clearAllFloatingWindows(); // 清除所有浮動視窗
+
+            // 儲存 select1 - select6 所選欄位的資料
+            extractDataBasedOnSelectedColumns();
 
             processDataAndPlot(parsedData, selectedFields, selectedValueField, cubeSizeX, cubeSizeY, cubeSizeZ);
             
@@ -7065,9 +7398,8 @@
             height: 100%; /* 佔滿浮動視窗的高度 */
         }
 
-
         #dataProcessingPanel {
-            width: 600px; /* 或根据需求调整 */
+            width: 600px; /* 根據需要調整寬度 */
             height: 650px; /* 根據需要調整高度 */
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             text-align: center;
@@ -7080,6 +7412,7 @@
             width: 100%; /* 表格寬度 */
             margin-top: 20px; /* 與上方內容的間距 */
             font-size: 13px;
+            word-wrap: break-word; /* 讓內容自動換行 */
         }
 
         #dataPreviewTable, #dataPreviewTable th, #dataPreviewTable td {
@@ -7098,6 +7431,7 @@
         .data-information-panel .card {
             border: 1px solid #ccc;
             border-radius: 5px;
+            /* width: 557px; */
         }
 
         .data-information-panel .card-header {
@@ -7194,7 +7528,7 @@
             font-size: 1.25rem;
             border: none;
             margin-top: 11px;
-            /* margin-bottom: 5px; */
+            /* margin-bottom: 11px; */
             border-radius: 5px;
             width: 50px; /* Width of the button */
             height: 40px; /* Height of the button */
