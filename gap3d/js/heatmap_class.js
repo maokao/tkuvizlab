@@ -4089,11 +4089,22 @@ setupHeatmap2(nowdata, nowID, x, y, mode, heatmapId, colorID) {
                     //var colorScale = d3.scaleSequential()
                     //    .domain([self.yd_max_value[colnum], self.yd_min_value[colnum]])
                     //    .interpolator(colorID);    
+                    var colorScale2;
+                    let paletteName = self.ydPalette;
 
-                    var colorScale2 = d3.scaleOrdinal().domain(self.yd_cate_col[colnum])
-                        .range(colorID); 
-                    if (d != null) return colorScale2(d);
-                    else return "url(#diagonalHatch)";
+                    if(paletteName == "GAP_Color_16")
+                    {
+                        if (d != null) return GAP_Color_16(d);
+                        else return "url(#diagonalHatch)";
+                    }
+                    else
+                    {
+                        colorScale2 = d3.scaleOrdinal().domain(self.yd_cate_col[colnum])
+                            .range(colorID); 
+                        if (d != null) return colorScale2(d);
+                        else return "url(#diagonalHatch)";
+                    }
+                    
                 }
                 else if(mode==12)
                 {

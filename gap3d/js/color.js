@@ -17,6 +17,18 @@ function GAP_Blue_White_Red(min, max) {
     return colors;
 } 
 
+function GAP_Color_16(index) {
+	var colors =["#FF0000", "#007F00", "#0000FF", "#FFFF00", "#00FFFF", 
+	"#FF00FF", "#7F7F7F", "#FF7F00", "#7F007F", "#7FFF00", "#7F3F3F", "#7F7F00", 
+	"#3F7F7F", "#FF7F7F", "#00007F", "#FFFFFF"];
+
+	if (index >= 0 && index < colors.length) {
+        return d3.color(colors[index]); // 返回顏色的 HEX 值
+    } else {
+        return d3.color("#000000"); // 如果索引不在範圍內，返回 black
+    }
+}
+
 function MyTicks(min, max, num)
 {
 	let arr = [];

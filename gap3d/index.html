@@ -3015,6 +3015,7 @@
                 // 畫Xd
                 if(xd_num>0)
                 {
+                    gapX.ydPalette = "GAP_Color_16";
                     gapX.setupHeatmap2(gapX.ydData,"mv11",gapX.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
                     gapX.setupydLabel(gapX.yd_X-gapX.col_fontsize/2, -5, `#${windowID}`);
                 }
@@ -3293,6 +3294,7 @@
                 //Yd
                 if(yd_num>0)
                 {
+                    gapY.ydPalette = "GAP_Color_16";
                     gapY.setupHeatmap2(gapY.ydData,"mv11",gapY.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
                     gapY.setupydLabel(gapY.yd_X-gapY.col_fontsize/2, -5, `#${windowID}`);
                 }
@@ -3566,6 +3568,7 @@
                 //zd
                 if(zd_num>0)
                 {
+                    gapZ.ydPalette = "GAP_Color_16";
                     gapZ.setupHeatmap2(gapZ.ydData,"mv11",gapZ.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
                     gapZ.setupydLabel(gapZ.yd_X-gapZ.col_fontsize/2, -5, `#${windowID}`);
                 }
