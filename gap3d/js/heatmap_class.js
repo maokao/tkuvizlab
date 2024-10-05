@@ -4246,20 +4246,26 @@ setupProximityData(heatmapId)
     //else
     //    this.scaleP = (viewerHeight*3/4)/$(document).height();
     this.scaleP = 1.0;
-    if(viewerWidth/$(document).width() < viewerHeight/$(document).height())
+    //if(viewerWidth/$(document).width() < viewerHeight/$(document).height())
+    if(viewerWidth < viewerHeight)
     {
-        self.cellWidth = viewerWidth*0.8/self.row_number;
+        self.cellWidth = viewerWidth*0.9/self.row_number;
         self.cellHeight = self.cellWidth;
     }
     else
     {
-        self.cellWidth = viewerHeight*0.8/self.row_number;
+        self.cellWidth = viewerHeight*0.9/self.row_number;
         self.cellHeight = self.cellWidth;    
     }
 
+    let covCount = 0;
+    if(this.yd > 0)
+        covCount++;
+    if(this.yc > 0)
+        covCount++;
     //this.viewerPosLeft = (viewerWidth-this.scaleP*this.row_number*this.cellWidth)/2;
     //this.viewerPosTop = (viewerHeight-this.scaleP*this.row_number*this.cellHeight)/2;
-    this.viewerPosLeft = 40+this.yd*this.ycov_cellWidth;
+    this.viewerPosLeft = 40+(this.yd+this.yc)*this.ycov_cellWidth+covCount*10;
     this.viewerPosTop = (viewerHeight-this.scaleP*this.row_number*this.cellHeight)/2;
 /*
     function zoom() {

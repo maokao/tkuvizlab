@@ -2937,6 +2937,7 @@
                 // 設定 row_number
                 gapX.row_number = numX;
 
+                let covCount = 0;
                 // 設定 yc
                 if(xc_num>0)
                 {
@@ -2945,6 +2946,7 @@
                     gapX.yc_name = xc_name;
                     gapX.yc_X = -10-gapX.yc*gapX.ycov_cellWidth;
                     gapX.compute_yc_minmax();
+                    covCount++;
                 }
                 // 設定 yd
                 if(xd_num>0)
@@ -2954,6 +2956,7 @@
                     gapX.yd_cate_col = xd_cate_col;
                     gapX.yd_name = xd_name;
                     gapX.yd_X = gapX.yc_X -10-gapX.yd*gapX.ycov_cellWidth;
+                    covCount++;
                 }
 
                 gapX.row_Scale_id = row_Scale_id;
@@ -2972,10 +2975,13 @@
                 // 建立 colorbar 的 HTML 元素
                 var colorbarX = document.createElement('div');
 
+                // 計算增加的寬度
+                let plusWidth = (gapX.yc+gapX.yd)*gapX.ycov_cellWidth+covCount*10;
+
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 430, 380);
+                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 430+plusWidth, 380);
                 } else {
                     return
                 }
@@ -3206,6 +3212,7 @@
                 // 設定 row_number
                 gapY.row_number = numY;
 
+                let covCount = 0;
                 // 設定 yc
                 if(yc_num>0)
                 {
@@ -3214,6 +3221,7 @@
                     gapY.yc_name = yc_name;
                     gapY.yc_X = -10-gapY.yc*gapY.ycov_cellWidth;
                     gapY.compute_yc_minmax();
+                    covCount++;
                 }
                 // 設定Yd
                 if(yd_num>0)
@@ -3223,6 +3231,7 @@
                     gapY.yd_cate_col = yd_cate_col;
                     gapY.yd_name = yd_name;
                     gapY.yd_X = gapY.yc_X -10-gapY.yd*gapY.ycov_cellWidth;
+                    covCount++;
                 }
 
                 gapY.row_Scale_id = row_Scale_id;
@@ -3241,10 +3250,13 @@
                 // 建立 colorbar 的 HTML 元素
                 var colorbarY = document.createElement('div');
 
+                // 計算增加的寬度
+                let plusWidth = (gapY.yc+gapY.yd)*gapY.ycov_cellWidth+covCount*10;
+
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 430, 380);
+                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 430+plusWidth, 380);
                 } else {
                     return
                 }
@@ -3472,6 +3484,7 @@
                 // 設定 row_number
                 gapZ.row_number = numZ;
 
+                let covCount = 0;
                 // 設定 zc
                 if(zc_num>0)
                 {
@@ -3480,6 +3493,7 @@
                     gapZ.yc_name = zc_name;
                     gapZ.yc_X = -10-gapZ.yc*gapZ.ycov_cellWidth;
                     gapZ.compute_yc_minmax();
+                    covCount++;
                 }
                 // 設定zd
                 if(zd_num>0)
@@ -3489,6 +3503,7 @@
                     gapZ.yd_cate_col = zd_cate_col;
                     gapZ.yd_name = zd_name;
                     gapZ.yd_X = gapZ.yc_X -10-gapZ.yd*gapZ.ycov_cellWidth;
+                    covCount++;
                 }
 
                 gapZ.row_Scale_id = row_Scale_id;
@@ -3507,10 +3522,13 @@
                 // 建立 colorbar 的 HTML 元素
                 var colorbarZ = document.createElement('div');
 
+                // 計算增加的寬度
+                let plusWidth = (gapZ.yc+gapZ.yd)*gapZ.ycov_cellWidth+covCount*10;
+
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 430, 380);
+                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 430+plusWidth, 380);
                 } else {
                     return
                 }
