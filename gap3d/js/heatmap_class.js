@@ -1050,7 +1050,7 @@ heatmap_display(url, heatmapId, paletteName, delimiter) {
         //==================================================
         d3.select("#rowprox").on("change", function() { 
 
-            gtag('event', 'proximity', {'event_category': '按鈕點擊','event_label': 'row prox'});
+            //gtag('event', 'proximity', {'event_category': '按鈕點擊','event_label': 'row prox'});
             var colorID;
             if (this.value == "euclidean_distance"){
                 var rowProxData1D = runProximity(0, 0, self.data, self.row_number, self.col_number, 0);
@@ -1253,7 +1253,7 @@ heatmap_display(url, heatmapId, paletteName, delimiter) {
                 }
             }
             */
-            gtag('event', 'proximity', {'event_category': '按鈕點擊','event_label': 'col prox'});
+            //gtag('event', 'proximity', {'event_category': '按鈕點擊','event_label': 'col prox'});
             var colorID;
             if (this.value == "euclidean_distance"){
                 var colProxData1D = runProximity(0, 1, self.data, self.row_number, self.col_number, 0);
@@ -3899,9 +3899,20 @@ setupHeatmap2(nowdata, nowID, x, y, mode, heatmapId, colorID) {
         }
         else if(mode==12)   //self.yc
         {
-            var colorScale = d3.scaleSequential()
-                .domain([self.yc_max_value[0], self.yc_min_value[0]])
-                .interpolator(colorID);     
+            let paletteName = self.ycPalette;
+            var colorScale;
+            if(paletteName == "GAP_Rainbow")
+                colorScale = GAP_Rainbow(self.yc_min_value[0], self.yc_max_value[0]);
+            else if(paletteName == "GAP_Blue_White_Red")
+                colorScale = GAP_Blue_White_Red(self.yc_min_value[0], self.yc_max_value[0]);
+            else{
+                colorScale = d3.scaleSequential()
+                    .domain([self.yc_max_value[0], self.yc_min_value[0]])
+                    .interpolator(colorID); 
+            }
+            //var colorScale = d3.scaleSequential()
+            //    .domain([self.yc_max_value[0], self.yc_min_value[0]])
+            //    .interpolator(colorID);     
             self.drawColorLegend("self.yc_colorspec", self.viewerPosTop, colorScale, "Yconti. covariates", self.yc_min_value[0], self.yc_max_value[0], false);    
         }
         else if(mode==13)   //self.xd
@@ -4086,9 +4097,24 @@ setupHeatmap2(nowdata, nowID, x, y, mode, heatmapId, colorID) {
                 }
                 else if(mode==12)
                 {
-                    var colorScale2 = d3.scaleSequential()
+                    /*var colorScale2 = d3.scaleSequential()
                         .domain([self.yc_max_value[colnum], self.yc_min_value[colnum]])
                         .interpolator(colorID);
+                    if (d != null) return colorScale2(d);
+                    else return "url(#diagonalHatch)";*/
+                    var colorScale2;
+                    let paletteName = self.ycPalette;
+
+                    if(paletteName == "GAP_Rainbow")
+                        colorScale2 = GAP_Rainbow(self.yc_min_value[colnum], self.yc_max_value[colnum]);
+                    else if(paletteName == "GAP_Blue_White_Red")
+                        colorScale2 = GAP_Blue_White_Red(self.yc_min_value[colnum], self.yc_max_value[colnum]);
+                    else{
+                        colorScale2 = d3.scaleSequential()
+                            .domain([self.yc_max_value[colnum], self.yc_min_value[colnum]])
+                            .interpolator(colorID); 
+                    }
+
                     if (d != null) return colorScale2(d);
                     else return "url(#diagonalHatch)";
                 }
@@ -4175,7 +4201,7 @@ setupHeatmap2(nowdata, nowID, x, y, mode, heatmapId, colorID) {
             })
             .on("mousemove", function(e, d, i) {
                 //tooltip.style("top", (d3.event.pageY - 47) + "px").style("left", (d3.event.pageX - 39) + "px");
-                tooltip.style("top", (e.pageY - 47) + "px").style("left", (e.pageX - 39) + "px");
+                //tooltip.style("top", (e.pageY - 47) + "px").style("left", (e.pageX - 39) + "px");
             })
             .on('click', function(e, d, i) {
                 if (d != null) {
@@ -5187,13 +5213,13 @@ setupProxLabel(heatmapId) {
             })
             .on('mouseout', function(d, i) {
                 d3.select('#rowLabel_' + i).classed("hover", false);
-            })
-            .on("click", function(d, i) {
+            });
+            /*.on("click", function(d, i) {
                 rowSortOrder = !rowSortOrder;
                 sortByValues("r", i, rowSortOrder);
                 d3.select("#order").property("selectedIndex", 0);
                 //$("#order").jqxComboBox({selectedIndex: 0});
-            });
+            });*/
 }
 
 //#########################################################

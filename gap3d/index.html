@@ -3008,6 +3008,7 @@
                 // 畫Xc(須先畫，才能計算Xd位置)
                 if(xc_num>0)
                 {
+                    gapX.ycPalette = "GAP_Rainbow";
                     gapX.setupHeatmap2(gapX.ycData,"mv12",gapX.yc_X,0,12, `#${windowID}`, d3.interpolateSpectral);
                     gapX.setupycLabel(gapX.yc_X-gapX.col_fontsize/2, -5, `#${windowID}`);
                 }
@@ -3285,6 +3286,7 @@
                 // 畫Yc(須先畫，才能計算Xd位置)
                 if(yc_num>0)
                 {
+                    gapY.ycPalette = "GAP_Rainbow";
                     gapY.setupHeatmap2(gapY.ycData,"mv12",gapY.yc_X,0,12, `#${windowID}`, d3.interpolateSpectral);
                     gapY.setupycLabel(gapY.yc_X-gapY.col_fontsize/2, -5, `#${windowID}`);
                 }
@@ -3557,6 +3559,7 @@
                 // 畫zc(須先畫，才能計算Xd位置)
                 if(zc_num>0)
                 {
+                    gapZ.ycPalette = "GAP_Rainbow";
                     gapZ.setupHeatmap2(gapZ.ycData,"mv12",gapZ.yc_X,0,12, `#${windowID}`, d3.interpolateSpectral);
                     gapZ.setupycLabel(gapZ.yc_X-gapZ.col_fontsize/2, -5, `#${windowID}`);
                 }
