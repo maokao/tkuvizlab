@@ -138,6 +138,28 @@ class GAP {
     }
 
 //#########################################################
+compute_yc_minmax() {
+    var self = this;
+
+    for(let j=0 ;j< self.yc; j++)
+    {
+        self.yc_max_value[j]=self.ycData[0][j];
+        self.yc_min_value[j]=self.ycData[0][j];
+        for(let i=1 ;i< self.row_number; i++)
+        {
+            if(self.yc_max_value[j] < self.ycData[i][j])
+            {
+                self.yc_max_value[j]=self.ycData[i][j];
+            }
+            if(self.yc_min_value[j] > self.ycData[i][j])
+            {
+                self.yc_min_value[j]=self.ycData[i][j];   
+            }           
+        }
+    }
+}
+
+//#########################################################
 heatmap_display(url, heatmapId, paletteName, delimiter) {
     var self = this;
 

@@ -1400,6 +1400,8 @@
                 gapX.rowOrderId = XsortOrder;
                 var windowID = "#windowProxforX";
                 gapX.redrawHeatmap("mv2", 0, 0, 1, windowID);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
+                if(gapX.yc>0)
+                    gapX.redrawHeatmap("mv12", gapX.yc_X, 0, 12, windowID); 
                 if(gapX.yd>0)
                     gapX.redrawHeatmap("mv11", gapX.yd_X, 0, 11, windowID); 
                 gapX.redrawRowLabels(windowID);
@@ -1505,6 +1507,8 @@
                 gapY.rowOrderId = YsortOrder;
                 var windowID = "#windowProxforY";
                 gapY.redrawHeatmap("mv2", 0, 0, 1, windowID);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
+                if(gapY.yc>0)
+                    gapY.redrawHeatmap("mv12", gapY.yc_X, 0, 12, windowID); 
                 if(gapY.yd>0)
                     gapY.redrawHeatmap("mv11", gapY.yd_X, 0, 11, windowID); 
                 gapY.redrawRowLabels(windowID);
@@ -1606,6 +1610,8 @@
                 gapZ.rowOrderId = ZsortOrder;
                 var windowID = "#windowProxforZ";
                 gapZ.redrawHeatmap("mv2", 0, 0, 1, windowID);  //redrawHeatmap(nowID, x, y, mode, heatmapId)  
+                if(gapZ.yc>0)
+                    gapZ.redrawHeatmap("mv12", gapZ.yc_X, 0, 12, windowID); 
                 if(gapZ.yd>0)
                     gapZ.redrawHeatmap("mv11", gapZ.yd_X, 0, 11, windowID); 
                 gapZ.redrawRowLabels(windowID);
@@ -2931,6 +2937,15 @@
                 // 設定 row_number
                 gapX.row_number = numX;
 
+                // 設定 yc
+                if(xc_num>0)
+                {
+                    gapX.yc = xc_num;
+                    gapX.ycData = xc;
+                    gapX.yc_name = xc_name;
+                    gapX.yc_X = -10-gapX.yc*gapX.ycov_cellWidth;
+                    gapX.compute_yc_minmax();
+                }
                 // 設定 yd
                 if(xd_num>0)
                 {
@@ -2984,7 +2999,13 @@
                 // 更新全域變數
                 currentRowProxDataX = rowProxDataX;
 
-                //Xd
+                // 畫Xc(須先畫，才能計算Xd位置)
+                if(xc_num>0)
+                {
+                    gapX.setupHeatmap2(gapX.ycData,"mv12",gapX.yc_X,0,12, `#${windowID}`, d3.interpolateSpectral);
+                    gapX.setupycLabel(gapX.yc_X-gapX.col_fontsize/2, -5, `#${windowID}`);
+                }
+                // 畫Xd
                 if(xd_num>0)
                 {
                     gapX.setupHeatmap2(gapX.ydData,"mv11",gapX.yd_X,0,11, `#${windowID}`, d3.schemeSet1);
@@ -3185,6 +3206,15 @@
                 // 設定 row_number
                 gapY.row_number = numY;
 
+                // 設定 yc
+                if(yc_num>0)
+                {
+                    gapY.yc = yc_num;
+                    gapY.ycData = yc;
+                    gapY.yc_name = yc_name;
+                    gapY.yc_X = -10-gapY.yc*gapY.ycov_cellWidth;
+                    gapY.compute_yc_minmax();
+                }
                 // 設定Yd
                 if(yd_num>0)
                 {
@@ -3240,6 +3270,12 @@
                 // 更新全域變數
                 currentRowProxDataY = rowProxDataY;
 
+                // 畫Yc(須先畫，才能計算Xd位置)
+                if(yc_num>0)
+                {
+                    gapY.setupHeatmap2(gapY.ycData,"mv12",gapY.yc_X,0,12, `#${windowID}`, d3.interpolateSpectral);
+                    gapY.setupycLabel(gapY.yc_X-gapY.col_fontsize/2, -5, `#${windowID}`);
+                }
                 //Yd
                 if(yd_num>0)
                 {
@@ -3436,6 +3472,15 @@
                 // 設定 row_number
                 gapZ.row_number = numZ;
 
+                // 設定 zc
+                if(zc_num>0)
+                {
+                    gapZ.yc = zc_num;
+                    gapZ.ycData = zc;
+                    gapZ.yc_name = zc_name;
+                    gapZ.yc_X = -10-gapZ.yc*gapZ.ycov_cellWidth;
+                    gapZ.compute_yc_minmax();
+                }
                 // 設定zd
                 if(zd_num>0)
                 {
@@ -3491,6 +3536,12 @@
                 // 更新全域變數
                 currentRowProxDataZ = rowProxDataZ;
 
+                // 畫zc(須先畫，才能計算Xd位置)
+                if(zc_num>0)
+                {
+                    gapZ.setupHeatmap2(gapZ.ycData,"mv12",gapZ.yc_X,0,12, `#${windowID}`, d3.interpolateSpectral);
+                    gapZ.setupycLabel(gapZ.yc_X-gapZ.col_fontsize/2, -5, `#${windowID}`);
+                }
                 //zd
                 if(zd_num>0)
                 {
@@ -5513,10 +5564,14 @@
                         {
                             let tmpArray = [];
                             columns.forEach(columnName => {
-                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                                tmpArray.push(Number(selectedData[`select${i}`][j][columnName]));
                             });
                             xc.push(tmpArray);
                         }
+                        columns.forEach(columnName => {
+                            xc_name.push(columnName);
+                        });
+                        xc_num = columns.length;
                         
                     }
                     else if(i == 4)
@@ -5525,11 +5580,14 @@
                         {
                             let tmpArray = [];
                             columns.forEach(columnName => {
-                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                                tmpArray.push(Number(selectedData[`select${i}`][j][columnName]));
                             });
                             yc.push(tmpArray);
                         }
-                        
+                        columns.forEach(columnName => {
+                            yc_name.push(columnName);
+                        });
+                        yc_num = columns.length;
                     }
                     else
                     {                        
@@ -5537,11 +5595,15 @@
                         {
                             let tmpArray = [];
                             columns.forEach(columnName => {
-                                tmpArray.push(selectedData[`select${i}`][j][columnName]);
+                                tmpArray.push(Number(selectedData[`select${i}`][j][columnName]));
                             });
                             zc.push(tmpArray);
                         }
-                        
+
+                        columns.forEach(columnName => {
+                            zc_name.push(columnName);
+                        });
+                        zc_num = columns.length;
                     }
                 }
             }
