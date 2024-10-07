@@ -3033,7 +3033,7 @@
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 440+plusWidth, 380);
+                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 440+plusWidth, 380, gapX.yd, gapX.yc);
                 } else {
                     return
                 }
@@ -3310,7 +3310,7 @@
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 440+plusWidth, 380);
+                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 440+plusWidth, 380, gapY.yd, gapY.yc);
                 } else {
                     return
                 }
@@ -3584,7 +3584,7 @@
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 440+plusWidth, 380);
+                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 440+plusWidth, 380, gapZ.yd, gapZ.yc);
                 } else {
                     return
                 }
@@ -3727,7 +3727,7 @@
         });
 
         // 建立浮動視窗
-        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height) {
+        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height, dCovNum, cCovNum) {
             // 建立浮動視窗元素
             const floatWindow = document.createElement('div');
             floatWindow.classList.add('floating-window');
@@ -3853,6 +3853,7 @@
             const colorbarContainerMain = document.createElement('div');
             colorbarContainerMain.id = 'colorbarforprox-container-main';
 
+            //colorbarContainerMain.classList.add('content');
             colorbarContainerMain.style.height = '100%';
             colorbarContainerMain.style.display = 'flex';
             colorbarContainerMain.style.position = 'absolute';
@@ -3876,14 +3877,30 @@
             button.classList.add('active'); // 添加 active class
             tabMenuContainer.appendChild(button);
 
+            if(dCovNum > 0)
+            {
+                const button1 = document.createElement('button');
+                button1.innerText = 'discr. cov.'; // 按鈕文字
+                button1.setAttribute('data-target', 'tab2'); // 設置 data-target 屬性
+                tabMenuContainer.appendChild(button1);                
+            }
+            if(cCovNum > 0)
+            {
+                const button2 = document.createElement('button');
+                button2.innerText = 'conti. cov.'; // 按鈕文字
+                button2.setAttribute('data-target', 'tab3'); // 設置 data-target 屬性
+                tabMenuContainer.appendChild(button2);                
+            }
+
             // 建立 colorbar 容器和標籤
             const colorbarContainer = document.createElement('div');
 
             colorbarContainer.id = 'colorbarforprox-container';
             colorbarContainer.classList.add('content');
+            //colorbarContainer.classList.add('tab-content', 'active');
             // colorbarContainer.style.flexDirection = 'row'; // 横向排列元素
             colorbarContainer.style.display = 'flex';
-            colorbarContainer.style.position = 'absolute';
+            //colorbarContainer.style.position = 'absolute';
             colorbarContainer.style.marginRight = '30px'; // 給標籤留一些空間
             colorbarContainer.style.alignItems = 'center'; // 內容從頂部對齊
             colorbarContainer.style.marginTop = '0'; // 去除上邊距
@@ -3892,8 +3909,14 @@
             colorbarContainer.style.right = '0'; // 去除任何內邊距
             // colorbarContainer.style.border = '2px solid blue';
 
+            // 建立 colorbar 容器
+            const colorbarPanel = document.createElement('div');
+            colorbarPanel.id = 'tab1';
+            colorbarPanel.classList.add('tab-content', 'active');
+            colorbarPanel.style.left = '14px'; // 去除任何內邊距
+
             // 設定 colorbar 樣式並新增到容器
-            colorbarElement.classList.add('tab-content', 'active');
+            //colorbarElement.classList.add('tab-content', 'active');
             colorbarElement.style.width = '20px'; // 設定 colorbar 的寬度
             colorbarElement.style.height = '200px'; // 設定 colorbar 的高度
             colorbarElement.style.border = '1px solid #FFF'; // 設定 colorbar 的邊框樣式
@@ -3960,11 +3983,73 @@
             minLabel.style.padding = '0'; // 去除任何內邊距
             // minLabel.style.border = '2px solid gray';s
 
+            // 將標籤和 colorbar 加入 colorbarPanel
+            colorbarPanel.appendChild(maxLabel);
+            colorbarPanel.appendChild(colorbarElement);
+            colorbarPanel.appendChild(minLabel);
 
-            // 將標籤和 colorbar 加入 colorbarContainer
-            colorbarContainer.appendChild(maxLabel);
-            colorbarContainer.appendChild(colorbarElement);
-            colorbarContainer.appendChild(minLabel);
+            //colorbarPanel 加入 colorbarContainer
+            colorbarContainer.appendChild(colorbarPanel);
+
+            if(dCovNum > 0)
+            {
+                // 建立 colorbar 容器
+                const colorbarPanel1 = document.createElement('div');
+                colorbarPanel1.id = 'tab2';
+                colorbarPanel1.classList.add('tab-content');
+                colorbarPanel1.style.left = '14px'; // 去除任何內邊距
+
+                // 設定 colorbar 樣式並新增到容器
+/*
+                colorbarElement.style.width = '20px'; // 設定 colorbar 的寬度
+                colorbarElement.style.height = '200px'; // 設定 colorbar 的高度
+                colorbarElement.style.border = '1px solid #FFF'; // 設定 colorbar 的邊框樣式
+                colorbarElement.style.position = 'relative'; // 設定 colorbar 相對定位，以便標籤使用絕對定位
+                colorbarElement.style.alignItems = 'flex-start'; // 內容從頂部對齊
+                colorbarElement.style.boxSizing = 'border-box'; // 確保 padding 和 border 不會影響佈局
+                colorbarElement.style.marginTop = '0'; // 去除上邊距
+                colorbarElement.style.marginBottom = '0'; // 去除下邊距
+                colorbarElement.style.padding = '0'; // 去除任何內邊距
+*/
+                // 將標籤和 colorbar 加入 colorbarPanel
+                //colorbarPanel1.appendChild(maxLabel);
+                //colorbarPanel1.appendChild(colorbarElement);
+                //colorbarPanel1.appendChild(minLabel);
+
+                //colorbarPanel 加入 colorbarContainer
+                colorbarContainer.appendChild(colorbarPanel1);
+            }
+
+            if(cCovNum > 0)
+            {
+                // 建立 colorbar 容器
+                const colorbarPanel2 = document.createElement('div');
+                colorbarPanel2.id = 'tab3';
+                colorbarPanel2.classList.add('tab-content');
+                colorbarPanel2.style.left = '14px'; // 去除任何內邊距
+
+                // 設定 colorbar 樣式並新增到容器
+                //colorbarElement.classList.add('tab-content', 'active');
+                /*
+                colorbarElement.style.width = '20px'; // 設定 colorbar 的寬度
+                colorbarElement.style.height = '200px'; // 設定 colorbar 的高度
+                colorbarElement.style.border = '1px solid #FFF'; // 設定 colorbar 的邊框樣式
+                colorbarElement.style.position = 'relative'; // 設定 colorbar 相對定位，以便標籤使用絕對定位
+                colorbarElement.style.alignItems = 'flex-start'; // 內容從頂部對齊
+                colorbarElement.style.boxSizing = 'border-box'; // 確保 padding 和 border 不會影響佈局
+                colorbarElement.style.marginTop = '0'; // 去除上邊距
+                colorbarElement.style.marginBottom = '0'; // 去除下邊距
+                colorbarElement.style.padding = '0'; // 去除任何內邊距
+*/
+                // 將標籤和 colorbar 加入 colorbarPanel
+                //colorbarPanel1.appendChild(maxLabel);
+                //colorbarPanel2.appendChild(colorbarElement);
+                //colorbarPanel1.appendChild(minLabel);
+
+                //colorbarPanel 加入 colorbarContainer
+                colorbarContainer.appendChild(colorbarPanel2);
+            }
+
 
             // 將colorbarContainer加入 colorbarContainerMain
             colorbarContainerMain.appendChild(colorbarContainer);
@@ -3994,6 +4079,25 @@
             // 新增點擊事件監聽器來調整 z-index
             floatWindow.addEventListener('click', function() {
                 this.style.zIndex = ++highestZIndex;
+            });
+
+            // 新增點擊tab的功能
+            const buttons = document.querySelectorAll('.tab-menu button');
+            const contents = document.querySelectorAll('.tab-content');
+
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // 移除所有按鈕的 active 狀態
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    // 為點擊的按鈕添加 active 狀態
+                    button.classList.add('active');
+
+                    // 隱藏所有內容
+                    contents.forEach(content => content.classList.remove('active'));
+                    // 顯示點擊按鈕對應的內容
+                    const target = document.getElementById(button.getAttribute('data-target'));
+                    target.classList.add('active');
+                });
             });
         }
 

@@ -61,7 +61,7 @@ class GAP {
         this.colFlipId = "null";
         this.rowCurrentOrder = [];
         this.colCurrentOrder = [];
-        this.yd = 1;
+        this.yd = 0;
         this.xd = 0;
         this.yc = 0;
         this.xc = 0;
