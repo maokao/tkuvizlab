@@ -74,3 +74,54 @@ text.hover {
   left: 50%;
   margin-left: -16px;
 }
+
+        /* 內容區域的樣式 */
+        .content {
+            /* flex: 1;
+            padding: 40px;*/
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 右邊標籤欄的樣式 */
+        .tab-menu {
+            background-color: #cccccc;
+            display: flex;
+            flex-direction: column;
+            /*justify-content: center;*/
+            align-items: center;
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+        }
+
+        .tab-menu button {
+            font-size: 9pt;
+            background-color: #f0f0f0;
+            border: 1px solid #cccccc;
+            border-left-color: #cccccc; /* 預設左邊的邊框顏色 */
+            cursor: pointer;
+            writing-mode: vertical-rl; /* 改變文字方向 */
+            /* transform: rotate(180deg); 旋轉文字以符合閱讀方向 */
+            text-align: center;
+            width: 20px; /* 限制寬度使得文字排版不錯亂 */
+            border-radius: 0 6px 6px 0; /* 右邊的圓角 */
+            transition: background-color 0.3s ease, border-left-color 0.3s ease; /* 增加背景顏色和邊框顏色的過渡效果 */
+        }
+
+        .tab-menu button.active {
+            background-color: #ffffff;
+            color: #000000;
+            border-left-color: #ffffff; /* active tab 的左邊邊框保持為白色 */
+        }
+
+        .tab-menu button:hover {
+            background-color: #e0e0e0; /* 滑鼠懸停效果 */
+        }
