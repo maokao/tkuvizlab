@@ -3813,7 +3813,7 @@
             colorbarContainerMain.style.padding = '0px';
             colorbarContainerMain.style.right = '0px';
             colorbarContainerMain.style.width = '80px';
-            colorbarContainerMain.style.background = 'linear-gradient(to right, rgba(255, 255, 250, 0) 0%, rgba(255, 255, 244, 1) 50%, rgba(255, 255, 240, 1) 100%)';
+            colorbarContainerMain.style.background = 'linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 1) 100%)';
 
             // 建立menu bar
             const tabMenuContainer = document.createElement('div');
@@ -4112,8 +4112,8 @@
             });
 
             // 新增點擊tab的功能
-            const buttons = document.querySelectorAll('.tab-menu button');
-            const contents = document.querySelectorAll('.tab-content');
+            const buttons = colorbarContainerMain.querySelectorAll('.tab-menu button');
+            const contents = colorbarContainerMain.querySelectorAll('.tab-content');
 
             buttons.forEach(button => {
                 button.addEventListener('click', () => {
@@ -4125,7 +4125,8 @@
                     // 隱藏所有內容
                     contents.forEach(content => content.classList.remove('active'));
                     // 顯示點擊按鈕對應的內容
-                    const target = document.getElementById(button.getAttribute('data-target'));
+                    //const target = colorbarContainerMain.getElementById(button.getAttribute('data-target'));
+                    const target = colorbarContainerMain.querySelector(`#${button.getAttribute('data-target')}`);
                     target.classList.add('active');
                 });
             });
