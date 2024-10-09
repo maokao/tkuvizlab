@@ -449,69 +449,6 @@
             });
         });
 
-        // 根據滑動條的值更新立方體的透明度
-        /*function updateCubeOpacityBasedOnSlider(sliderMin, sliderMax) {
-            var opacityRange = document.getElementById('opacityRange');
-            var newOpacity = parseFloat(opacityRange.value);
-            document.getElementById('opacityValue').textContent = newOpacity;
-
-            // 更新 filter 掉之 cubes 透明度
-            var filteropacityRange = document.getElementById('filteropacityRange');
-            var filternewOpacity = parseFloat(filteropacityRange.value);
-            //document.getElementById('filteropacityValue').textContent = filternewOpacity;
-
-            cubes.forEach((cubeRow, i) => {
-                cubeRow.forEach((cubeColumn, j) => {
-                    cubeColumn.forEach((cube, k) => {
-                        if (cube) {
-                            var value = cube.userData.value; // 立方體的值
-
-                            if (value == null) { // 如果為遺失值，透明度為 0
-                                cube.material.opacity = 0;
-                                cubesOpacity[i][j][k] = 0; // 追蹤透明度值
-                            } 
-                            else{
-                                if (categoryConditions.size == 0 && rangeConditions.size == 0) { // 如果長條圖跟直方圖都沒有選擇 bar，且非遺失值，則更新透明度
-                                    // 非遺失值值立方體根據滑動條更新透明度
-                                    if (value < SliderMin || value > SliderMax) {
-                                        // 值不在滑動條選擇的範圍內
-                                        cube.material.opacity = 0;
-                                        cubesOpacity[i][j][k] = 0; // 追蹤透明度值
-                                                
-                                    } else if (SliderMin <= value <= SliderMax) {
-                                        // 值在滑動條選擇的範圍內
-                                        cube.material.opacity = newOpacity;
-                                        // 追蹤透明度值
-                                        cubesOpacity[i][j][k] = cube.material.opacity; 
-                                    }
-                                }
-                                else
-                                {   
-                                    // 非遺失值值立方體根據滑動條更新透明度
-                                    if (value < SliderMin || value > SliderMax) {
-                                        // 值不在滑動條選擇的範圍內
-                                        cube.material.opacity = 0;
-                                        cubesOpacity[i][j][k] = 0; // 追蹤透明度值
-                                                
-                                    } else if (SliderMin <= value <= SliderMax) {
-                                        // 值在滑動條選擇的範圍內
-                                        if(matchesCategoryConditions && matchesRangeConditions)
-                                            cube.material.opacity = newOpacity;
-                                        else
-                                            cube.material.opacity = filternewOpacity; 
-                                        cubesOpacity[i][j][k] = cube.material.opacity;
-
-                                    }
-                                }
-                            }
-                            cube.material.needsUpdate = true;
-                        }
-                    });
-                });
-            });
-        }
-        */
-
         // 創建場景
         var scene = new THREE.Scene();
 
@@ -2424,52 +2361,6 @@
             }
         }
 
-        // // 添加軸標籤
-        // function createAxisLabel(text, position, size, axisLabelName) {
-        //     var canvas = document.createElement('canvas'); // 創建一個新的 HTML <canvas> 元素
-        //     var context = canvas.getContext('2d', { willReadFrequently: true }); // 獲取該 <canvas> 元素的 2D 繪圖上下文
-            
-        //     // 根據需要調整字體大小
-        //     var fontSize = parseFloat(document.getElementById('fontSize').value);
-        //     // 更新顯示值
-        //     document.getElementById('fontSizeValue').textContent = fontSize;
-        //     context.clearRect(0, 0, canvas.width, canvas.height);
-
-        //     finalFontSize = 110 - fontSize;
-
-        //     // 設定字體大小為 fontSize 像素，並且選擇字體樣式為 Arial
-        //     context.font = `${finalFontSize}px Arial` ;
-
-        //     context.fillStyle = 'rgba(92, 92, 92, 1.0)'; // 文字顏色：深灰色 (完全不透明) #5C5C5C
-
-        //     // 計算文本寬度並根據此來設定 canvas 寬度
-        //     var textWidth = context.measureText(text).width;
-        //     canvas.width = 1000; // 設定固定的 canvas 寬度
-        //     canvas.height = finalFontSize * 2; // 高度足夠容納文本
-
-        //     context.textAlign = 'center'; // 將文本對齊方式：'center' 'right'
-        //     context.textBaseline = 'middle'; // 設定文本基線為 'middle'，確保文本垂直居中
-        //     context.fillText(text, canvas.width / 2, canvas.height / 2); // 在 <canvas> 上繪製實心的文本
-
-        //     // 從剛才繪製的 <canvas> 創建一個新的 Three.js 材質的貼圖 (texture)
-        //     var texture = new THREE.CanvasTexture(canvas);
-        //     texture.minFilter = THREE.LinearFilter;
-        //     texture.needsUpdate = true;
-
-        //     // 創建一個 SpriteMaterial，它是一種用於創建具有純色或貼圖的矩形平面的材質
-        //     var material = new THREE.SpriteMaterial({
-        //         map: texture,
-        //         depthTest: false // 添加這個屬性禁用深度測試
-        //     });
-
-        //     var sprite = new THREE.Sprite(material); // 使用該材質來創建一個 THREE.Sprite
-        //     sprite.position.copy(position); // 將 sprite 的位置設定為傳入的 position
-        //     sprite.scale.set(size * canvas.width / canvas.height, size, 1); // 調整標籤尺寸
-        //     sprite.name = axisLabelName; // 為軸標籤設定一個唯一的名稱
-
-        //     scene.add(sprite);
-        // }
-
         // 繪製軸標籤文本
         function drawText(text, context, canvas, fontSize, fontStyle, fontColor) {
             context.clearRect(0, 0, canvas.width, canvas.height); // 清空畫布
@@ -2983,7 +2874,7 @@
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 440+plusWidth, 380, gapX.yd, gapX.yc);
+                    createFloatingWindow(windowID, title, svgContainerX, colorbarX, 'colorforXproximity', 'reverseColorforX', maxProxX, minProxX, 396, 110, 440+plusWidth, 380, gapX.yd, gapX.yc, 'window-container-classX');
                 } else {
                     return
                 }
@@ -3260,7 +3151,7 @@
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 440+plusWidth, 380, gapY.yd, gapY.yc);
+                    createFloatingWindow(windowID, title, svgContainerY, colorbarY, 'colorforYproximity', 'reverseColorforY', maxProxY, minProxY, 396, 340, 440+plusWidth, 380, gapY.yd, gapY.yc, 'window-container-classY');
                 } else {
                     return
                 }
@@ -3534,7 +3425,7 @@
                 // 在資料輸入時才創建浮動視窗
                 if (isDataLoaded) {
                     // 呼叫 createFloatingWindow 來創建浮動視窗
-                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 440+plusWidth, 380, gapZ.yd, gapZ.yc);
+                    createFloatingWindow(windowID, title, svgContainerZ, colorbarZ, 'colorforZproximity', 'reverseColorforZ', maxProxZ, minProxZ, 396, 570, 440+plusWidth, 380, gapZ.yd, gapZ.yc, 'window-container-classZ');
                 } else {
                     return
                 }
@@ -3677,7 +3568,7 @@
         });
 
         // 建立浮動視窗
-        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height, dCovNum, cCovNum) {
+        function createFloatingWindow(windowId, title, contentElement, colorbarElement, selectedSchemeforproximity, reverseColorforproximity, maxLabelText, minLabelText, left, top, width, height, dCovNum, cCovNum, containerclass) {
             // 建立浮動視窗元素
             const floatWindow = document.createElement('div');
             floatWindow.classList.add('floating-window');
@@ -3777,6 +3668,7 @@
 
             // 建立內容容器，並將 heatmap 和 colorbar 添加到其中
             const container = document.createElement('div');
+            container.classList.add(containerclass); // 給 container 添加一個有效的類名 for export (X Y Z 分開命名)
 
             container.style.display = 'flex'; // 使用 Flexbox 佈局
             container.style.position = 'absolute'; // 設定為相對定位，以便 colorbar 使用絕對定位
@@ -3815,12 +3707,15 @@
             colorbarContainerMain.style.width = '80px';
             colorbarContainerMain.style.background = 'linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 1) 100%)';
 
-            // 建立menu bar
+            // 建立 menu bar
             const tabMenuContainer = document.createElement('div');
             tabMenuContainer.id = "tab-menu";
-            tabMenuContainer.classList.add('tab-menu');           
+            tabMenuContainer.classList.add('tab-menu');
+            
+            // tabMenuContainer.style.background = '#F0F0F0';
+            tabMenuContainer.style.background = 'white';
 
-            // 建立menu tab
+            // 建立 menu tab
             const button = document.createElement('button');
             button.innerText = 'proximity'; // 按鈕文字
             button.setAttribute('data-target', 'tab1'); // 設置 data-target 屬性
@@ -4080,12 +3975,11 @@
                 colorbarContainer.appendChild(colorbarPanel2);
             }
 
-
             // 將colorbarContainer加入 colorbarContainerMain
             colorbarContainerMain.appendChild(colorbarContainer);
             colorbarContainerMain.appendChild(tabMenuContainer);
 
-            // 將內容容器新增到浮動視窗中
+            // 將內容新增到內容容器中
             container.appendChild(contentElement); // 將 heatmap 元素加入容器中
             container.appendChild(colorbarContainerMain); // 將 colorbarContainer 元素加入容器中
 
@@ -4111,7 +4005,7 @@
                 this.style.zIndex = ++highestZIndex;
             });
 
-            // 新增點擊tab的功能
+            // 新增點擊 tab 的功能
             const buttons = colorbarContainerMain.querySelectorAll('.tab-menu button');
             const contents = colorbarContainerMain.querySelectorAll('.tab-content');
 
@@ -5614,55 +5508,6 @@
         // 用來存儲重新編碼的類別映射
         let categoryMapping = {};
 
-        // // 依據欄位名稱，從 parsedData 中提取對應的資料，並對 select1, select3, select5 重新編碼
-        // function extractDataBasedOnSelectedColumns() {
-        //     for (let i = 1; i <= 6; i++) {
-        //         // 取得每個 select 中的欄位名稱陣列
-        //         let columns = selectedColumns[`select${i}`];
-        //         selectedData[`select${i}`] = [];
-
-        //         // 只有 select1, select3, select5 需要重新編碼
-        //         if (i === 1 || i === 3 || i === 5) {
-        //             categoryMapping[`select${i}`] = {}; // 初始化類別映射表
-
-        //             // 建立每個欄位的類別重新編碼映射
-        //             columns.forEach(columnName => {
-        //                 let uniqueValues = [...new Set(parsedData.map(row => row[columnName]))]; // 找到欄位的唯一值
-        //                 // console.log(uniqueValues);
-        //                 uniqueValues.forEach((value, index) => {
-        //                     categoryMapping[`select${i}`][value] = index; // 從 0 開始編碼
-        //                 });
-        //             });
-
-        //             // 遍歷 parsedData 的每一列，並根據欄位名稱提取對應的資料
-        //             parsedData.forEach(row => {
-        //                 let rowData = {};
-        //                 columns.forEach(columnName => {
-        //                     let originalValue = row[columnName];
-        //                     let recodedValue = categoryMapping[`select${i}`][originalValue]; // 重新編碼
-        //                     rowData[columnName] = recodedValue;
-        //                 });
-        //                 // 將提取的資料 push 到對應的 select array 中
-        //                 selectedData[`select${i}`].push(rowData);
-        //             });
-
-        //         } else {
-        //             // 不需要重新編碼，直接提取資料
-        //             parsedData.forEach(row => {
-        //                 let rowData = {};
-        //                 columns.forEach(columnName => {
-        //                     rowData[columnName] = row[columnName]; // 保持原始資料
-        //                 });
-        //                 // 將提取的資料 push 到對應的 select array 中
-        //                 selectedData[`select${i}`].push(rowData);
-        //             });
-        //         }
-        //     }
-        //     // 列印 selectedData 和 categoryMapping 來檢查結果
-        //     console.log('Re-coded Selected Data:', selectedData);
-        //     console.log('Category Mapping:', categoryMapping);
-        // }
-
         // 依據欄位名稱，從 parsedData 中提取對應的資料，並對 select1, select3, select5 重新編碼
         function extractDataBasedOnSelectedColumns() {
             for (let i = 1; i <= 6; i++) {
@@ -5855,10 +5700,9 @@
                 }
             }
             // 列印 selectedData 和 categoryMapping 來檢查結果
-            console.log('Re-coded Selected Data:', selectedData);
-            console.log('Category Mapping:', categoryMapping);
+            // console.log('Re-coded Selected Data:', selectedData);
+            // console.log('Category Mapping:', categoryMapping);
         }
-
 
         // 選擇 Example Data or Import Data 的 radio
         const defaultRadio = document.getElementById('defaultdata');
@@ -6562,29 +6406,6 @@
             exportSceneToPNG();
         });
 
-        // 匯出場景為 PNG 圖片並自動下載的函數
-        // function exportSceneToPNG() {
-        //     // 檢查場景是否有任何物件
-        //     if (scene.children.length === 0) {
-        //         console.log("Cube not found or scene is empty.");
-        //         return; // 場景為空，返回不繼續執行
-        //     }
-
-        //     // 渲染當前場景
-        //     renderer.render(scene, camera);
-            
-        //     // 取得渲染器的內容並轉換為 PNG 資料 URL
-        //     var imgData = renderer.domElement.toDataURL('image/png');
-            
-        //     // 建立一個暫時的 <a> 元素用於觸發下載
-        //     var link = document.createElement('a');
-        //     link.href = imgData;
-        //     link.download = 'Cube.png'; // 下載的檔案名稱
-            
-        //     // 觸發點擊事件下載圖片
-        //     link.click();
-        // }
-
         // 匯出場景為 PNG 圖片並自動下載的函數 with colorbar
         function exportSceneToPNG() {
             // 檢查場景是否有任何物件
@@ -6664,29 +6485,32 @@
         // 監聽 exportProxImage 按鈕的點擊事件
         document.getElementById('exportProxImage').addEventListener('click', function() {
             exportWindowAsImage('windowProxforX', 'ProximityImage_X');
-            exportWindowAsImage('windowProxforY', 'ProximityImage_Y');
-            exportWindowAsImage('windowProxforZ', 'ProximityImage_Z');
+            // exportWindowAsImage('windowProxforY', 'ProximityImage_Y');
+            // exportWindowAsImage('windowProxforZ', 'ProximityImage_Z');
+
+            exportWindowAsImage('window-container-classX', 'ProximityImage_X');
+            exportWindowAsImage('window-container-classY', 'ProximityImage_Y');
+            exportWindowAsImage('window-container-classZ', 'ProximityImage_Z');
         });
 
-        // 匯出指定視窗的內容為圖片
-        function exportWindowAsImage(windowID, name) {
-            var element = document.getElementById(windowID); // 取得浮動視窗的 DOM 元素
-            
+        // 匯出視窗的 container 的內容為圖片
+        function exportWindowAsImage(className, name) {
+            // 選擇具有指定 class 的元素
+            var containerElement = document.querySelector('.' + className);
+
             // 檢查元素是否存在
-            if (!element) {
-                // console.log("Element " + name + " not found.");
-                return; // 找不到元素直接返回，不觸發錯誤
+            if (!containerElement) {
+                console.log("Container element not found.");
+                return; // 如果找不到 container，直接返回
             }
 
-            var header = element.querySelector('.window-header'); // 取得標題元素
-
-            // 暫時隱藏標題
-            if (header) {
-                header.style.display = 'none';
-            }
-
-            // 使用 html2canvas 將指定元素渲染為畫布
-            html2canvas(element).then(function(canvas) {
+            // 使用 html2canvas 渲染 container，同時忽略 tab-menu 和 tab-content 元素
+            html2canvas(containerElement, {
+                ignoreElements: function(element) {
+                    // 忽略包含 tab-menu 和 tab-content class 的元素
+                    return element.classList.contains('tab-menu');
+                }
+            }).then(function(canvas) {
                 // 將畫布轉換為圖片資料 URL
                 var imgData = canvas.toDataURL('image/png');
 
@@ -6697,17 +6521,8 @@
 
                 // 觸發下載
                 link.click();
-
-                // 恢復標題的顯示
-                if (header) {
-                    header.style.display = 'flex';
-                }
             }).catch(function(error) {
                 console.error("Error rendering canvas: ", error);
-                // 如果渲染失敗，也要恢復標題顯示
-                if (header) {
-                    header.style.display = 'flex';
-                }
             });
         }
 
