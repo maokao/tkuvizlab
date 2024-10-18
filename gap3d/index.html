@@ -2816,7 +2816,7 @@
             }
 
             // console.log(rowProxData1D);
-            // console.log('rowProxDataX', rowProxDataX);
+            console.log('rowProxDataX', rowProxDataX);
 
             // console.log('最大值:', maxProxX);
             // console.log('最小值:', minProxX);
@@ -2890,8 +2890,8 @@
                 gapX.isRowProxfirst = false;
                 gapX.rowIsSimilarity = rowIsSimilarity;
 
-                // let ArrayYZ = convert3DArrayTo2D('X');
-                // console.log(ArrayYZ);
+                let ArrayYZ = convert3DArrayTo2D('X');
+                console.log(ArrayYZ);
                 // 輸出成 txt
                 // exportArrayToTxt(ArrayYZ, 'ArrayYZ.txt');
 
@@ -4286,6 +4286,10 @@
                 case 'O':
                     allowUpdateSizes = true; // 當選擇回原始 cube 時，回復修改邊長功能
                     allowUpdatehollowSizes = true; // 當選擇回原始 cube 時，回復分開所有小立方體
+
+                    // 重置 SliceRange 滑桿值為預設值
+                    SliceRange.value = 1; // 將滑桿值設定為初始值
+                    SliceValue.textContent = 1; // 同步更新顯示值
 
                     // updateAxes = true; // 當選擇回原始 cube 時，回復軸線功能
 
