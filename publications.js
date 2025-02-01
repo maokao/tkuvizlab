@@ -45,6 +45,7 @@
 {"id": "Ueda, Koji", "group":0, "short":""},
 {"id": "Wu, Ming-Shiang", "group":0, "short":""},
 {"id": "Shen, Tang-Long", "group":0, "short":""},
+{"id": "Lin, Jie", "group":0, "short":""},
 {"id": "Analysis of genomic distributions of SARS-CoV-2 reveals a dominant strain type with strong allelic associations", "group":1, "short":""},
 {"id": "Using data visualization technique to detect sensitive information re-identification problem of real open dataset", "group":1, "short":""},
 {"id": "Exploratory data analysis of interval-valued symbolic data with matrix visualization", "group":1, "short":""},
@@ -58,7 +59,8 @@
 {"id": "Visualizing large hierarchical information structures in digital libraries", "group":1, "short":""},
 {"id": "Dimension Reduction and Visualization of Symbolic Interval-Valued Data Using Sliced Inverse Regression", "group":1, "short":""},
 {"id": "A Deep Generative Model for Reordering Adjacency Matrices", "group":1, "short":""},
-{"id": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "group":1, "short":""}
+{"id": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "group":1, "short":""},
+{"id": "Visualizing NBA information via storylines", "group":1, "short":""}
   ],
   "links": [
 {"source": "Yang, Hsin-Chou", "target": "Analysis of genomic distributions of SARS-CoV-2 reveals a dominant strain type with strong allelic associations", "value":0},
@@ -123,6 +125,8 @@
 {"source": "Chiu, Han-Mo", "target": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "value":0},
 {"source": "Ueda, Koji", "target": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "value":0},
 {"source": "Wu, Ming-Shiang", "target": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "value":0},
-{"source": "Shen, Tang-Long", "target": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "value":0}
+{"source": "Shen, Tang-Long", "target": "Exploration of the Proteomic Landscape of Small Extracellular Vesicles in Serum as Biomarkers for Early Detection of Colorectal Neoplasia", "value":0},
+{"source": "Lin, Jie", "target": "Visualizing NBA information via storylines", "value":0},
+{"source": "Yang, Chuan-Kai", "target": "Visualizing NBA information via storylines", "value":0}
   ]
 }
