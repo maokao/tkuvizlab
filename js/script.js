@@ -1,11 +1,17 @@
-window.addEventListener('scroll', () => {
-    let parent = document.getElementById('parallax-container');
-    let children = parent.getElementsByTagName('div');
-    for (let i = 0; i < children.length; i++) {
-        if(children[i].id != "skyline")
-        children[i].style.transform = 'translateY(-' + (window.pageYOffset * i / children.length) + 'px)';
-    }
-}, false);
+// 偵測是否為觸控裝置 (iOS/Android)
+var isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+// 視差捲動效果 — 觸控裝置停用，避免 iOS Safari position:fixed 跑版
+if (!isTouchDevice) {
+    window.addEventListener('scroll', () => {
+        let parent = document.getElementById('parallax-container');
+        let children = parent.getElementsByTagName('div');
+        for (let i = 0; i < children.length; i++) {
+            if(children[i].id != "skyline")
+            children[i].style.transform = 'translateY(-' + (window.pageYOffset * i / children.length) + 'px)';
+        }
+    }, false);
+}
 
 // ページの読み込みを待つ
 var today = new Date();
@@ -23,8 +29,8 @@ document.getElementById("comet").setAttribute("style", "display:none;");
 function init() {
     let rot = 0; // 角度
     let canvas = document.querySelector('canvas');
-	canvas.style = 'width: 1792px; height: 927px;"';
-	//canvas.style = 'width: 100%;"';
+    // 響應式寬度：不強制固定像素
+    canvas.style.cssText = 'width: 100%; height: 100%; position: absolute; top: 0; left: 0;';
 
     // レンダラーを作成
     const renderer = new THREE.WebGLRenderer({
@@ -174,8 +180,8 @@ function go() {
 
     // a.style=[P='width',Q='height','object-fit:contain;background:#000'].join`:100%;`
 
-    //canvas.style = 'width: 100%; object-fit:contain; background:#000;';
-    canvas.style = 'width: 100%; height: 927px; background-color:#000;';
+    // 響應式：佔滿容器，不寫死高度
+    canvas.style.cssText = 'width: 100%; height: 100%; position: absolute; top: 0; left: 0; background-color:#000;';
 
     // Now we need a frame counter.
 
@@ -196,8 +202,9 @@ function go() {
         // W=E[P]=128
         // H=E[Q]=64
 
-        canvas.width = 3584;
-        canvas.height = 1854;
+        // 使用視窗尺寸，避免超大 canvas 浪費記憶體
+        canvas.width = window.innerWidth || 1280;
+        canvas.height = window.innerHeight || 750;
         //canvas.width = 512;
         //canvas.height = 256;
         godraysCanvas.width = 128;
