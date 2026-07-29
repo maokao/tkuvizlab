@@ -12,61 +12,85 @@ html{box-sizing:border-box}*,::after,::before{box-sizing:inherit}:root{-moz-tab-
 #parallax-container {
     display: block;
     height: 750px;
-    position: relative;
-    overflow: hidden;
 }
 
 #parallax-container div {
     position: fixed;
+   /* top: 0; */
+   /* background-position: center !important;*/
     transform: translateY(0px);
     height: 750px;
     width: 100%;
 }
 
-/* 手機版：停用 fixed parallax，改用 absolute 避免跑版 */
-@media screen and (max-width: 736px) {
-    #parallax-container {
-        height: 100svh;
-        min-height: 500px;
-    }
-    #parallax-container div {
-        position: absolute;
-        height: 100%;
+#content {
+    position: relative;
+    /*background-color: #030f33; */
+    /*ackground-color: #0a0f26; */
+    background-color: #011a43;
+    /*background-color: #193361;*/
+    font-size: 28px;
+    color: #ffffff;
+    padding: 100px;
+}
+
+
+@media screen and (max-width: 1680px) {
+    #content {
+      position: relative;
+      background-color: #011a43;
+      font-size: 24px;
+      color: #ffffff;
+      padding-left: 100px;
+      padding-right: 100px;
     }
 }
 
-#content {
-    position: relative;
-    background-color: #011a43;
-    font-size: clamp(16px, 1.8vw, 28px);  /* 響應式字級：最小16px，最大28px */
-    line-height: 1.6;
-    color: #ffffff;
-    padding: 80px 100px;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+@media screen and (max-width: 1280px) {
+    #content {
+      position: relative;
+      background-color: #011a43;
+      font-size: 20px;
+      color: #ffffff;
+      padding-left: 100px;
+      padding-right: 100px;
+    }
+    
 }
 
 @media screen and (max-width: 980px) {
     #content {
-        padding: 60px 60px;
+      position: relative;
+      background-color: #011a43;
+      font-size: 17px;
+      color: #ffffff;
+      padding-left: 100px;
+      padding-right: 100px;
+      line-height: 18px;
     }
 }
 
 @media screen and (max-width: 736px) {
     #content {
-        padding: 48px 32px;
-        min-height: 160px;
-        /* 移除 calc(100vh - 750px) 在手機可能為負值的問題 */
-        height: auto !important;
+      position: relative;
+      background-color: #011a43;
+      font-size: 15px;
+      color: #ffffff;
+      padding-left: 100px;
+      padding-right: 100px;
+      line-height: 16px;
     }
 }
 
 @media screen and (max-width: 480px) {
     #content {
-        padding: 40px 20px;
-        min-height: 140px;
+      position: relative;
+      background-color: #011a43;
+      font-size: 12px;
+      color: #ffffff;
+      padding-left: 20px;
+      padding-right: 20px;
+      line-height: 12px;
     }
 }
 
@@ -152,8 +176,6 @@ html{box-sizing:border-box}*,::after,::before{box-sizing:inherit}:root{-moz-tab-
   left:0;
   right:0;
   bottom:0;
-  width:100%;
-  height:100%;
   -webkit-animation:twinkle var(--twinkle-duration) ease-in-out infinite;animation:twinkle var(--twinkle-duration) ease-in-out infinite
 }
 .stars:nth-child(2){
@@ -171,106 +193,3 @@ html{box-sizing:border-box}*,::after,::before{box-sizing:inherit}:root{-moz-tab-
 .star:nth-child(7n){opacity:.6}
 .star:nth-child(13n){opacity:.4}
 .star:nth-child(19n){opacity:.2}
-
-
-/* =============================================
-   視覺設計優化 & 響應式補強
-   ============================================= */
-
-/* 導覽列：手機版 padding 縮減 */
-#header {
-    box-sizing: border-box;
-}
-
-@media screen and (max-width: 736px) {
-    #header {
-        padding: 6px 12px !important;
-    }
-    #header #logo {
-        max-width: 180px;
-        height: auto;
-    }
-}
-
-/* Publications 區塊：字型改善 */
-.pub-list {
-    font-size: 13px;
-    line-height: 1.9;
-    color: rgba(255,255,255,0.92);
-    padding-left: 1.4em;
-    margin-bottom: 1.5em;
-}
-
-.pub-list li {
-    margin-bottom: 0.7em;
-}
-
-.pub-list li em {
-    color: #d4c06e;
-    font-style: italic;
-}
-
-.pub-list li a {
-    color: #7ec8e3;
-    text-decoration: none;
-    border-bottom: 1px dotted rgba(126,200,227,0.5);
-}
-
-.pub-list li a:hover {
-    color: #b3e0f2;
-    border-bottom-color: #b3e0f2;
-}
-
-/* Section 區塊 padding 手機版縮減 */
-@media screen and (max-width: 736px) {
-    #four .container {
-        padding: 3em 1.5em !important;
-    }
-    #four header.major {
-        margin-bottom: 1.5em;
-    }
-}
-
-/* Quote 文字區塊改善 */
-#content .text {
-    max-width: 900px;
-    text-align: center;
-    line-height: 1.7;
-    letter-spacing: 0.01em;
-}
-
-/* 星星 SVG 確保不超出容器 */
-#stars svg.stars {
-    overflow: hidden;
-}
-
-/* Skyline：手機版確保置底 */
-@media screen and (max-width: 736px) {
-    #skyline {
-        height: 100%;
-    }
-    #skyline object {
-        min-width: 100% !important;
-    }
-}
-
-/* Footer 手機版文字縮排改善 */
-@media screen and (max-width: 480px) {
-    #footer {
-        padding: 20px 16px;
-        text-align: center;
-    }
-    #footer ul.icons {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
-    }
-}
-
-/* 減少動畫以改善效能（使用者偏好設定）*/
-@media (prefers-reduced-motion: reduce) {
-    .stars, .comet {
-        animation: none !important;
-    }
-}
