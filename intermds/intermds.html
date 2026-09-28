@@ -1,0 +1,3302 @@
+<title>MDS 互動診斷儀</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --page:#f6f5f1; --surface:#ffffff; --chart:#fcfcfb; --border:rgba(11,11,11,0.12);
+    --text:#15130f; --text-2:#52514e; --muted:#898781; --accent:#4a3aa7; --accent-ink:#ffffff;
+    --accent-soft:rgba(74,58,167,0.10); --grid:#e1e0d9; --axis:#c3c2b7; --good:#0ca30c;
+    --div-neg:#2a78d6; --div-pos:#e34948; --div-mid:#f0efec;
+    --serif:"Source Serif 4",Georgia,"Noto Serif TC",serif;
+    --sans:"IBM Plex Sans","PingFang TC","Microsoft JhengHei",system-ui,-apple-system,sans-serif;
+    --mono:"IBM Plex Mono","SFMono-Regular",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page:#0d0d0c; --surface:#17171a; --chart:#1a1a19; --border:rgba(255,255,255,0.13);
+      --text:#f5f4f0; --text-2:#c3c2b7; --muted:#8b8880; --accent:#9085e9; --accent-ink:#14121f;
+      --accent-soft:rgba(144,133,233,0.18); --grid:#2c2c2a; --axis:#3a3a37; --good:#0ca30c;
+      --div-neg:#3987e5; --div-pos:#e66767; --div-mid:#383835;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page:#0d0d0c; --surface:#17171a; --chart:#1a1a19; --border:rgba(255,255,255,0.13);
+    --text:#f5f4f0; --text-2:#c3c2b7; --muted:#8b8880; --accent:#9085e9; --accent-ink:#14121f;
+    --accent-soft:rgba(144,133,233,0.18); --grid:#2c2c2a; --axis:#3a3a37; --good:#0ca30c;
+    --div-neg:#3987e5; --div-pos:#e66767; --div-mid:#383835;
+  }
+
+  *{box-sizing:border-box;}
+  body{ background:var(--page); color:var(--text); font-family:var(--sans); font-size:14px; line-height:1.5; }
+  h1,h2,h3{ font-family:var(--serif); font-weight:600; margin:0; letter-spacing:-0.01em; text-wrap:balance; }
+  .mono{ font-family:var(--mono); font-variant-numeric:tabular-nums; }
+  button, select, input{ font-family:inherit; font-size:inherit; color:inherit; }
+  a{ color:var(--accent); }
+  ::selection{ background:var(--accent-soft); }
+
+  .shell{ max-width:1440px; margin:0 auto; padding:20px 16px 48px; display:flex; flex-direction:column; gap:16px; }
+
+  header.top{
+    display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 24px;
+    padding-bottom:14px; border-bottom:1px solid var(--border);
+  }
+  header.top .titles h1{ font-size:26px; }
+  header.top .titles p{ margin:6px 0 0; color:var(--text-2); font-size:13px; max-width:62ch; }
+  .cite-chip{
+    font-family:var(--mono); font-size:11px; color:var(--text-2); background:var(--surface);
+    border:1px solid var(--border); border-radius:6px; padding:6px 10px; white-space:nowrap;
+  }
+  .cite-chip a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
+
+  .layout{ display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start; }
+  @media (max-width:880px){ .layout{ grid-template-columns:1fr; } }
+
+  .rail{ display:flex; flex-direction:column; gap:12px; position:sticky; top:16px; }
+  @media (max-width:880px){ .rail{ position:static; } }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; }
+  .card h2{ font-size:13px; color:var(--text); margin-bottom:2px; }
+  .card .sub{ font-size:11.5px; color:var(--muted); margin:0 0 10px; }
+  .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:10px; }
+  .field:last-child{ margin-bottom:0; }
+  .field label{ font-size:11.5px; color:var(--text-2); font-weight:500; }
+  .field .hint{ font-size:10.5px; color:var(--muted); }
+
+  select, .file-btn{
+    width:100%; background:var(--chart); border:1px solid var(--border); border-radius:7px;
+    padding:7px 9px; font-size:12.5px; color:var(--text);
+  }
+  select:focus-visible, .file-btn:focus-within, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent); outline-offset:1px;
+  }
+  input[type="file"]{ display:none; }
+  .file-btn{ display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer; }
+  .file-btn span.name{ color:var(--muted); font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:120px; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px; width:100%;
+    background:var(--accent); color:var(--accent-ink); border:none; border-radius:7px;
+    padding:9px 10px; font-size:12.5px; font-weight:600; cursor:pointer;
+  }
+  .btn:hover{ filter:brightness(1.06); }
+  .btn.ghost{ background:transparent; color:var(--text); border:1px solid var(--border); font-weight:500; }
+  .btn.small{ width:auto; padding:5px 10px; font-size:11.5px; font-weight:500; }
+  button:disabled, select:disabled, input:disabled{ opacity:0.42; cursor:not-allowed; }
+
+  .seg{ display:flex; border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+  .seg button{
+    flex:1; background:var(--chart); border:none; padding:7px 6px; font-size:11.5px; color:var(--text-2);
+    cursor:pointer; border-right:1px solid var(--border);
+  }
+  .seg button:last-child{ border-right:none; }
+  .seg button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); font-weight:600; }
+
+  input[type="range"]{ width:100%; accent-color:var(--accent); }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px 10px; }
+  .stat{ display:flex; flex-direction:column; gap:2px; }
+  .stat .k{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat .v{ font-family:var(--mono); font-size:15px; font-weight:600; }
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11px; padding:3px 8px; border-radius:999px;
+    background:var(--accent-soft); color:var(--accent); font-weight:600; width:fit-content;
+  }
+  .badge.good{ background:rgba(12,163,12,0.12); color:var(--good); }
+  .badge .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .plots{ display:grid; grid-template-columns:1.5fr 1fr; gap:14px; }
+  @media (max-width:1180px){ .plots{ grid-template-columns:1fr; } }
+  .row3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:880px){ .row3{ grid-template-columns:1fr; } }
+
+  .panel{ background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; min-width:0; }
+  .panel .phead{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .panel h3{ font-size:13.5px; }
+  .panel .phint{ font-size:10.5px; color:var(--muted); }
+  .chart-wrap{ position:relative; width:100%; background:var(--chart); border-radius:8px; overflow:hidden; }
+  .chart-wrap.scrollx{ overflow-x:auto; }
+  /* The smearing/heatmap canvas is absolutely positioned, which by default stacks
+     ABOVE a normal-flow (static) sibling regardless of DOM order — so without an
+     explicit z-index the semi-transparent 2D color-smear would paint over the SVG
+     nodes/grid/labels, dulling them. Giving the svg a stacking context with a
+     higher z-index keeps it crisply on top, with the canvas purely as backdrop. */
+  .chart-wrap svg{ display:block; position:relative; z-index:1; }
+  .chart-wrap canvas{ position:absolute; inset:0; pointer-events:none; z-index:0; }
+  .axis-label{ font-size:10px; fill:var(--muted); font-family:var(--sans); }
+  .tick text{ font-size:9.5px; fill:var(--muted); font-family:var(--mono); }
+  .tick line{ stroke:var(--grid); stroke-width:1; }
+  .zeroline{ stroke:var(--axis); stroke-width:1; }
+  .ref-line{ stroke:var(--muted); stroke-width:1; stroke-dasharray:2 3; }
+
+  .legend-bar{ display:flex; flex-direction:column; gap:3px; margin-top:2px; }
+  .legend-grad{ height:10px; border-radius:4px; border:1px solid var(--border); flex:1; min-width:0; }
+  .legend-ticks{ flex:1; min-width:0; display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px; color:var(--muted); }
+  /* Dual-scale legend row (mirrors the paper's Figure 3/6/7/10 color bar,
+     which prints a second "Disparity" tick row aligned under the main
+     "Proximity" row — both read off the same color, just in two units).
+     .legend-row pairs a small fixed-width row label with its value row so
+     the numbers still line up under .legend-grad above; .legend-grad itself
+     gets a matching blank-label row so its left edge aligns with the ticks'
+     left edge rather than starting flush at column 0. */
+  .legend-row{ display:flex; align-items:center; gap:6px; }
+  .legend-row-label{ flex:0 0 50px; font-size:8.5px; color:var(--muted); text-align:right; white-space:nowrap; opacity:0.85; }
+  .legend-ticks-disparity{ opacity:0.75; }
+
+  #tooltip{
+    position:fixed; pointer-events:none; z-index:50; background:var(--text); color:var(--page);
+    font-family:var(--mono); font-size:11px; padding:6px 8px; border-radius:6px; line-height:1.4;
+    box-shadow:0 4px 14px rgba(0,0,0,0.22); max-width:220px; display:none; white-space:pre-line;
+  }
+  :root[data-theme="dark"] #tooltip, @media (prefers-color-scheme:dark){ }
+
+  footer.foot{ border-top:1px solid var(--border); padding-top:14px; color:var(--muted); font-size:11px; display:flex; flex-wrap:wrap; gap:8px 18px; justify-content:space-between; }
+  footer.foot .m{ max-width:70ch; }
+
+  .empty-hint{ font-size:11.5px; color:var(--muted); padding:10px; text-align:center; }
+  .point-label{ font-family:var(--mono); font-size:8.5px; fill:var(--text-2); pointer-events:none; }
+  .clickable{ cursor:pointer; }
+</style>
+
+<div class="shell">
+  <header class="top">
+    <div class="titles">
+      <h1>MDS 互動診斷儀</h1>
+      <p>重現多維標度（MDS）互動診斷方法：色彩連動（color linkage）、條件式組態圖、色暈塗抹（color-smearing）、分解應力比例圖與殘差連動刷選 — 用來找出「整體 stress 很低，但個別物件仍配適不佳」的隱藏問題。</p>
+    </div>
+    <div class="cite-chip">Chen, C.-H. &amp; Chen, J.-A. (2000). Interactive Diagnostic Plots for MDS.<br>Statistica Sinica 10, 665–691.</div>
+  </header>
+
+  <div class="layout">
+    <aside class="rail">
+      <div class="card">
+        <h2>資料來源</h2>
+        <p class="sub">選一種方式載入 proximity / 原始資料</p>
+        <div class="field">
+          <button class="btn" id="btnDemo">載入示範資料（論文模擬研究）</button>
+          <span class="hint">50 個觀測值，取自論文 Figure 8 的模擬研究資料（由圖片數位化重建 x1, x2；x3 依 panel (b) 標示的離群點取 0.5，其餘為 0）；以三維歐氏距離作為 proximity，重現論文 Section 5 的 stress contributor 現象。</span>
+        </div>
+        <div class="field">
+          <label for="fileProx">上傳 Proximity Matrix（CSV／Tab 分隔，n×n）</label>
+          <label class="file-btn" for="fileProx"><span>選擇檔案…</span><span class="name" id="fileProxName">尚未選擇</span></label>
+          <input type="file" id="fileProx" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
+          <span class="hint">可含表頭列/欄作為物件名稱；不對稱會自動取對稱平均。支援 .csv 或 Tab 分隔的 .tsv／.txt，分隔符號會自動偵測。</span>
+        </div>
+        <div class="field">
+          <label for="fileRaw">上傳原始資料矩陣（CSV／Tab 分隔，列×欄）</label>
+          <label class="file-btn" for="fileRaw"><span>選擇檔案…</span><span class="name" id="fileRawName">尚未選擇</span></label>
+          <input type="file" id="fileRaw" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain">
+          <select id="rawOrientation">
+            <option value="rows">列為物件 → 算列間歐氏距離（相異度）</option>
+            <option value="cols" selected>欄為物件 → 算欄間相關係數（相似度，如論文症狀變項）</option>
+          </select>
+          <span class="hint">第一列視為欄名、第一欄視為列名（若可辨識為文字）。支援 .csv 或 Tab 分隔的 .tsv／.txt，分隔符號會自動偵測。</span>
+        </div>
+        <div class="field" id="rawFieldConfigWrap" style="display:none;">
+          <label>欄位設定</label>
+          <div id="rawFieldConfigTable" style="max-height:220px; overflow:auto; border:1px solid var(--border); border-radius:7px;"></div>
+          <span class="hint" id="rawFieldConfigHint"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>轉換設定</h2>
+        <p class="sub">Proximity → Disparity 的配適方式</p>
+        <div class="field">
+          <label for="proxType">Proximity 型態</label>
+          <select id="proxType">
+            <option value="dissimilarity">相異度（值越大越不相似，如距離）</option>
+            <option value="similarity">相似度（值越大越相似，如相關係數）</option>
+          </select>
+        </div>
+        <div class="field" id="simTransformField">
+          <label for="simTransform">相似度 → 相異度轉換</label>
+          <select id="simTransform">
+            <option value="oneminus">δ = 1 − x（相關係數專用，論文作法）</option>
+            <option value="maxminus">δ = max(x) − x（通用）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dispMode">Disparity 配適</label>
+          <select id="dispMode">
+            <option value="nonmetric">非度量（Ordinal / Kruskal 單調迴歸，論文預設）</option>
+            <option value="interval">區間（Metric / 線性迴歸）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="mdsAlgorithm">配適演算法</label>
+          <select id="mdsAlgorithm">
+            <option value="smacof">SMACOF 疊代（Guttman transform，論文預設）</option>
+            <option value="classical">Classical MDS（Torgerson，一步到位）</option>
+            <option value="alscal">ALSCAL（SSTRESS 疊代，歐氏距離下為精確 Newton–Raphson）*</option>
+          </select>
+          <span class="hint" id="algorithmHint"></span>
+        </div>
+        <div class="field">
+          <label for="distModel">距離模型</label>
+          <select id="distModel">
+            <option value="2">Euclidean 歐氏距離</option>
+            <option value="1">City-block 城市街廓（Manhattan）</option>
+            <option value="minkowski">Minkowski（可調 p）*</option>
+          </select>
+        </div>
+        <div class="field" id="minkowskiPField" style="display:none;">
+          <label for="minkowskiP">Minkowski p = <span id="minkowskiPVal">2.0</span></label>
+          <input type="range" id="minkowskiP" min="1" max="4" step="0.1" value="2">
+        </div>
+        <p class="hint" style="line-height:1.5;">＊ALSCAL＋歐氏距離現採用論文原始 Takane–Young–de Leeuw (1977) 每點 Newton–Raphson 疊代法（含正定性修正與步長線搜尋）忠實重建；由於 1977 年原始 FORTRAN 原始碼並未公開，此為依論文演算法描述之忠實重建，非逐位元核對之精確複製。ALSCAL＋非歐氏（City-block／Minkowski）距離模型、以及 SMACOF＋非歐氏距離模型，因無對應的封閉解析形式，仍採本工具自行實作之梯度下降＋回溯線搜尋法近似重現；歐氏距離＋SMACOF（預設組合）維持論文原始配適法不變。</p>
+        <button class="btn" id="btnRefit">重新配適 MDS（q = 2）</button>
+      </div>
+
+      <div class="card">
+        <h2>配適品質</h2>
+        <p class="sub" id="fitStatusText">尚未配適</p>
+        <div class="stat-grid">
+          <div class="stat"><span class="k">STRESS1</span><span class="v mono" id="statStress1">–</span></div>
+          <div class="stat"><span class="k">STRESS2</span><span class="v mono" id="statStress2">–</span></div>
+          <div class="stat"><span class="k">SSTRESS</span><span class="v mono" id="statSstress">–</span></div>
+          <div class="stat"><span class="k">R²</span><span class="v mono" id="statR2">–</span></div>
+        </div>
+        <p class="hint" style="margin-top:8px" id="statIter">–</p>
+      </div>
+
+      <div class="card">
+        <h2>色階設定</h2>
+        <p class="sub">ColorBrewer 與 GAP3D／論文原始色階，套用於組態圖、色暈塗抹與圖例</p>
+        <div class="field">
+          <label for="palette" id="paletteLabel">色階</label>
+          <select id="palette"></select>
+          <span class="hint" id="paletteSafeHint"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>互動設定</h2>
+        <p class="sub">色暈塗抹（color-smearing）</p>
+        <div class="seg" role="group" aria-label="色暈塗抹模式">
+          <button data-smear="off" aria-pressed="true">關閉</button>
+          <button data-smear="2d" aria-pressed="false">2D</button>
+          <button data-smear="1d" aria-pressed="false">1D</button>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label for="bw2d">2D 平滑寬度 h</label>
+          <input type="range" id="bw2d" min="5" max="60" value="22">
+        </div>
+        <div class="field">
+          <label for="bw1d">1D 平滑寬度 h</label>
+          <input type="range" id="bw1d" min="5" max="60" value="22">
+        </div>
+        <div class="field">
+          <label for="smearOpacity">色暈塗抹透明度 <span id="smearOpacityVal">100%</span></label>
+          <input type="range" id="smearOpacity" min="10" max="100" step="5" value="100">
+          <span class="hint">同時套用於 2D／1D 色暈塗抹與 3D 地板紋理</span>
+        </div>
+        <button class="btn ghost small" id="btnClearSel" style="width:100%">清除選取／刷選</button>
+      </div>
+    </aside>
+
+    <main class="plots-wrap" style="display:flex; flex-direction:column; gap:14px;">
+      <div class="plots">
+        <div class="panel">
+          <div class="phead">
+            <h3>組態圖（Configuration Plot）— 點選任一物件以顯示色彩連動</h3>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <button class="btn ghost small" id="btn3DToggle" aria-pressed="false">3D 樹狀圖</button>
+              <button class="btn ghost small" id="btn3DReset" style="display:none;">重置視角</button>
+              <span class="phint mono" id="selInfo">未選取</span>
+            </div>
+          </div>
+          <p class="phint" id="config3DHint" style="margin:-4px 0 0; display:none;"></p>
+          <div class="chart-wrap" id="wrapConfig"></div>
+          <div class="legend-bar">
+            <div class="legend-row"><span class="legend-row-label"></span><div class="legend-grad" id="legendGrad"></div></div>
+            <div class="legend-row"><span class="legend-row-label">Proximity</span><div class="legend-ticks" id="legendTicks"></div></div>
+            <div class="legend-row"><span class="legend-row-label">Disparity</span><div class="legend-ticks legend-ticks-disparity" id="legendTicksDisparity"></div></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="phead">
+            <h3>分解應力比例圖</h3>
+            <span class="phint">依貢獻度排序，點長條可選取</span>
+          </div>
+          <div class="chart-wrap scrollx" id="wrapStressBar"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="phead">
+          <h3>Proximity Matrix 熱圖（Heatmap）— 點選列/欄可顯示色彩連動</h3>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label class="phint" style="display:flex; align-items:center; gap:5px; margin:0;">
+              排序法（Seriation）
+              <select id="heatmapOrderMethod" style="width:auto; min-width:150px; padding:4px 7px; font-size:11.5px; border-radius:6px;">
+                <option value="original">原始順序 Original</option>
+                <option value="single">最短距離法 Single-Linkage</option>
+                <option value="complete">最長距離法 Complete-Linkage</option>
+                <option value="average">平均距離法 Average-Linkage</option>
+                <option value="r2e">R2E（Rank-Two Ellipse）</option>
+                <option value="random">隨機 Random</option>
+              </select>
+            </label>
+            <label class="phint" style="display:flex; align-items:center; gap:5px; margin:0;">
+              翻轉（Flip）
+              <select id="heatmapFlipMethod" style="width:auto; min-width:110px; padding:4px 7px; font-size:11.5px; border-radius:6px;">
+                <option value="none">無 None</option>
+                <option value="r2e">R2E 導向</option>
+                <option value="uncle">Uncle*</option>
+                <option value="grandpa">GrandPa*</option>
+              </select>
+            </label>
+            <label class="phint" style="display:flex; align-items:center; gap:5px; margin:0; cursor:pointer;">
+              <input type="checkbox" id="heatmapShowLabels" style="margin:0; accent-color:var(--accent);">
+              顯示列/欄名稱
+            </label>
+            <span class="phint" id="heatmapHint">依目前物件順序排列</span>
+          </div>
+        </div>
+        <p class="phint" id="heatmapSeriationNote" style="margin:-6px 0 10px; color:var(--muted); font-size:10.5px; line-height:1.5;">
+          排序／翻轉法參考 GAP3D（maokao.github.io/GAP3D）之選單設計；「Original／Single／Complete／Average-Linkage／R2E／Random」及「R2E 翻轉」為標準演算法之忠實實作。GAP3D 的實際排序引擎為編譯後的 WebAssembly（無公開原始碼可供逐位元核對），故標示 <b>*</b> 的「Uncle」「GrandPa」翻轉法為本工具依其命名概念（以旁支／祖層子樹脈絡決定分支方向）自行設計之近似重現，並非 GAP3D 內部演算法的精確重製。此外本工具的 proximity matrix 恆為對稱矩陣，故列與欄採同一組排序，不若 GAP3D 可分別調整列／欄。選擇 Single／Complete／Average-Linkage 這三種階層式聚類排序法時，會在熱圖右側同步畫出該排序所依據的樹狀圖（dendrogram），分支的合併距離即為該連結法下的群聚距離；懸停在分支上可查看該次合併的距離值。Original／Random／R2E 並非由聚類樹產生排序，故不會顯示樹狀圖。
+        </p>
+        <div class="chart-wrap scrollx" id="wrapHeatmap"></div>
+        <div class="legend-bar">
+          <div class="legend-row"><span class="legend-row-label"></span><div class="legend-grad" id="heatmapLegendGrad"></div></div>
+          <div class="legend-row"><span class="legend-row-label">Proximity</span><div class="legend-ticks" id="heatmapLegendTicks"></div></div>
+          <div class="legend-row"><span class="legend-row-label">Disparity</span><div class="legend-ticks legend-ticks-disparity" id="heatmapLegendTicksDisparity"></div></div>
+        </div>
+      </div>
+
+      <div class="row3">
+        <div class="panel">
+          <div class="phead"><h3>Linear Fit</h3><span class="phint">Disparity vs Distance</span></div>
+          <div class="chart-wrap" id="wrapLinear"></div>
+        </div>
+        <div class="panel">
+          <div class="phead"><h3>Transformation</h3><span class="phint">Proximity vs Disparity</span></div>
+          <div class="chart-wrap" id="wrapTransform"></div>
+        </div>
+        <div class="panel">
+          <div class="phead"><h3>Nonlinear Fit</h3><span class="phint">Proximity vs Distance</span></div>
+          <div class="chart-wrap" id="wrapNonlinear"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="phead">
+          <h3>殘差圖（Residual Plot）— 拖曳刷選以在組態圖上畫出連線（按住 Shift 可多次匡選、疊加選取範圍）</h3>
+          <span class="phint">紅：距離被高估（over-represented）／藍：距離被低估（under-represented）</span>
+        </div>
+        <div class="chart-wrap" id="wrapResidual"></div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="foot">
+    <span class="m">方法依據 Chen, C.-H. &amp; Chen, J.-A. (2000), <em>Interactive Diagnostic Plots for Multidimensional Scaling with Applications in Psychosis Disorder Data Analysis</em>, Statistica Sinica 10(2), 665–691。色暈塗抹以高斯核迴歸估計（論文式 6、7）；色階預設採論文與 GAP3D（maokao.github.io/GAP3D）原始色階：GAP Rainbow 彩虹（原文模擬研究之距離型 proximity）與 GAP Blue-Red 藍－白－紅（原文案例研究之相關係數），亦可於左側「色階設定」切換為 ColorBrewer 色盲安全方案。</span>
+    <span id="themeNote">組態、應力與殘差計算皆在瀏覽器本機完成，資料不會上傳。</span>
+  </footer>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ============================== MATH CORE ============================== */
+function zeros(n,m){ const A=new Array(n); for(let i=0;i<n;i++) A[i]=new Float64Array(m); return A; }
+function matMul(A,B){ const n=A.length,k=B.length,m=B[0].length; const C=zeros(n,m);
+  for(let i=0;i<n;i++){ for(let p=0;p<k;p++){ const a=A[i][p]; if(a===0) continue; const Bp=B[p],Ci=C[i];
+    for(let j=0;j<m;j++) Ci[j]+=a*Bp[j]; } } return C; }
+
+function jacobiEigen(Ain,maxSweeps,tol){
+  maxSweeps=maxSweeps||60; tol=tol||1e-11;
+  const n=Ain.length; const A=zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) A[i][j]=Ain[i][j];
+  const V=zeros(n,n); for(let i=0;i<n;i++) V[i][i]=1;
+  for(let sweep=0; sweep<maxSweeps; sweep++){
+    let off=0;
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) off+=A[i][j]*A[i][j];
+    if(off<tol) break;
+    for(let p=0;p<n-1;p++){
+      for(let q=p+1;q<n;q++){
+        const apq=A[p][q]; if(Math.abs(apq)<1e-300) continue;
+        const app=A[p][p],aqq=A[q][q];
+        const phi=0.5*Math.atan2(2*apq, aqq-app);
+        const c=Math.cos(phi), s=Math.sin(phi);
+        for(let k=0;k<n;k++){ const akp=A[k][p],akq=A[k][q]; A[k][p]=c*akp-s*akq; A[k][q]=s*akp+c*akq; }
+        for(let k=0;k<n;k++){ const apk=A[p][k],aqk=A[q][k]; A[p][k]=c*apk-s*aqk; A[q][k]=s*apk+c*aqk; }
+        for(let k=0;k<n;k++){ const vkp=V[k][p],vkq=V[k][q]; V[k][p]=c*vkp-s*vkq; V[k][q]=s*vkp+c*vkq; }
+      }
+    }
+  }
+  const values=new Float64Array(n); for(let i=0;i<n;i++) values[i]=A[i][i];
+  return {values, vectors:V};
+}
+
+function classicalMDS(delta,q){
+  const n=delta.length;
+  const D2=zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) D2[i][j]=delta[i][j]*delta[i][j];
+  const rowMean=new Float64Array(n); let grand=0;
+  for(let i=0;i<n;i++){ let s=0; for(let j=0;j<n;j++) s+=D2[i][j]; rowMean[i]=s/n; grand+=s; }
+  grand/=n*n;
+  const B=zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) B[i][j]=-0.5*(D2[i][j]-rowMean[i]-rowMean[j]+grand);
+  const {values,vectors}=jacobiEigen(B,60,1e-9);
+  const idx=Array.from({length:n},(_,i)=>i).sort((a,b)=>values[b]-values[a]);
+  const X=zeros(n,q);
+  for(let c=0;c<q;c++){ const ei=idx[c]; const lam=Math.max(values[ei],0); const sq=Math.sqrt(lam);
+    for(let i=0;i<n;i++) X[i][c]=vectors[i][ei]*sq; }
+  return X;
+}
+
+/* ---- Seriation (proximity-matrix reordering), for the heatmap panel ----
+   Order/flip menu mirrors GAP3D (maokao.github.io/GAP3D):
+     order: Original, Single/Complete/Average-Linkage, R2E, Random
+     flip:  None, R2E-guided, Uncle, GrandPa
+   FIDELITY NOTE: GAP3D's actual seriation engine (hctree_wasm / r2e_wasm)
+   is compiled WebAssembly with no public source, so its internal numerics
+   cannot be read or verified against. Original / Random / the three
+   linkage methods / R2E order / R2E-guided flip below are standard,
+   textbook algorithms (Lance–Williams hierarchical clustering; R2E =
+   classical/Torgerson MDS to 2 dimensions + angular sort around the
+   centroid, per Chen (2002) "Generalized Association Plots" — reusing
+   classicalMDS() already defined above). "Uncle" and "GrandPa" flip are
+   this tool's own best-effort reconstruction of the *concept* GAP3D names
+   (using a node's sibling / grandparent subtree as context for which way
+   to orient a branch) — NOT a verified reproduction of GAP3D's internal
+   WASM algorithm. This is disclosed in the heatmap panel's UI text too. */
+
+// Lance-Williams agglomerative hierarchical clustering on a dissimilarity
+// matrix. linkage: 'single' | 'complete' | 'average' (UPGMA, size-weighted).
+// Returns a binary tree: leaf = {leaf:i}; internal = {left,right,dist}.
+function hierarchicalClustering(delta, linkage){
+  const n=delta.length;
+  const clusters=new Array(n);
+  for(let i=0;i<n;i++) clusters[i]={node:{leaf:i}, size:1};
+  const Dw=zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) Dw[i][j]=delta[i][j];
+  let active=Array.from({length:n},(_,i)=>i);
+  while(active.length>1){
+    let bi=0,bj=1,best=Infinity;
+    for(let a=0;a<active.length;a++){
+      for(let b=a+1;b<active.length;b++){
+        const i=active[a], j=active[b], d=Dw[i][j];
+        if(d<best){ best=d; bi=a; bj=b; }
+      }
+    }
+    const i=active[bi], j=active[bj];
+    const ni=clusters[i].size, nj=clusters[j].size;
+    for(const k of active){
+      if(k===i||k===j) continue;
+      const dik=Dw[i][k], djk=Dw[j][k];
+      let dnew;
+      if(linkage==='single') dnew=Math.min(dik,djk);
+      else if(linkage==='complete') dnew=Math.max(dik,djk);
+      else dnew=(ni*dik+nj*djk)/(ni+nj); // average / UPGMA
+      Dw[i][k]=dnew; Dw[k][i]=dnew;
+    }
+    clusters[i]={node:{left:clusters[i].node, right:clusters[j].node, dist:best}, size:ni+nj};
+    active.splice(bj,1);
+  }
+  return clusters[active[0]].node;
+}
+
+// Default (unflipped) left-to-right leaf order of a tree.
+function treeLeafOrder(node){
+  if(node.leaf!==undefined) return [node.leaf];
+  return treeLeafOrder(node.left).concat(treeLeafOrder(node.right));
+}
+
+// Post-order pass caching each subtree's member (leaf-index) list, keyed
+// by node object identity, so the flip routines can look up "who is under
+// this branch" in O(1) instead of re-walking the tree each time.
+function computeMembers(node, map){
+  map = map || new Map();
+  const members = node.leaf!==undefined ? [node.leaf]
+    : computeMembers(node.left,map).concat(computeMembers(node.right,map));
+  map.set(node, members);
+  return members;
+}
+
+// R2E (Rank-Two Ellipse) seriation order: project onto the top-2 axes of
+// classical/Torgerson MDS (same projection as GAP's rank-two ellipse,
+// Chen 2002), then sort objects by angle around the centroid.
+function r2eOrder(delta){
+  const n=delta.length;
+  if(n<=2) return Array.from({length:n},(_,i)=>i);
+  const X=classicalMDS(delta,2);
+  let cx=0,cy=0; for(let i=0;i<n;i++){ cx+=X[i][0]; cy+=X[i][1]; } cx/=n; cy/=n;
+  const withAngle=X.map((row,i)=>({i, a:Math.atan2(row[1]-cy, row[0]-cx)}));
+  withAngle.sort((p,q)=>p.a-q.a);
+  return withAngle.map(p=>p.i);
+}
+
+function meanRefRank(members, refRankOf){
+  let s=0; for(const m of members) s+=refRankOf[m];
+  return s/members.length;
+}
+
+// "R2E-guided" flip: recursively swap each internal node's two children so
+// their mean rank against a reference order (here, the independently
+// computed R2E order) is ascending left-to-right — the standard
+// optimal-leaf-ordering style flip GAP3D's own R2E flip performs.
+function flipByReference(node, refRankOf, membersMap){
+  if(node.leaf!==undefined) return;
+  flipByReference(node.left, refRankOf, membersMap);
+  flipByReference(node.right, refRankOf, membersMap);
+  const lm=membersMap.get(node.left), rm=membersMap.get(node.right);
+  if(meanRefRank(lm,refRankOf) > meanRefRank(rm,refRankOf)){
+    const t=node.left; node.left=node.right; node.right=t;
+  }
+}
+
+// "Uncle" / "GrandPa" flip — see the fidelity note above: our own
+// best-effort reconstruction, not GAP3D's exact (WASM, unpublished)
+// algorithm. Idea: rather than comparing a node's two children only to
+// each other, also weigh each child's mean proximity to a wider context —
+// "uncle" = the node's own sibling subtree, "grandpa" = the node's own
+// uncle context one generation further up — and place whichever child is
+// closer to that context on the side nearest it. Applied top-down since
+// each node needs its ancestors' context first.
+function flipUncleGrandpa(root, delta, membersMap, mode){
+  function meanDist(as,bs){
+    let s=0,c=0;
+    for(const a of as) for(const b of bs){ s+=delta[a][b]; c++; }
+    return c ? s/c : Infinity;
+  }
+  function recurse(node, uncleMembers, grandpaMembers){
+    if(node.leaf!==undefined) return;
+    const context = mode==='grandpa' ? grandpaMembers : uncleMembers;
+    if(context && context.length){
+      const lm=membersMap.get(node.left), rm=membersMap.get(node.right);
+      const dl=meanDist(lm,context), dr=meanDist(rm,context);
+      if(dr<dl){ const t=node.left; node.left=node.right; node.right=t; }
+    }
+    const lm2=membersMap.get(node.left), rm2=membersMap.get(node.right);
+    recurse(node.left, rm2, uncleMembers);
+    recurse(node.right, lm2, uncleMembers);
+  }
+  recurse(root, null, null);
+}
+
+// Orchestration: recompute App.heatmapOrder from the current dropdown
+// selections + App.delta. Called on data load/refit and on dropdown
+// change only (not on every render/resize), so e.g. "Random" order stays
+// stable across incidental re-renders.
+function computeHeatmapOrder(){
+  const n=App.n;
+  const orderSel=document.getElementById('heatmapOrderMethod');
+  const flipSel=document.getElementById('heatmapFlipMethod');
+  if(!n){ App.heatmapOrder=[]; App.heatmapTree=null; App.selectedNode=null; return; }
+  const orderMethod = orderSel.value;
+  const linkageOf = {single:'single', complete:'complete', average:'average'};
+  // A dendrogram (and hence a meaningful "flip") only exists here for the
+  // three linkage methods; Original/Random have no structure to flip, and
+  // (see UI note) this tool does not build one for R2E either, so flip is
+  // disabled for those three — a deliberate, disclosed simplification.
+  const flipEnabled = !!linkageOf[orderMethod];
+  flipSel.disabled = !flipEnabled;
+  if(!flipEnabled) flipSel.value='none';
+  const flipMethod = flipSel.value;
+  App.heatmapOrderMethod = orderMethod;
+  App.heatmapFlipMethod = flipMethod;
+
+  const delta=App.delta;
+  let order;
+  // App.heatmapTree only holds a dendrogram-able tree for the three linkage
+  // methods (see renderDendrogram below, which draws it beside the heatmap);
+  // Original/Random/R2E have no such tree, so this is reset every call and
+  // only (re)assigned in the linkage branch — otherwise a dendrogram from a
+  // previous "Single-Linkage" selection could linger and be drawn against
+  // an unrelated "Original"/"Random" order. Any previously-selected internal
+  // node also refers to a tree OBJECT that is about to be discarded (a fresh
+  // tree is built below even when the method is unchanged), so it is cleared
+  // here too rather than left dangling as a stale reference.
+  App.heatmapTree=null; App.selectedNode=null;
+  if(orderMethod==='original'){
+    order=Array.from({length:n},(_,i)=>i);
+  } else if(orderMethod==='random'){
+    order=Array.from({length:n},(_,i)=>i);
+    for(let i=n-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=order[i]; order[i]=order[j]; order[j]=t; }
+  } else if(orderMethod==='r2e'){
+    order=r2eOrder(delta);
+  } else {
+    const tree=hierarchicalClustering(delta, linkageOf[orderMethod]);
+    const membersMap=new Map();
+    computeMembers(tree, membersMap);
+    if(flipMethod==='r2e'){
+      const r2e=r2eOrder(delta), refRankOf=new Array(n);
+      r2e.forEach((idx,rank)=>{ refRankOf[idx]=rank; });
+      flipByReference(tree, refRankOf, membersMap);
+    } else if(flipMethod==='uncle' || flipMethod==='grandpa'){
+      flipUncleGrandpa(tree, delta, membersMap, flipMethod);
+    }
+    // Store the (possibly flipped) tree itself, not just its flattened leaf
+    // order: treeLeafOrder() below reads it left-to-right to produce `order`,
+    // and renderDendrogram() re-walks this exact same tree left-to-right to
+    // draw it, which is what keeps every dendrogram branch pointing at the
+    // correct row — including after a flip swaps which child is on which side.
+    App.heatmapTree=tree;
+    order=treeLeafOrder(tree);
+  }
+  App.heatmapOrder=order;
+}
+
+function pava(y,w){
+  const n=y.length; if(!w) w=new Float64Array(n).fill(1);
+  const val=new Float64Array(n), wt=new Float64Array(n), cnt=new Int32Array(n);
+  let top=-1;
+  for(let i=0;i<n;i++){
+    top++; val[top]=y[i]; wt[top]=w[i]; cnt[top]=1;
+    while(top>0 && val[top-1] > val[top]+1e-15){
+      const nv=(val[top-1]*wt[top-1]+val[top]*wt[top])/(wt[top-1]+wt[top]);
+      wt[top-1]+=wt[top]; cnt[top-1]+=cnt[top]; val[top-1]=nv; top--;
+    }
+  }
+  const out=new Float64Array(n); let pos=0;
+  for(let b=0;b<=top;b++) for(let k=0;k<cnt[b];k++) out[pos++]=val[b];
+  return out;
+}
+
+function pairIndices(n){ const p=[]; for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) p.push([i,j]); return p; }
+
+function distMatrix(X){
+  const n=X.length,q=X[0].length; const D=zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    let s=0; for(let c=0;c<q;c++){ const d=X[i][c]-X[j][c]; s+=d*d; }
+    const dist=Math.sqrt(s); D[i][j]=dist; D[j][i]=dist;
+  }
+  return D;
+}
+
+// Generalized distance matrix under a Minkowski p-norm: p=2 is ordinary
+// Euclidean (identical fast path to distMatrix above), p=1 is city-block
+// (Manhattan), any other p in [1,4] is the general Minkowski form. Used by
+// fitMDS so the "距離模型" selector can change what "distance" means in the
+// fitted configuration, not just how the input proximities are read.
+function distMatrixP(X,p){
+  if(p===2) return distMatrix(X);
+  const n=X.length,q=X[0].length; const D=zeros(n,n);
+  if(p===1){
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+      let s=0; for(let c=0;c<q;c++) s+=Math.abs(X[i][c]-X[j][c]);
+      D[i][j]=s; D[j][i]=s;
+    }
+  } else {
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+      let s=0; for(let c=0;c<q;c++) s+=Math.pow(Math.abs(X[i][c]-X[j][c]), p);
+      const dist=Math.pow(s, 1/p); D[i][j]=dist; D[j][i]=dist;
+    }
+  }
+  return D;
+}
+
+// Raw (unnormalized) sum of squared errors between the current configuration's
+// distances and a fixed target disparity vector — used only as the line-search
+// criterion inside gradientStep below.
+function computeRawSSE(X, distP, dhatVecArr, pairs){
+  const Dtmp=distMatrixP(X, distP);
+  let sse=0;
+  for(let k=0;k<pairs.length;k++){ const [i,j]=pairs[k]; const e=Dtmp[i][j]-dhatVecArr[k]; sse+=e*e; }
+  return sse;
+}
+
+// Numerical gradient-descent step (with backtracking line search) for cases
+// the classic Guttman transform doesn't cover: ALSCAL's SSTRESS objective, and
+// any non-Euclidean (city-block / Minkowski) distance model. The Guttman
+// transform's guaranteed monotone decrease is derived specifically for
+// squared-Euclidean STRESS, so it isn't reused here — this is a general but
+// approximate stand-in, not each method's own textbook-exact update rule.
+function gradientStep(X, D, Dhat, distP, q, n, pairs){
+  const eps=1e-9;
+  const grad=zeros(n,q);
+  for(const [i,j] of pairs){
+    const dij=D[i][j];
+    if(dij<eps) continue;
+    const dhatij=Dhat[i][j];
+    const coeff=2*(dij-dhatij);
+    for(let c=0;c<q;c++){
+      const diff=X[i][c]-X[j][c];
+      const adiff=Math.abs(diff);
+      let g;
+      if(adiff<eps) g=0;
+      else if(distP===1) g = diff>0 ? 1 : -1;
+      else g = (diff>0?1:-1) * Math.pow(adiff, distP-1) / Math.pow(dij, distP-1);
+      grad[i][c]+=coeff*g; grad[j][c]-=coeff*g;
+    }
+  }
+  let gnorm=0;
+  for(let i=0;i<n;i++) for(let c=0;c<q;c++) gnorm+=grad[i][c]*grad[i][c];
+  gnorm=Math.sqrt(gnorm);
+  if(gnorm<1e-12) return X;
+  let xnorm=0;
+  for(let i=0;i<n;i++) for(let c=0;c<q;c++) xnorm+=X[i][c]*X[i][c];
+  xnorm=Math.sqrt(xnorm/Math.max(n,1))||1;
+
+  const dhatVecArr=pairs.map(([i,j])=>Dhat[i][j]);
+  const baseSSE=computeRawSSE(X, distP, dhatVecArr, pairs);
+  let step=0.3*xnorm/gnorm;
+  for(let tries=0; tries<20; tries++){
+    const Xtry=zeros(n,q);
+    for(let i=0;i<n;i++) for(let c=0;c<q;c++) Xtry[i][c]=X[i][c]-step*grad[i][c];
+    const sse=computeRawSSE(Xtry, distP, dhatVecArr, pairs);
+    if(sse<=baseSSE) return Xtry;
+    step*=0.5;
+  }
+  return X;
+}
+
+// Exact ALSCAL configuration-update step for Euclidean distance: a
+// Newton–Raphson iteration on the SSTRESS objective sigma^2 = sum_{i<j}
+// (d_ij^2 - dhat_ij^2)^2, following the algorithm described for ALSCAL in
+// Takane, Young, & de Leeuw (1977, Psychometrika 42(1), 7–67) and refined
+// in Young, Takane & Lewyckyj (1978, Psychometrika 43(1), 139–143, "Three
+// notes on ALSCAL"): each stimulus point i is updated using its own
+// analytic gradient and full q×q Hessian block — the second-derivative
+// terms are exact within a point's own q coordinates, but cross-point
+// curvature is ignored, which is what makes this an efficient per-point
+// Newton step rather than one giant (n·q)×(n·q) Newton solve (with q
+// typically just 2, inverting each point's tiny Hessian is essentially
+// free). Because SSTRESS is not convex, a point's Hessian can occasionally
+// fail to be positive definite (an "uphill" Newton direction) — ALSCAL
+// guards against this with Gill & Murray's modification: eigen-decompose
+// the Hessian (reusing jacobiEigen, since q is small) and floor any
+// non-positive eigenvalue before inverting, so the step is always a
+// guaranteed descent direction. A final scalar backtracking line search on
+// raw SSTRESS mirrors ALSCAL's own step-halving safeguard. This closed-form
+// derivative only holds for ordinary (p=2) Euclidean distance — for
+// city-block/Minkowski models there is no analogous closed form, so fitMDS
+// falls back to gradientStep's generic numerical approximation there
+// instead (see the caller below). NOTE: the original 1977 FORTRAN ALSCAL
+// source is not publicly available for a byte-for-byte comparison, so this
+// is a faithful reconstruction of its documented algorithm, not a verified
+// bit-exact reproduction of that implementation.
+function newtonStepALSCAL(X, D, Dhat, q, n, pairs){
+  const G = zeros(n,q);
+  const H = new Array(n);
+  for(let i=0;i<n;i++) H[i]=zeros(q,q);
+  for(const [i,j] of pairs){
+    const e = D[i][j]*D[i][j] - Dhat[i][j]*Dhat[i][j];
+    const u = new Float64Array(q);
+    for(let c=0;c<q;c++) u[c]=X[i][c]-X[j][c];
+    for(let c=0;c<q;c++){
+      const gTerm = 4*e*u[c];
+      G[i][c]+=gTerm; G[j][c]-=gTerm;
+    }
+    for(let a=0;a<q;a++){
+      for(let b=0;b<q;b++){
+        const hTerm = 8*u[a]*u[b] + (a===b ? 4*e : 0);
+        // Same magnitude for both points: u flips sign for j (x_j-x_i=-u)
+        // but the outer product u*u^T is sign-invariant, and e_ij=e_ji.
+        H[i][a][b]+=hTerm; H[j][a][b]+=hTerm;
+      }
+    }
+  }
+  const Delta = zeros(n,q);
+  const eigFloor = 1e-6;
+  for(let i=0;i<n;i++){
+    const {values, vectors} = jacobiEigen(H[i], 50, 1e-12);
+    const gi = G[i];
+    const Vtg = new Float64Array(q);
+    for(let c=0;c<q;c++){ let s=0; for(let r=0;r<q;r++) s+=vectors[r][c]*gi[r]; Vtg[c]=s; }
+    for(let c=0;c<q;c++) Vtg[c] /= Math.max(values[c], eigFloor);
+    for(let r=0;r<q;r++){ let s=0; for(let c=0;c<q;c++) s+=vectors[r][c]*Vtg[c]; Delta[i][r]=s; }
+  }
+  function rawSSTRESS(Xc){
+    const Dc=distMatrix(Xc);
+    let s=0;
+    for(const [i,j] of pairs){ const e=Dc[i][j]*Dc[i][j]-Dhat[i][j]*Dhat[i][j]; s+=e*e; }
+    return s;
+  }
+  const base=rawSSTRESS(X);
+  let step=1;
+  for(let tries=0; tries<20; tries++){
+    const Xtry=zeros(n,q);
+    for(let i=0;i<n;i++) for(let c=0;c<q;c++) Xtry[i][c]=X[i][c]-step*Delta[i][c];
+    const sse=rawSSTRESS(Xtry);
+    if(sse<=base) return Xtry;
+    step*=0.5;
+  }
+  return X;
+}
+
+function olsLinearFit(xs,ys){
+  const n=xs.length; let sx=0,sy=0,sxx=0,sxy=0;
+  for(let i=0;i<n;i++){ sx+=xs[i]; sy+=ys[i]; sxx+=xs[i]*xs[i]; sxy+=xs[i]*ys[i]; }
+  const denom=n*sxx-sx*sx; let b=denom!==0 ? (n*sxy-sx*sy)/denom : 0; let a=(sy-b*sx)/n;
+  return {a,b};
+}
+
+function fitMDS(delta,opts){
+  opts=opts||{};
+  const q=opts.q||2, mode=opts.mode||'nonmetric', maxIter=opts.maxIter||300, tol=opts.tol||1e-9;
+  const algorithm=opts.algorithm||'smacof', distP=opts.distP||2;
+  const n=delta.length;
+  const pairs=pairIndices(n);
+  const deltaVec=pairs.map(([i,j])=>delta[i][j]);
+  const order=pairs.map((_,k)=>k).sort((a,b)=>deltaVec[a]-deltaVec[b]);
+
+  // Classical MDS (Torgerson): one-shot double-centering eigen decomposition —
+  // no iteration, no disparity transform (it fits delta directly). A
+  // comparable STRESS1 is still computed for the diagnostic panels by
+  // OLS-scaling delta against the resulting configuration's distances, the
+  // same way "interval" disparity works elsewhere — purely for display, not
+  // part of the classical algorithm itself. Always solved in Euclidean space
+  // (the double-centering identity only holds there), so the distance-model
+  // setting does not apply to this branch.
+  if(algorithm==='classical'){
+    const X = opts.seedX || classicalMDS(delta,q);
+    const D = distMatrixP(X,2);
+    const dVec = pairs.map(([i,j])=>D[i][j]);
+    const {a,b} = olsLinearFit(deltaVec,dVec);
+    const dhatVec = deltaVec.map(d=>Math.max(a+b*d,1e-9));
+    const Dhat = zeros(n,n);
+    for(let k=0;k<pairs.length;k++){ const [i,j]=pairs[k]; Dhat[i][j]=Dhat[j][i]=dhatVec[k]; }
+    let sumD2=0,ssRes=0;
+    for(let k=0;k<pairs.length;k++){ sumD2+=dVec[k]*dVec[k]; const e=dVec[k]-dhatVec[k]; ssRes+=e*e; }
+    const stress=Math.sqrt(ssRes/(sumD2||1));
+    return {X,D,Dhat,stress,stressHistory:[stress],iterations:1};
+  }
+
+  let X = opts.seedX || classicalMDS(delta,q);
+  let prevStress=Infinity, stressHistory=[], Dhat=zeros(n,n), D=distMatrixP(X,distP), iterUsed=0;
+  // The Guttman transform below is the majorization step SMACOF uses to
+  // guarantee monotone STRESS decrease — but that guarantee is derived
+  // specifically for squared-Euclidean distance, so it doesn't carry over to
+  // ALSCAL's SSTRESS objective or to non-Euclidean (city-block/Minkowski)
+  // distances. For ALSCAL + Euclidean distance, newtonStepALSCAL (defined
+  // above) reproduces the paper's own per-point Newton–Raphson update
+  // instead. Only the combinations with no known closed-form update —
+  // ALSCAL under a non-Euclidean distance model, or SMACOF under a
+  // non-Euclidean distance model — fall back to gradientStep's generic
+  // numerical gradient-descent + backtracking line search, which remains a
+  // reasonable but NOT textbook-exact stand-in for just those two cases.
+  const useGuttman = (algorithm==='smacof' && distP===2);
+  const useNewtonALSCAL = (algorithm==='alscal' && distP===2);
+
+  for(let iter=0; iter<maxIter; iter++){
+    iterUsed=iter+1;
+    D=distMatrixP(X,distP);
+    const dVec=pairs.map(([i,j])=>D[i][j]);
+    let dhatVec;
+    if(algorithm==='alscal'){
+      // ALSCAL fits disparities against SQUARED distances (SSTRESS), unlike
+      // SMACOF's direct-distance (STRESS) disparities above.
+      const d2Vec=dVec.map(d=>d*d);
+      let u2hat;
+      if(mode==='interval'){
+        const {a,b}=olsLinearFit(deltaVec,d2Vec);
+        u2hat=deltaVec.map(d=>Math.max(a+b*d,1e-9));
+      } else {
+        const yOrdered=order.map(k=>d2Vec[k]);
+        const fitted=pava(yOrdered);
+        u2hat=new Array(pairs.length);
+        for(let k=0;k<order.length;k++) u2hat[order[k]]=Math.max(fitted[k],1e-9);
+      }
+      dhatVec=u2hat.map(v=>Math.sqrt(v));
+    } else if(mode==='interval'){
+      const {a,b}=olsLinearFit(deltaVec,dVec);
+      dhatVec=deltaVec.map(d=>Math.max(a+b*d,1e-9));
+    } else {
+      const yOrdered=order.map(k=>dVec[k]);
+      const fitted=pava(yOrdered);
+      dhatVec=new Array(pairs.length);
+      for(let k=0;k<order.length;k++) dhatVec[order[k]]=Math.max(fitted[k],1e-9);
+    }
+    let sumD2=0,sumDhat2=0;
+    for(let k=0;k<pairs.length;k++){ sumD2+=dVec[k]*dVec[k]; sumDhat2+=dhatVec[k]*dhatVec[k]; }
+    const scale=sumDhat2>0 ? Math.sqrt(sumD2/sumDhat2) : 1;
+    for(let k=0;k<pairs.length;k++) dhatVec[k]*=scale;
+
+    let ssRes=0;
+    for(let k=0;k<pairs.length;k++){ const e=dVec[k]-dhatVec[k]; ssRes+=e*e; }
+    const stress=Math.sqrt(ssRes/(sumD2||1));
+    stressHistory.push(stress);
+
+    for(let k=0;k<pairs.length;k++){ const [i,j]=pairs[k]; Dhat[i][j]=Dhat[j][i]=dhatVec[k]; }
+
+    if(Math.abs(prevStress-stress)<tol){ prevStress=stress; break; }
+    prevStress=stress;
+
+    if(useGuttman){
+      const Bmat=zeros(n,n);
+      for(let i=0;i<n;i++){
+        let rowSum=0;
+        for(let j=0;j<n;j++){
+          if(i===j) continue;
+          const dij=D[i][j];
+          const bij = dij>1e-12 ? -Dhat[i][j]/dij : 0;
+          Bmat[i][j]=bij; rowSum+=bij;
+        }
+        Bmat[i][i]=-rowSum;
+      }
+      const BX=matMul(Bmat,X);
+      const Xnew=zeros(n,q);
+      for(let i=0;i<n;i++) for(let c=0;c<q;c++) Xnew[i][c]=BX[i][c]/n;
+      X=Xnew;
+    } else if(useNewtonALSCAL){
+      X = newtonStepALSCAL(X, D, Dhat, q, n, pairs);
+    } else {
+      X = gradientStep(X, D, Dhat, distP, q, n, pairs);
+    }
+  }
+  D=distMatrixP(X,distP);
+  return {X,D,Dhat,stress:prevStress,stressHistory,iterations:iterUsed};
+}
+
+function stressMetrics(D,Dhat){
+  const n=D.length, pairs=pairIndices(n);
+  let sumD=0,sumD2=0,sumRes2=0,sumSqRes2=0,sumD4=0;
+  const dArr=[],dhArr=[];
+  for(const [i,j] of pairs){
+    const d=D[i][j], dh=Dhat[i][j];
+    dArr.push(d); dhArr.push(dh);
+    sumD+=d; sumD2+=d*d; sumD4+=d*d*d*d;
+    const res=d-dh; sumRes2+=res*res;
+    const res2=d*d-dh*dh; sumSqRes2+=res2*res2;
+  }
+  const meanD=sumD/pairs.length;
+  let sumDevD2=0; for(const d of dArr) sumDevD2+=(d-meanD)*(d-meanD);
+  const stress1=Math.sqrt(sumRes2/sumD2);
+  const stress2=Math.sqrt(sumRes2/sumDevD2);
+  const sstress=Math.sqrt(sumSqRes2/sumD4);
+  const nP=dArr.length; let mD=0,mDh=0;
+  for(let k=0;k<nP;k++){ mD+=dArr[k]; mDh+=dhArr[k]; } mD/=nP; mDh/=nP;
+  let cov=0,vD=0,vDh=0;
+  for(let k=0;k<nP;k++){ cov+=(dArr[k]-mD)*(dhArr[k]-mDh); vD+=(dArr[k]-mD)*(dArr[k]-mD); vDh+=(dhArr[k]-mDh)*(dhArr[k]-mDh); }
+  const r=cov/Math.sqrt(vD*vDh); const r2=r*r;
+  return {stress1,stress2,sstress,r2};
+}
+
+function decomposedStressProportions(D,Dhat){
+  // Follows the paper's eq.(8): each object's contribution is based on the
+  // SSTRESS-style squared difference of squared distances/disparities,
+  // (d_ri^2 - dhat_ri^2)^2, summed over j and normalized by the grand total
+  // (each pair (i,j) counted twice across all n proportions, as in the paper).
+  const n=D.length; const contrib=new Float64Array(n); let total=0;
+  for(let i=0;i<n;i++){
+    let s=0;
+    for(let j=0;j<n;j++){
+      if(i===j) continue;
+      const e = D[i][j]*D[i][j] - Dhat[i][j]*Dhat[i][j];
+      s += e*e;
+    }
+    contrib[i]=s; total+=s;
+  }
+  const prop=new Float64Array(n); for(let i=0;i<n;i++) prop[i]= total>0 ? contrib[i]/total : 0;
+  return prop;
+}
+
+/* ============================== RNG + DEMO DATA ============================== */
+function mulberry32(seed){
+  return function(){
+    seed|=0; seed=(seed+0x6D2B79F5)|0;
+    let t=Math.imul(seed ^ (seed>>>15), 1|seed);
+    t=(t + Math.imul(t ^ (t>>>7), 61|t)) ^ t;
+    return ((t ^ (t>>>14))>>>0)/4294967296;
+  };
+}
+
+// Digitized from Chen & Chen (2000) Figure 8 (the paper's simulation-study
+// scatter plots of the 50 observations): x1,x2 read off panel (a)'s point
+// positions via pixel-to-axis calibration, x3 set to 0.5 for the three
+// points panel (b) marks as outliers (hollow-square markers, indices 4, 20,
+// 32) and 0 otherwise. Not the paper's original unpublished raw values --
+// reconstructed from the published figure, so expect ~pixel-level rounding.
+const FIGURE8_DATA = [
+    [0.1476,0.745,0.0], [0.3276,0.4564,0.0], [0.8735,0.3486,0.0], [0.6941,0.8451,0.0], [0.2165,0.2438,0.5],
+    [0.4641,0.9317,0.0], [0.96,0.2986,0.0], [0.6147,0.3846,0.0], [0.2982,0.6225,0.0], [0.9676,0.0395,0.0],
+    [0.5718,0.9817,0.0], [0.6582,0.5506,0.0], [0.6294,0.7226,0.0], [0.8882,0.4494,0.0], [0.6147,0.7662,0.0],
+    [0.2982,0.1113,0.0], [0.2629,0.838,0.0], [0.9312,0.2621,0.0], [0.2841,0.745,0.0], [0.6441,0.7733,0.0],
+    [0.6841,0.3086,0.5], [0.7088,0.7521,0.0], [0.6582,0.1254,0.0], [0.5647,0.3486,0.0], [0.2841,0.1543,0.0],
+    [0.0182,0.2191,0.0], [0.0394,0.7085,0.0], [0.1335,0.3704,0.0], [0.7441,0.8669,0.0], [0.8735,0.4564,0.0],
+    [0.9029,0.9028,0.0], [0.8018,0.1472,0.0], [0.49,0.9058,0.5], [0.4424,0.8816,0.0], [0.3488,0.6372,0.0],
+    [0.7088,0.543,0.0], [0.6724,0.9676,0.0], [0.9818,0.5718,0.0], [0.1688,0.2839,0.0], [0.3276,0.0748,0.0],
+    [0.1188,0.7521,0.0], [0.3994,0.7803,0.0], [0.1265,0.8598,0.0], [0.8806,0.2621,0.0], [0.7806,0.7155,0.0],
+    [0.2335,0.5212,0.0], [0.1476,0.9317,0.0], [0.5,0.0748,0.0], [0.3418,0.6219,0.0], [0.45,0.4423,0.0]
+];
+
+function buildDemoData(){
+  const pts=FIGURE8_DATA; const n=pts.length; const outliers=[];
+  for(let i=0;i<n;i++){ if(pts[i][2]===0.5) outliers.push(i); }
+  const prox=zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    let s=0; for(let c=0;c<3;c++){ const d=pts[i][c]-pts[j][c]; s+=d*d; }
+    prox[i][j]=Math.sqrt(s);
+  }
+  const labels=Array.from({length:n},(_,i)=>'o'+(i+1));
+  return {proximity:prox, labels, proximityType:'dissimilarity', outliers, note:'Chen & Chen (2000) Figure 8 資料（由圖片數位化重建）：x1,x2 為原圖座標，x3∈{0,0.5}（第 5, 21, 33 點，即 o5/o21/o33）；3 維歐氏距離降到 2 維'};
+}
+
+/* ============================== CSV PARSING ============================== */
+function looksNumeric(s){ if(s===undefined||s===null) return false; s=String(s).trim(); if(s==='') return false; return /^-?\d*\.?\d+(e-?\d+)?$/i.test(s); }
+
+// Sniffs whether a pasted/uploaded table is comma- or tab-delimited by
+// counting each delimiter on the first non-blank line — .tsv/.txt exports
+// (and a .csv saved from certain locales/tools) can use either, so this
+// lets one upload input accept both without the user having to say which.
+// Ties (e.g. a single-column file with neither) fall back to comma.
+function detectDelimiter(text){
+  const firstLine = text.split(/\r\n|\r|\n/).find(l=>l.trim().length>0) || '';
+  const tabs = (firstLine.match(/\t/g)||[]).length;
+  const commas = (firstLine.match(/,/g)||[]).length;
+  return tabs>commas ? '\t' : ',';
+}
+
+function parseCSVText(text, delim){
+  delim = delim || detectDelimiter(text);
+  const lines=text.replace(/\r\n/g,'\n').split('\n').filter(l=>l.trim().length>0);
+  return lines.map(line=>{
+    // simple delimited-line split honoring basic quotes
+    const out=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){ inQ=!inQ; continue; }
+      if(c===delim && !inQ){ out.push(cur); cur=''; continue; }
+      cur+=c;
+    }
+    out.push(cur);
+    return out.map(s=>s.trim());
+  });
+}
+
+function parseProximityCSV(text){
+  const rows=parseCSVText(text);
+  // Heuristic: if row 0 (excluding a possible corner cell) isn't all-numeric, treat it as a label header.
+  const firstRowAllNumericFromIdx1 = rows[0].slice(1).every(looksNumeric);
+  const colHeader = !firstRowAllNumericFromIdx1;
+  const bodyRows = colHeader ? rows.slice(1) : rows;
+  const firstColAllNumeric = bodyRows.every(r=>looksNumeric(r[0]));
+  const rowHeader = !firstColAllNumeric;
+
+  let labels;
+  if(colHeader) labels = rows[0].slice(rowHeader?1:0);
+  else if(rowHeader) labels = bodyRows.map(r=>r[0]);
+  else labels = null;
+
+  const matRows = bodyRows.map(r => (rowHeader ? r.slice(1) : r).map(Number));
+  const n = matRows.length;
+  if(!labels) labels = Array.from({length:n},(_,i)=>'o'+(i+1));
+  const M = zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    const v = matRows[i][j];
+    M[i][j] = Number.isFinite(v) ? v : 0;
+  }
+  // symmetrize
+  const S = zeros(n,n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){ S[i][j] = i===j ? 0 : (M[i][j]+M[j][i])/2; }
+  return {matrix:S, labels, n};
+}
+
+function parseRawMatrixCSV(text){
+  const rows=parseCSVText(text);
+  const hasColHeader = !rows[0].slice(1).every(looksNumeric);
+  const bodyRows = hasColHeader ? rows.slice(1) : rows;
+  const firstColAllNumeric = bodyRows.every(r=>looksNumeric(r[0]));
+  const hasRowHeader = !firstColAllNumeric;
+
+  const colLabels = hasColHeader ? rows[0].slice(hasRowHeader?1:0) : null;
+  const rowLabels = hasRowHeader ? bodyRows.map(r=>r[0]) : null;
+  // rawStrings keeps the un-coerced cell text alongside the Number()-parsed
+  // `values` below — used only by the 欄位設定 (field configuration) panel to
+  // detect each variable's type (all-numeric vs. text) and show a real
+  // example value, without having to re-parse the file.
+  const rawStrings = bodyRows.map(r => (hasRowHeader ? r.slice(1) : r));
+  const values = rawStrings.map(r => r.map(Number));
+  const nr = values.length, nc = values[0].length;
+  return {
+    values, rawStrings, nr, nc,
+    rowLabels: rowLabels || Array.from({length:nr},(_,i)=>'r'+(i+1)),
+    colLabels: colLabels || Array.from({length:nc},(_,i)=>'c'+(i+1)),
+  };
+}
+
+function euclideanFromRows(values, nr, nc){
+  const D=zeros(nr,nr);
+  for(let i=0;i<nr;i++) for(let j=0;j<nr;j++){
+    let s=0; for(let c=0;c<nc;c++){ const d=(values[i][c]||0)-(values[j][c]||0); s+=d*d; }
+    D[i][j]=Math.sqrt(s);
+  }
+  return D;
+}
+
+function corrFromCols(values, nr, nc){
+  const means=new Float64Array(nc), sds=new Float64Array(nc);
+  for(let c=0;c<nc;c++){
+    let s=0; for(let i=0;i<nr;i++) s+=values[i][c]||0;
+    means[c]=s/nr;
+  }
+  for(let c=0;c<nc;c++){
+    let s=0; for(let i=0;i<nr;i++){ const d=(values[i][c]||0)-means[c]; s+=d*d; }
+    sds[c]=Math.sqrt(s/Math.max(nr-1,1)) || 1e-9;
+  }
+  const R=zeros(nc,nc);
+  for(let a=0;a<nc;a++) for(let b=0;b<nc;b++){
+    let s=0; for(let i=0;i<nr;i++) s+=((values[i][a]||0)-means[a])*((values[i][b]||0)-means[b]);
+    R[a][b]= (s/Math.max(nr-1,1))/(sds[a]*sds[b]);
+  }
+  for(let a=0;a<nc;a++) R[a][a]=1;
+  return R;
+}
+
+/* ============================== COLOR SCALES ============================== */
+function hexToRgb(hex){ hex=hex.replace('#',''); return [parseInt(hex.slice(0,2),16),parseInt(hex.slice(2,4),16),parseInt(hex.slice(4,6),16)]; }
+function rgbToHex(r,g,b){ const h=v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0'); return '#'+h(r)+h(g)+h(b); }
+function lerpHex(h1,h2,t){ const a=hexToRgb(h1),b=hexToRgb(h2); return rgbToHex(a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t); }
+
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0,s=0; const l=(max+min)/2;
+  const d=max-min;
+  if(d>1e-9){
+    s = l>0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h=(g-b)/d + (g<b?6:0); break;
+      case g: h=(b-r)/d + 2; break;
+      default: h=(r-g)/d + 4;
+    }
+    h/=6;
+  }
+  return [h,s,l];
+}
+function hue2rgb(p,q,t){
+  if(t<0) t+=1; if(t>1) t-=1;
+  if(t<1/6) return p+(q-p)*6*t;
+  if(t<1/2) return q;
+  if(t<2/3) return p+(q-p)*(2/3-t)*6;
+  return p;
+}
+function hslToRgb(h,s,l){
+  if(s<1e-9) { const v=Math.round(l*255); return [v,v,v]; }
+  const q = l<0.5 ? l*(1+s) : l+s-l*s;
+  const p = 2*l-q;
+  return [Math.round(hue2rgb(p,q,h+1/3)*255), Math.round(hue2rgb(p,q,h)*255), Math.round(hue2rgb(p,q,h-1/3)*255)];
+}
+// Invert only the lightness of a hex color (keeps hue/saturation) — used to adapt
+// a light-surface-tuned ColorBrewer ramp so it still "pops vs. recedes" correctly
+// against a dark chart surface, without swapping which hue means what.
+function invertLightnessHex(hex){
+  const [r,g,b]=hexToRgb(hex);
+  const [h,s,l]=rgbToHsl(r,g,b);
+  const [nr,ng,nb]=hslToRgb(h,s,1-l);
+  return rgbToHex(nr,ng,nb);
+}
+
+// ColorBrewer (Cynthia Brewer, colorbrewer2.org) sequential & diverging schemes.
+// `safe` marks the schemes ColorBrewer itself flags as colorblind-safe.
+// `source:'gap'` marks the two schemes ported from GAP3D (maokao.github.io/GAP3D,
+// js/color.js: GAP_Rainbow / GAP_Blue_White_Red) — the same GAP-family spectrum
+// the original 2000 paper itself used (rainbow for distance-type proximity in the
+// simulation study, blue–white–red for the correlation case study), kept here
+// verbatim for users who want the paper's own look rather than a ColorBrewer one.
+const SEQ_PALETTES = {
+  Blues:  { label:'Blues 藍',    safe:true,  stops:['#f7fbff','#deebf7','#c6dbef','#9ecae1','#6baed6','#4292c6','#2171b5','#08519c','#08306b'] },
+  Greens: { label:'Greens 綠',   safe:true,  stops:['#f7fcf5','#e5f5e0','#c7e9c0','#a1d99b','#74c476','#41ab5d','#238b45','#006d2c','#00441b'] },
+  Oranges:{ label:'Oranges 橙',  safe:true,  stops:['#fff5eb','#fee6ce','#fdd0a2','#fdae6b','#fd8d3c','#f16913','#d94801','#a63603','#7f2704'] },
+  Purples:{ label:'Purples 紫',  safe:true,  stops:['#fcfbfd','#efedf5','#dadaeb','#bcbddc','#9e9ac8','#807dba','#6a51a3','#54278f','#3f007d'] },
+  Reds:   { label:'Reds 紅',     safe:true,  stops:['#fff5f0','#fee0d2','#fcbba1','#fc9272','#fb6a4a','#ef3b2c','#cb181d','#a50f15','#67000d'] },
+  Greys:  { label:'Greys 灰',    safe:true,  stops:['#ffffff','#f0f0f0','#d9d9d9','#bdbdbd','#969696','#737373','#525252','#252525','#000000'] },
+  YlOrRd: { label:'YlOrRd 黃橙紅',safe:true,  stops:['#ffffcc','#ffeda0','#fed976','#feb24c','#fd8d3c','#fc4e2a','#e31a1c','#bd0026','#800026'] },
+  YlGnBu: { label:'YlGnBu 黃綠藍',safe:true,  stops:['#ffffd9','#edf8b1','#c7e9b4','#7fcdbb','#41b6c4','#1d91c0','#225ea8','#253494','#081d58'] },
+  BuPu:   { label:'BuPu 藍紫',   safe:true,  stops:['#f7fcfd','#e0ecf4','#bfd3e6','#9ebcda','#8c96c6','#8c6bb1','#88419d','#810f7c','#4d004b'] },
+  GnBu:   { label:'GnBu 綠藍',   safe:true,  stops:['#f7fcf0','#e0f3db','#ccebc5','#a8ddb5','#7bccc4','#4eb3d3','#2b8cbe','#0868ac','#084081'] },
+  PuBuGn: { label:'PuBuGn 紫藍綠',safe:true, stops:['#fff7fb','#ece2f0','#d0d1e6','#a6bddb','#67a9cf','#3690c0','#02818a','#016c59','#014636'] },
+  GAP_Rainbow: { label:'GAP Rainbow 彩虹（論文原始色譜）', safe:false, source:'gap', noThemeFlip:true,
+    // Ordered near(t=0)->far(t=1): darkest blue at distance 0, darkest red at
+    // the maximum distance (see the noThemeFlip note in seqColor() below for
+    // why this fixed direction, rather than the theme-based flip other
+    // sequential palettes use, is deliberate here).
+    stops:['#00008C','#004DEB','#007359','#66A600','#B3E600','#CCF200','#FFFF00','#FFE600','#FFB300','#FF6600','#FF0000','#D90000','#A60000'] },
+  // Literal 13-stop GAP3D rainbow source values (js/color.js RGB[] array),
+  // same hex set as GAP_Rainbow above, ordered the same way: near(t=0)->
+  // far(t=1), darkest blue at distance 0, darkest red at the maximum
+  // distance (matches the GAP_Rainbow direction fix above). `discrete:true`
+  // marks this palette as a literal 13-swatch step scale rather than a
+  // continuous ramp: seqColor()/the legend below pick ONE of these 13 exact
+  // hex values per value (a hard-edged nearest-bucket lookup), with no
+  // lerpHex() blending between adjacent stops — unlike every other palette
+  // here, which interpolates smoothly between its stops.
+  GAP_Rainbow13: { label:'GAP Rainbow 13色', safe:false, source:'gap', noThemeFlip:true, discrete:true,
+    stops:['#00008C','#004DEB','#007359','#66A600','#B3E600','#CCF200','#FFFF00','#FFE600','#FFB300','#FF6600','#FF0000','#D90000','#A60000'] },
+};
+const DIV_PALETTES = {
+  RdBu:    { label:'RdBu 紅－藍',   safe:true,  stops:['#67001f','#b2182b','#d6604d','#f4a582','#fddbc7','#f7f7f7','#d1e5f0','#92c5de','#4393c3','#2166ac','#053061'] },
+  PRGn:    { label:'PRGn 紫－綠',   safe:true,  stops:['#40004b','#762a83','#9970ab','#c2a5cf','#e7d4e8','#f7f7f7','#d9f0d3','#a6dba0','#5aae61','#1b7837','#00441b'] },
+  PiYG:    { label:'PiYG 桃－綠',   safe:true,  stops:['#8e0152','#c51b7d','#de77ae','#f1b6da','#fde0ef','#f7f7f7','#e6f5d0','#b8e186','#7fbc41','#4d9221','#276419'] },
+  BrBG:    { label:'BrBG 棕－藍綠', safe:true,  stops:['#543005','#8c510a','#bf812d','#dfc27d','#f6e8c3','#f5f5f5','#c7eae5','#80cdc1','#35978f','#01665e','#003c30'] },
+  PuOr:    { label:'PuOr 紫－橙',   safe:true,  stops:['#2d004b','#542788','#8073ac','#b2abd2','#d8daeb','#f7f7f7','#fee0b6','#fdb863','#e08214','#b35806','#7f3b08'] },
+  RdYlBu:  { label:'RdYlBu 紅－黃－藍', safe:false, stops:['#a50026','#d73027','#f46d43','#fdae61','#fee090','#ffffbf','#e0f3f8','#abd9e9','#74add1','#4575b4','#313695'] },
+  RdYlGn:  { label:'RdYlGn 紅－黃－綠', safe:false, stops:['#a50026','#d73027','#f46d43','#fdae61','#fee08b','#ffffbf','#d9ef8b','#a6d96a','#66bd63','#1a9850','#006837'] },
+  Spectral:{ label:'Spectral 光譜',   safe:false, stops:['#9e0142','#d53e4f','#f46d43','#fdae61','#fee08b','#ffffbf','#e6f598','#abdda4','#66c2a5','#3288bd','#5e4fa2'] },
+  GAP_BlueRed: { label:'GAP Blue-Red 藍－白－紅（論文原始色階）', safe:true, source:'gap',
+    stops:['#00006B','#00009E','#0000BF','#0000E8','#2121FF','#4A4AFF','#7A7AFF','#ADADFF','#E0E0FF','#FAFAFF','#FFFAFA','#FFC7C7','#FF9494','#FF6161','#FF3838','#FF0000','#CF0000','#AD0000','#850000','#520000'] },
+};
+
+function stopsAt(stops, t){
+  t=Math.max(0,Math.min(1,t));
+  const n=stops.length-1; const f=t*n; const i=Math.min(n-1,Math.floor(f)); const lt=f-i;
+  return lerpHex(stops[i], stops[i+1], lt);
+}
+// Discrete counterpart to stopsAt(): splits [0,1] into stops.length equal-
+// width buckets and returns that bucket's stop color VERBATIM — no lerpHex()
+// blending with its neighbor. Used by palettes marked `discrete:true` (see
+// GAP_Rainbow13 above), which are meant to be shown as their literal named
+// swatches rather than a smooth ramp.
+function stopsAtDiscrete(stops, t){
+  t=Math.max(0,Math.min(1,t));
+  const n=stops.length;
+  const i=Math.min(n-1, Math.floor(t*n));
+  return stops[i];
+}
+function sequentialColor(t){
+  const pal = SEQ_PALETTES[App.seqPaletteKey] || SEQ_PALETTES.Blues;
+  return pal.discrete ? stopsAtDiscrete(pal.stops, t) : stopsAt(pal.stops, t);
+}
+// Sequential magnitude color for a given theme: on a light chart surface, small
+// values (near) should read as the dark/saturated end (pops on white) and large
+// values (far) recede toward the light surface. On a dark surface the recede
+// direction flips: small values pop light, large values recede toward black.
+// This flip only makes sense for a single-hue lightness ramp (ColorBrewer's
+// sequential schemes) — flipping a multi-hue ramp like GAP_Rainbow would swap
+// which hue means "near" between light/dark mode instead of just adapting
+// contrast, so a palette can opt out with `noThemeFlip` and always read the
+// same way: blue=near (distance 0), red=far (maximum distance), fixed
+// regardless of theme.
+function seqColor(t, theme){
+  const pal = SEQ_PALETTES[App.seqPaletteKey] || SEQ_PALETTES.Blues;
+  const tt = pal.noThemeFlip ? t : (theme==='dark' ? t : 1-t);
+  return pal.discrete ? stopsAtDiscrete(pal.stops, tt) : stopsAt(pal.stops, tt);
+}
+function divergingColor(t, theme){
+  t=Math.max(-1,Math.min(1,t));
+  const pal = DIV_PALETTES[App.divPaletteKey] || DIV_PALETTES.RdBu;
+  const hex = stopsAt(pal.stops, (t+1)/2);
+  // ColorBrewer diverging schemes are tuned for a light (paper) surface: the weak/
+  // neutral midpoint is near-white and strong values are dark, so they naturally
+  // recede/pop correctly there. On a dark chart surface that logic inverts — invert
+  // lightness only (hue/sign is untouched) so strong values still pop and the
+  // midpoint still recedes into the dark surface.
+  return theme==='dark' ? invertLightnessHex(hex) : hex;
+}
+
+function currentTheme(){
+  const attr=document.documentElement.getAttribute('data-theme');
+  if(attr==='dark'||attr==='light') return attr;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+/* ============================== SVG HELPERS ============================== */
+const SVGNS='http://www.w3.org/2000/svg';
+function svgEl(tag, attrs){
+  const el=document.createElementNS(SVGNS, tag);
+  if(attrs) for(const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+function scaleLinear(domain, range){
+  const [d0,d1]=domain, [r0,r1]=range;
+  const span = (d1-d0)||1e-9;
+  const fn = v => r0 + (v-d0)/span * (r1-r0);
+  fn.invert = v => d0 + (v-r0)/(r1-r0) * span;
+  return fn;
+}
+function niceTicks(min,max,count){
+  // Guard against a near-degenerate (but not exactly equal, so the check
+  // below wouldn't otherwise catch it) span: e.g. every point's coordinate
+  // on one axis collapsing to the same value up to floating-point noise,
+  // which can happen with a near-constant or single-variable-derived MDS fit
+  // (reachable in practice once a user can exclude most raw-data columns
+  // down to just one or two via 欄位設定). Without this, step0 below can end
+  // up astronomically small, and the tick loop keeps pushing until it blows
+  // past the JS max array length (a RangeError) instead of degrading
+  // gracefully like the exact-equality case already does.
+  const scale = Math.max(Math.abs(min), Math.abs(max), 1e-12);
+  if(!Number.isFinite(min) || !Number.isFinite(max) || (max-min) < scale*1e-9){ min-=1; max+=1; }
+  const span=max-min;
+  const step0=span/count;
+  const mag=Math.pow(10, Math.floor(Math.log10(step0)));
+  const norm=step0/mag;
+  let step;
+  if(norm<1.5) step=1*mag; else if(norm<3) step=2*mag; else if(norm<7) step=5*mag; else step=10*mag;
+  const start=Math.ceil(min/step)*step;
+  const ticks=[];
+  // Second-line defense: even with the guard above, cap the loop itself so
+  // any other unforeseen edge case degrades to a truncated tick list rather
+  // than a hard crash.
+  for(let v=start; v<=max+1e-9 && ticks.length<1000; v+=step) ticks.push(Math.round(v/step)*step);
+  return ticks;
+}
+function fmtNum(v){
+  if(Math.abs(v)>=100) return v.toFixed(0);
+  if(Math.abs(v)>=10) return v.toFixed(1);
+  return v.toFixed(2);
+}
+
+function showTooltip(x,y,text){
+  const tip=document.getElementById('tooltip');
+  tip.style.display='block'; tip.textContent=text;
+  const pad=12;
+  let left=x+pad, top=y+pad;
+  const vw=window.innerWidth, vh=window.innerHeight;
+  if(left+220>vw) left=x-220-pad;
+  if(top+80>vh) top=y-80-pad;
+  tip.style.left=left+'px'; tip.style.top=top+'px';
+}
+function hideTooltip(){ document.getElementById('tooltip').style.display='none'; }
+
+/* ============================== APP STATE ============================== */
+const App = {
+  n:0, labels:[], proximity:null, proximityType:'dissimilarity',
+  delta:null, X:null, D:null, Dhat:null, metrics:null, stressProp:null,
+  selected:null, brush:null, smearMode:'off',
+  // attachedInfo: object index -> {variableName: rawValue}, populated only
+  // after a raw-data-matrix upload where the 欄位設定 (field configuration)
+  // panel has one or more variables set to 附加 (append) — see
+  // buildAttachedInfo()/attachedInfoText() below. null whenever there is
+  // none (demo data, a plain proximity-matrix upload, or no 附加 variables).
+  attachedInfo:null,
+  seqPaletteKey:'GAP_Rainbow', divPaletteKey:'GAP_BlueRed', heatmapShowLabels:false,
+  heatmapOrder:[], heatmapOrderMethod:'original', heatmapFlipMethod:'none', heatmapTree:null,
+  algorithm:'smacof', distP:2,
+  // config3D: whether the Configuration Plot shows the 3D "dendrogram rising
+  // off the 2D floor" view instead of the ordinary flat scatter — only ever
+  // true while App.heatmapTree exists (see syncConfig3DAvailability below).
+  // rot3D persists the current orbit-drag angles across re-renders, so the
+  // view doesn't snap back to the default every time something re-renders it.
+  // selectedNode: the currently-selected INTERNAL tree node (a merge point,
+  // not a leaf/object) in the 3D view, or null — mutually exclusive with
+  // App.selected (picking a leaf clears this, and vice versa), since a merge
+  // node represents a whole cluster rather than one object's proximity row.
+  // zoom3D: a persistent multiplier on top of the 3D view's auto-fit scale,
+  // driven by the mouse wheel (see the 'wheel' listener in
+  // renderConfigPlot3D) — kept in App, like rot3D, so it survives across
+  // re-renders instead of snapping back to 1 every frame.
+  config3D:false, rot3D:{yaw:-0.55, pitch:0.95}, zoom3D:1, selectedNode:null,
+  ro:[],
+};
+window.App = App;
+
+function computeDelta(){
+  const n=App.n, prox=App.proximity;
+  const type = document.getElementById('proxType').value;
+  App.proximityType = type;
+  const delta = zeros(n,n);
+  if(type==='dissimilarity'){
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++) delta[i][j]=Math.max(prox[i][j],0);
+  } else {
+    const tf = document.getElementById('simTransform').value;
+    let maxV=-Infinity;
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(i!==j) maxV=Math.max(maxV, prox[i][j]);
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+      if(i===j){ delta[i][j]=0; continue; }
+      delta[i][j] = tf==='oneminus' ? Math.max(1 - prox[i][j], 0) : Math.max(maxV - prox[i][j], 0);
+    }
+  }
+  App.delta = delta;
+}
+
+function runFit(){
+  computeDelta();
+  computeHeatmapOrder();
+  syncConfig3DAvailability();
+  populatePaletteSelect();
+  const mode = document.getElementById('dispMode').value;
+  const algorithm = document.getElementById('mdsAlgorithm').value;
+  const distModelRaw = document.getElementById('distModel').value;
+  const distP = distModelRaw==='minkowski' ? Number(document.getElementById('minkowskiP').value) : Number(distModelRaw);
+  const t0 = performance.now();
+  const res = fitMDS(App.delta, {q:2, mode, maxIter:300, tol:1e-9, algorithm, distP});
+  const t1 = performance.now();
+  App.X = res.X; App.D = res.D; App.Dhat = res.Dhat;
+  App.metrics = stressMetrics(res.D, res.Dhat);
+  App.stressProp = decomposedStressProportions(res.D, res.Dhat);
+  App.selected = null; App.brush = null;
+  App.algorithm = algorithm; App.distP = distP;
+  updateStatsPanel(res, t1-t0);
+  renderAll();
+}
+
+function updateStatsPanel(res, ms){
+  document.getElementById('statStress1').textContent = App.metrics.stress1.toFixed(4);
+  document.getElementById('statStress2').textContent = App.metrics.stress2.toFixed(4);
+  document.getElementById('statSstress').textContent = App.metrics.sstress.toFixed(4);
+  document.getElementById('statR2').textContent = App.metrics.r2.toFixed(4);
+  const algoLabelMap = {smacof:'SMACOF', classical:'Classical MDS', alscal:'ALSCAL'};
+  const distLabel = App.distP===2 ? 'Euclidean' : (App.distP===1 ? 'City-block' : `Minkowski p=${App.distP.toFixed(1)}`);
+  document.getElementById('statIter').textContent = `${res.iterations} 次疊代收斂 · n=${App.n} · ${ms.toFixed(0)} ms（本機計算）· ${algoLabelMap[App.algorithm]||App.algorithm} · ${distLabel}`;
+  const badgeHtml = `<span class="badge good"><span class="dot"></span>已配適</span>`;
+  document.getElementById('fitStatusText').innerHTML = badgeHtml;
+  const warnEl = document.getElementById('smallNWarn');
+  if(warnEl) warnEl.remove();
+  const dispMode = document.getElementById('dispMode').value;
+  if(App.n < 12 && dispMode==='nonmetric'){
+    const w=document.createElement('p'); w.id='smallNWarn'; w.className='hint';
+    w.style.cssText='margin-top:6px;color:var(--accent);';
+    w.textContent='提醒：物件數很少時，非度量（ordinal）配適容易產生近乎完美的假性低 stress，建議搭配區間法交叉檢查，或增加物件數。';
+    document.getElementById('fitStatusText').parentElement.appendChild(w);
+  }
+}
+
+/* ============================== DATA LOADING ============================== */
+function loadDataset(prox, labels, proximityType, extraNote, dispMode){
+  App.n = prox.length; App.labels = labels; App.proximity = prox;
+  // Reset here (not just at the raw-matrix call site) so switching to the
+  // demo dataset or a plain proximity-matrix upload after a raw-matrix
+  // upload doesn't keep showing stale "附加" (attached) info in tooltips
+  // from the previous raw file — applyRawOrientation() below sets this
+  // again, synchronously, right after this function returns.
+  App.attachedInfo = null;
+  if(proximityType) document.getElementById('proxType').value = proximityType;
+  if(dispMode) document.getElementById('dispMode').value = dispMode;
+  toggleSimTransformField();
+  runFit();
+  if(extraNote) console.log('[MDS demo]', extraNote);
+}
+
+// Builds the text this object's tooltip should append for any "附加"
+// (append-only) variables from a raw-matrix upload — empty string when
+// there is none (no raw upload, or no variable was set to 附加).
+function attachedInfoText(i){
+  if(!App.attachedInfo || !App.attachedInfo[i]) return '';
+  const obj = App.attachedInfo[i];
+  const keys = Object.keys(obj);
+  if(!keys.length) return '';
+  return '\n' + keys.map(k=>`${k}: ${obj[k]}`).join('\n');
+}
+
+document.getElementById('btnDemo').addEventListener('click', ()=>{
+  const demo = buildDemoData();
+  hideRawFieldConfig();
+  _rawParsedCache = null; _rawFieldRoles = null;
+  // The paper's §5 simulation study explicitly requests "a 2-dimensional
+  // configuration space with a metric model" (interval disparity), unlike
+  // the nonmetric/ordinal Kruskal fit used for its symptom-correlation case
+  // study. Force the disparity mode to match so the demo reproduces the
+  // paper's own simulation design, not just its data-generating model.
+  loadDataset(demo.proximity, demo.labels, 'dissimilarity', demo.note + ' | true outliers: ' + demo.outliers.map(i=>'o'+(i+1)).join(','), 'interval');
+});
+
+document.getElementById('fileProx').addEventListener('change', (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  document.getElementById('fileProxName').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed = parseProximityCSV(reader.result);
+      hideRawFieldConfig();
+      _rawParsedCache = null; _rawFieldRoles = null;
+      loadDataset(parsed.matrix, parsed.labels, 'dissimilarity');
+    }catch(err){ alert('無法解析 proximity matrix CSV：'+err.message); }
+  };
+  reader.readAsText(f);
+});
+
+// Cache of the last successfully-parsed raw data matrix, kept separate from
+// App state. The "列為物件／欄為物件" orientation dropdown only makes sense
+// once a raw file is loaded, and switching it should re-derive the proximity
+// matrix from the SAME uploaded file rather than requiring a re-upload — so
+// this cache is what applyRawOrientation() below reads from.
+let _rawParsedCache = null;
+// Per-column role ('analyze' | 'append' | 'ignore'). 欄位設定 always lists
+// the file's COLUMNS — see currentVariableInfo() below — regardless of
+// orientation, so this stays keyed by column index across an orientation
+// switch (a user's "don't use this column" choice carries over rather than
+// resetting). It's still reset (regenerated with type-based defaults)
+// whenever a new file is uploaded.
+let _rawFieldRoles = null;
+
+function hideRawFieldConfig(){
+  document.getElementById('rawFieldConfigWrap').style.display='none';
+}
+
+// Resolves the per-column info the 欄位設定 table configures — always the
+// file's COLUMNS, independent of orientation (see applyRawOrientation()
+// below for what a column's role actually DOES under each orientation:
+// under 列為物件 a column is a candidate Euclidean-distance variable;
+// under 欄為物件 a column IS itself a candidate MDS object, e.g. a
+// symptom). isNumeric is a simple all-numeric-or-not type detection
+// against the un-coerced rawStrings (so a text column doesn't just
+// silently read as all-NaN), plus one example value for display.
+function currentVariableInfo(){
+  if(!_rawParsedCache) return null;
+  const cache = _rawParsedCache;
+  const count=cache.nc, isNumeric=new Array(count), example=new Array(count);
+  for(let c=0;c<count;c++){
+    let allNum=true;
+    for(let i=0;i<cache.nr;i++){ if(!looksNumeric(cache.rawStrings[i][c])){ allNum=false; break; } }
+    isNumeric[c]=allNum;
+    example[c]= cache.rawStrings[0] ? cache.rawStrings[0][c] : '';
+  }
+  return {names:cache.colLabels, count, isNumeric, example, axis:'col'};
+}
+
+function ensureRawFieldRoles(info){
+  if(!_rawFieldRoles || _rawFieldRoles.length!==info.count){
+    // Default: an all-numeric column starts as 分析 (analyze); anything
+    // with even one non-numeric cell can't feed a distance/correlation
+    // calculation, so it defaults to 附加 (append-only) instead.
+    _rawFieldRoles = info.isNumeric.map(isNum => isNum ? 'analyze' : 'append');
+  }
+}
+
+function renderRawFieldConfig(info){
+  document.getElementById('rawFieldConfigWrap').style.display='';
+  const tableWrap=document.getElementById('rawFieldConfigTable');
+  tableWrap.innerHTML='';
+  // The hint text below the table describes what a role actually does, which
+  // differs by orientation (see applyRawOrientation): under 列為物件 a column
+  // is a distance VARIABLE and 附加 shows its value in each row-object's
+  // tooltip; under 欄為物件 a column IS the object itself, so there is no
+  // separate 附加 concept — a column only ever ends up analyzed or excluded.
+  document.getElementById('rawFieldConfigHint').textContent =
+    document.getElementById('rawOrientation').value==='cols'
+      ? '「分析」欄本身就是要納入相關係數計算、成為一個物件的欄（例如症狀）；「忽略」則整欄排除，不使該欄成為物件。只有每一列的值都可辨識為數字的欄才能設為「分析」。'
+      : '「分析」欄位會納入距離計算；「附加」欄位不參與計算，但會顯示在該列（物件）滑鼠懸停的提示文字中；「忽略」欄位完全不使用。只有全部可辨識為數字的欄位才能設為「分析」。';
+  const table=document.createElement('table');
+  table.style.cssText='width:100%; min-width:340px; border-collapse:collapse; font-size:11px;';
+  const thead=document.createElement('tr');
+  thead.style.cssText='text-align:left; color:var(--text-2);';
+  // Always the file's column names now (see currentVariableInfo() above).
+  ['欄名','型態','範例','角色'].forEach(h=>{
+    const th=document.createElement('th'); th.style.cssText='padding:4px 6px; position:sticky; top:0; background:var(--surface);'; th.textContent=h;
+    thead.appendChild(th);
+  });
+  table.appendChild(thead);
+  // 欄為物件下，「附加」對結果沒有獨立作用（見 applyRawOrientation 的說
+  // 明）——一個欄不是被納入分析成為物件，就是整欄排除，沒有另一個物件可
+  // 讓它附加資訊上去。因此這個定向下，選單只提供「分析」「忽略」兩個選
+  // 項，避免使用者以為選了「附加」會有額外效果。
+  const orientation = document.getElementById('rawOrientation').value;
+  const roleOptions = orientation==='cols'
+    ? [['analyze','分析'],['ignore','忽略']]
+    : [['analyze','分析'],['append','附加'],['ignore','忽略']];
+  for(let k=0;k<info.count;k++){
+    const tr=document.createElement('tr'); tr.style.borderTop='1px solid var(--border)';
+    const tdName=document.createElement('td'); tdName.style.cssText='padding:4px 6px; font-family:var(--mono);'; tdName.textContent=info.names[k];
+    const tdType=document.createElement('td'); tdType.style.cssText='padding:4px 6px; color:var(--text-2);'; tdType.textContent = info.isNumeric[k] ? '連續' : '文字';
+    const tdEx=document.createElement('td'); tdEx.style.cssText='padding:4px 6px; font-family:var(--mono); color:var(--text-2); max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+    tdEx.textContent = (info.example[k]!==undefined && info.example[k]!=='') ? info.example[k] : '–';
+    const tdRole=document.createElement('td'); tdRole.style.cssText='padding:4px 6px;';
+    const sel=document.createElement('select'); sel.style.cssText='width:auto; padding:3px 5px; font-size:11px;';
+    // A stored 'append' role has no distinct effect once 附加 is hidden
+    // (cols-orientation) — display it as 'ignore' so the dropdown always
+    // matches what's actually happening, without discarding the original
+    // 'append' choice should the user switch back to rows-orientation.
+    const displayValue = (orientation==='cols' && _rawFieldRoles[k]==='append') ? 'ignore' : _rawFieldRoles[k];
+    roleOptions.forEach(([v,l])=>{
+      const opt=document.createElement('option'); opt.value=v; opt.textContent=l;
+      if(displayValue===v) opt.selected=true;
+      if(v==='analyze' && !info.isNumeric[k]) opt.disabled=true; // can't feed distance/correlation math with text
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', ()=>{ _rawFieldRoles[k]=sel.value; applyRawOrientation(); });
+    tdRole.appendChild(sel);
+    tr.appendChild(tdName); tr.appendChild(tdType); tr.appendChild(tdEx); tr.appendChild(tdRole);
+    table.appendChild(tr);
+  }
+  tableWrap.appendChild(table);
+}
+
+// Builds App.attachedInfo (row-object index -> {columnName: rawValue}) from
+// every column whose role is 附加 (append) — read afterwards, at hover time,
+// by attachedInfoText() above. Only meaningful under 列為物件 (rows-as-
+// objects): each row IS an object there, so a non-analyzed column's value
+// for that row is well-defined extra context to show. Under 欄為物件
+// (cols-as-objects) a column IS itself the object being configured, so an
+// excluded column has no single object left to attach its value onto —
+// applyRawOrientation() below never calls this in that branch.
+function buildAttachedInfo(appendIdx, info, cache){
+  if(!appendIdx.length) return null;
+  const out={};
+  for(let i=0;i<cache.nr;i++){
+    const row={};
+    for(const c of appendIdx) row[info.names[c]] = cache.rawStrings[i][c];
+    out[i]=row;
+  }
+  return out;
+}
+
+function applyRawOrientation(){
+  if(!_rawParsedCache) return;
+  const orientation = document.getElementById('rawOrientation').value;
+  const info = currentVariableInfo();
+  ensureRawFieldRoles(info);
+  renderRawFieldConfig(info);
+  const analyzeIdx=[], appendIdx=[];
+  for(let k=0;k<info.count;k++){
+    if(_rawFieldRoles[k]==='analyze' && info.isNumeric[k]) analyzeIdx.push(k);
+    else if(_rawFieldRoles[k]==='append') appendIdx.push(k);
+  }
+  if(!analyzeIdx.length){
+    alert('目前沒有任何欄位被設為「分析」，請至少將一個數值欄位的角色設為「分析」。');
+    return;
+  }
+  if(orientation==='rows'){
+    // 列為物件：分析欄＝納入列間歐氏距離計算的變數；每一列本身就是物件，
+    // 附加欄的值會顯示在該列（物件）的滑鼠懸停提示中。
+    const sub = _rawParsedCache.values.map(row => analyzeIdx.map(c=>row[c]));
+    const D = euclideanFromRows(sub, _rawParsedCache.nr, analyzeIdx.length);
+    loadDataset(D, _rawParsedCache.rowLabels, 'dissimilarity');
+    App.attachedInfo = buildAttachedInfo(appendIdx, info, _rawParsedCache);
+  } else {
+    // 欄為物件：分析欄本身就是要納入相關係數計算、成為一個物件的欄（例如
+    // 論文中的症狀），相關係數一律用所有列（觀測值）計算 —— 一個欄只要
+    // 每一列的值都可辨識為數字就能設為「分析」，所以絕不會有非數字格子
+    // 混進 corrFromCols。未設為「分析」的欄（無論「附加」或「忽略」）都
+    // 整欄排除、不會成為物件；「附加」在此定向下沒有獨立意義（既然物件
+    // 就是欄本身，被排除的欄沒有另一個物件可以附加資訊上去），故不建立
+    // attachedInfo。
+    const sub = _rawParsedCache.values.map(row => analyzeIdx.map(c=>row[c]));
+    const R = corrFromCols(sub, _rawParsedCache.nr, analyzeIdx.length);
+    loadDataset(R, analyzeIdx.map(c=>_rawParsedCache.colLabels[c]), 'similarity');
+    App.attachedInfo = null;
+  }
+}
+document.getElementById('fileRaw').addEventListener('change', (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  document.getElementById('fileRawName').textContent=f.name;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      _rawParsedCache = parseRawMatrixCSV(reader.result);
+      _rawFieldRoles = null; // fresh file -> re-derive default roles from scratch
+      applyRawOrientation();
+    }catch(err){ alert('無法解析原始資料矩陣 CSV：'+err.message); _rawParsedCache=null; hideRawFieldConfig(); }
+  };
+  reader.readAsText(f);
+});
+// Re-applying on orientation change is the actual fix: previously this
+// dropdown had no listener at all, so choosing the other orientation after
+// a raw file was already loaded silently did nothing until a fresh upload.
+document.getElementById('rawOrientation').addEventListener('change', applyRawOrientation);
+
+function toggleSimTransformField(){
+  const isSim = document.getElementById('proxType').value === 'similarity';
+  document.getElementById('simTransformField').style.display = isSim ? '' : 'none';
+}
+document.getElementById('proxType').addEventListener('change', toggleSimTransformField);
+
+function toggleDistModelUI(){
+  const algo=document.getElementById('mdsAlgorithm').value;
+  const dm=document.getElementById('distModel').value;
+  const showP = dm==='minkowski' && algo!=='classical';
+  document.getElementById('minkowskiPField').style.display = showP ? '' : 'none';
+}
+// Mirrors the distP resolution logic in runFit() — used here only to decide
+// which algorithmHint text applies (exact-Newton-Raphson vs. approximate
+// gradient-descent for ALSCAL), not to actually run a fit.
+function currentDistPForHint(){
+  const raw=document.getElementById('distModel').value;
+  return raw==='minkowski' ? Number(document.getElementById('minkowskiP').value) : Number(raw);
+}
+function updateAlgorithmUI(){
+  const algo=document.getElementById('mdsAlgorithm').value;
+  const isClassical = algo==='classical';
+  document.getElementById('dispMode').disabled = isClassical;
+  document.getElementById('distModel').disabled = isClassical;
+  document.getElementById('minkowskiP').disabled = isClassical;
+  const hint=document.getElementById('algorithmHint');
+  if(isClassical){
+    hint.textContent = 'Classical MDS 直接以雙重置中特徵分解配適 delta（不套用 disparity 轉換），且一律使用歐氏距離求解，故上方 Disparity 與下方距離模型設定於此演算法下不生效。';
+  } else if(algo==='alscal'){
+    const distP=currentDistPForHint();
+    hint.textContent = distP===2
+      ? 'ALSCAL 以平方距離（SSTRESS）為配適目標；歐氏距離下採論文原始 Takane–Young–de Leeuw (1977) 每點 Newton–Raphson 疊代法忠實重建（詳見下方說明），非本工具其他情況所用的近似梯度下降法。'
+      : 'ALSCAL 以平方距離（SSTRESS）為配適目標；原始 Newton–Raphson 解法僅在歐氏距離下有解析形式，此距離模型下改採本工具自行實作之梯度下降＋回溯線搜尋法近似重現（詳見下方說明）。';
+  } else {
+    hint.textContent = '論文原始配適法：Guttman transform 疊代，在歐氏距離下保證單調收斂。';
+  }
+  toggleDistModelUI();
+}
+document.getElementById('mdsAlgorithm').addEventListener('change', updateAlgorithmUI);
+document.getElementById('distModel').addEventListener('change', updateAlgorithmUI);
+document.getElementById('minkowskiP').addEventListener('input', ()=>{
+  document.getElementById('minkowskiPVal').textContent = Number(document.getElementById('minkowskiP').value).toFixed(1);
+  updateAlgorithmUI();
+});
+document.getElementById('btnRefit').addEventListener('click', ()=>{ if(App.proximity) runFit(); });
+
+document.querySelectorAll('.seg button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed', b===btn ? 'true':'false'));
+    App.smearMode = btn.dataset.smear;
+    renderConfigPlot();
+  });
+});
+document.getElementById('bw2d').addEventListener('input', ()=>{ if(App.smearMode==='2d') renderConfigPlot(); });
+document.getElementById('bw1d').addEventListener('input', ()=>{ if(App.smearMode==='1d') renderConfigPlot(); });
+document.getElementById('smearOpacity').addEventListener('input', ()=>{
+  document.getElementById('smearOpacityVal').textContent = document.getElementById('smearOpacity').value + '%';
+  if(App.smearMode==='2d' || App.smearMode==='1d') renderConfigPlot();
+});
+document.getElementById('btnClearSel').addEventListener('click', ()=>{
+  App.selected=null; App.brush=null; App.selectedNode=null; renderAll();
+});
+
+// The two palette families are never both "live" at once — which one governs
+// the current data depends on App.proximityType — so the sidebar exposes a
+// single merged <select> whose option list and selection swap to match
+// whichever family is currently active, while each family still remembers
+// its own last-picked key (App.seqPaletteKey / App.divPaletteKey) so the
+// other choice is restored if the user switches proximity type back.
+function currentPaletteMap(){
+  return App.proximityType==='similarity' ? DIV_PALETTES : SEQ_PALETTES;
+}
+function currentPaletteKey(){
+  return App.proximityType==='similarity' ? App.divPaletteKey : App.seqPaletteKey;
+}
+function setCurrentPaletteKey(key){
+  if(App.proximityType==='similarity') App.divPaletteKey = key; else App.seqPaletteKey = key;
+}
+function populatePaletteSelect(){
+  const sel=document.getElementById('palette');
+  const map=currentPaletteMap();
+  const curKey=currentPaletteKey();
+  sel.innerHTML='';
+  for(const key in map){
+    const opt=document.createElement('option'); opt.value=key;
+    opt.textContent=map[key].label + (map[key].safe ? '' : '（非色盲安全）');
+    if(key===curKey) opt.selected=true;
+    sel.appendChild(opt);
+  }
+  document.getElementById('paletteLabel').textContent = App.proximityType==='similarity'
+    ? '相似度色階（Diverging）' : '相異度色階（Sequential）';
+  updatePaletteSafeHint();
+}
+function updatePaletteSafeHint(){
+  const pal=currentPaletteMap()[currentPaletteKey()];
+  const hintEl=document.getElementById('paletteSafeHint');
+  if(pal.source==='gap'){
+    hintEl.textContent = pal.safe
+      ? '此為 GAP3D／論文原始色階（非 ColorBrewer 認證），藍－紅兩端對多數色盲類型仍可分辨。'
+      : '此為 GAP3D／論文原始彩虹色譜（非 ColorBrewer 認證，且非色盲安全），僅供重現論文原貌之用，建議一般使用優先選有「色盲安全」標記的色階。';
+  } else {
+    hintEl.textContent = pal.safe ? 'ColorBrewer 標示為色盲安全（colorblind safe）。' : 'ColorBrewer 標示此配色對紅綠色盲較不友善，建議優先選有「色盲安全」標記的色階。';
+  }
+}
+document.getElementById('palette').addEventListener('change', (e)=>{
+  setCurrentPaletteKey(e.target.value);
+  updatePaletteSafeHint();
+  if(App.X) renderAll();
+});
+document.getElementById('heatmapShowLabels').addEventListener('change', (e)=>{
+  App.heatmapShowLabels = e.target.checked;
+  if(App.X) renderHeatmap();
+});
+document.getElementById('heatmapOrderMethod').addEventListener('change', ()=>{
+  if(!App.X) return;
+  computeHeatmapOrder();
+  syncConfig3DAvailability();
+  renderHeatmap();
+  renderConfigPlot();
+});
+document.getElementById('heatmapFlipMethod').addEventListener('change', ()=>{
+  if(!App.X) return;
+  computeHeatmapOrder();
+  syncConfig3DAvailability();
+  renderHeatmap();
+  renderConfigPlot();
+});
+
+// ---- Configuration Plot 3D toggle (dendrogram-over-configuration view) ----
+// Only ever meaningful while App.heatmapTree exists (i.e. the heatmap's
+// seriation is one of the three linkage methods) — that same tree is what
+// gets drawn floating above the 2D configuration here, so this stays in sync
+// with the heatmap panel's own dropdown rather than building a second tree.
+function syncConfig3DAvailability(){
+  const hasTree = !!App.heatmapTree;
+  if(!hasTree && App.config3D){ App.config3D = false; App.selectedNode = null; }
+  const btn=document.getElementById('btn3DToggle');
+  const resetBtn=document.getElementById('btn3DReset');
+  const hint=document.getElementById('config3DHint');
+  btn.setAttribute('aria-pressed', App.config3D ? 'true' : 'false');
+  btn.title = hasTree
+    ? '切換「組態圖 + 樹狀圖」3D 檢視（可拖曳旋轉；點選內部節點可高亮子群集）'
+    : '需先在下方 Proximity Matrix 熱圖面板，將排序法設為 Single／Complete／Average-Linkage，才能顯示對應的樹狀圖';
+  resetBtn.style.display = App.config3D ? '' : 'none';
+  if(App.config3D){
+    hint.style.display='';
+    hint.textContent='拖曳可旋轉視角；節點高度與連線代表階層式聚類的合併距離（此樹狀圖與熱圖排序共用同一棵聚類樹）。點選葉節點（物件）套用色彩連動，點選內部（合併）節點則高亮整個子群集；色暈塗抹（2D／1D）於此模式下會投影在地面上。';
+  } else {
+    hint.style.display='none';
+  }
+  // Color-smearing now also renders onto the 3D floor (see renderConfigPlot3D
+  // / getFloorSmearCanvas below), so its controls stay enabled in 3D too —
+  // no disabling here any more.
+}
+document.getElementById('btn3DToggle').addEventListener('click', ()=>{
+  if(!App.heatmapTree){
+    alert('請先在下方「Proximity Matrix 熱圖」面板的排序法選擇 Single-Linkage／Complete-Linkage／Average-Linkage 之一，才能顯示對應的樹狀圖並切換 3D 檢視。');
+    return;
+  }
+  App.config3D = !App.config3D;
+  if(!App.config3D) App.selectedNode = null;
+  syncConfig3DAvailability();
+  if(App.X) renderConfigPlot();
+});
+document.getElementById('btn3DReset').addEventListener('click', ()=>{
+  App.rot3D = {yaw:-0.55, pitch:0.95};
+  App.zoom3D = 1;
+  if(App.config3D) renderConfigPlot();
+});
+
+/* ============================== RENDER: ALL ============================== */
+function renderAll(){
+  if(!App.X) return;
+  renderConfigPlot();
+  renderStressBar();
+  renderHeatmap();
+  renderDiagnostic('wrapLinear', 'linear');
+  renderDiagnostic('wrapTransform', 'transform');
+  renderDiagnostic('wrapNonlinear', 'nonlinear');
+  renderResidual();
+  renderLegend();
+  let info;
+  if(App.selected!=null) info = `已選取：${App.labels[App.selected]}`;
+  else if(App.selectedNode!=null){ const leaves=collectLeaves(App.selectedNode); info = `已選取子群集：${leaves.length} 個物件（合併距離 ${fmtNum(App.selectedNode.dist)}）`; }
+  else info = '未選取';
+  document.getElementById('selInfo').textContent = info;
+}
+
+// Shared opacity for every color-smear layer (2D canvas, 1D canvas, and the
+// 3D floor texture's own <image> element) -- a single user-facing slider
+// (#smearOpacity) replaces what used to be three separate hardcoded
+// globalAlpha/opacity constants (0.55 for 2D, 0.85 for both 1D and the 3D
+// floor) baked into draw2DSmear/draw1DSmear/renderConfigPlot3D.
+function getSmearOpacity(){
+  const el = document.getElementById('smearOpacity');
+  return el ? Number(el.value)/100 : 1;
+}
+
+// Creates a canvas whose CSS box is exactly W x H (unchanged from before)
+// but whose backing pixel store is scaled up by devicePixelRatio, then resets
+// the 2D context's transform to that same scale -- every fillRect/arc/etc.
+// call elsewhere in this file keeps using plain CSS-pixel coordinates (m.l,
+// iw, cell, ...) with zero changes needed at the call sites, but now actually
+// paints at the display's native resolution instead of being upscaled blurry
+// by the browser. Fixes the canvas-drawn config-plot color-smear, and the
+// heatmap cells, looking soft/jagged on any HiDPI (Retina etc.) display,
+// where devicePixelRatio > 1 (previously canvas.width was set to the CSS
+// pixel size verbatim, i.e. implicitly assumed devicePixelRatio===1). The
+// canvas's CSS width/height stay byte-identical to before, so this does not
+// reopen the earlier canvas/SVG pixel-grid alignment bug described where
+// this is called.
+function makeHiDPICanvas(W, H){
+  const dpr = window.devicePixelRatio || 1;
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return canvas;
+}
+
+/* ---- config plot (with optional canvas smearing underlay) ---- */
+function renderConfigPlot(){
+  const wrap=document.getElementById('wrapConfig');
+  wrap.innerHTML='';
+  // Rounded to a whole pixel: wrap.clientWidth is often fractional (flex/grid
+  // layouts routinely report e.g. 553.7px), and canvas.width below silently
+  // truncates a fractional value to an integer while canvas.style.width keeps
+  // the fractional CSS size — that mismatch stretches the canvas's pixel grid
+  // by a fraction of a percent relative to the SVG on top of it, which is
+  // exactly what made the 2D color-smear underlay drift out of alignment with
+  // the point positions above it. Rounding here keeps canvas.width and the
+  // CSS pixel width identical, so the two layers stay pixel-for-pixel aligned.
+  const W = Math.round(Math.max(wrap.clientWidth || 560, 320));
+  const H = Math.round(W*0.72);
+  wrap.style.height=H+'px';
+
+  // The 3D "dendrogram over the configuration" view is a completely separate
+  // renderer (renderConfigPlot3D below) — it shares the panel and its (W,H),
+  // but everything past this point (canvas smearing, the 2D circle loop,
+  // brush lines) is the ordinary flat scatter and doesn't apply once a real
+  // third (height) dimension is in play, so this returns early rather than
+  // threading a 3D/2D branch through all of the code below.
+  if(App.config3D && App.heatmapTree){
+    renderConfigPlot3D(wrap, W, H);
+    return;
+  }
+
+  const n=App.n, X=App.X;
+  let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
+  for(let i=0;i<n;i++){ xmin=Math.min(xmin,X[i][0]); xmax=Math.max(xmax,X[i][0]); ymin=Math.min(ymin,X[i][1]); ymax=Math.max(ymax,X[i][1]); }
+  const padF=0.14;
+  const xr=xmax-xmin||1, yr=ymax-ymin||1;
+  xmin-=xr*padF; xmax+=xr*padF; ymin-=yr*padF; ymax+=yr*padF;
+  // keep aspect square-ish in data space
+  const m={l:54,r:14,t:12,b:28};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const xs=scaleLinear([xmin,xmax],[m.l,m.l+iw]);
+  const ys=scaleLinear([ymin,ymax],[m.t+ih,m.t]);
+
+  const canvas=makeHiDPICanvas(W, H);
+  wrap.appendChild(canvas);
+  const svg=svgEl('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`});
+  wrap.appendChild(svg);
+
+  drawAxes(svg, xs, ys, m, iw, ih, 'Dim 1', 'Dim 2');
+
+  const theme=currentTheme();
+  const sel=App.selected;
+  const row = sel!=null ? App.proximity[sel] : null;
+  let vmax=1;
+  if(App.proximityType==='similarity'){
+    // Similarity proximities are typically correlation coefficients, which are
+    // bounded in [-1,1] by construction — so the diverging color scale's two
+    // ends are fixed at that theoretical range rather than stretched to the
+    // data's own observed max |value|. Otherwise a dataset whose strongest
+    // correlation is e.g. 0.6 would get painted as fully saturated "near ±1"
+    // color, which misrepresents how strong that correlation actually is.
+    vmax=1;
+  } else {
+    vmax=0; for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(i!==j) vmax=Math.max(vmax,App.proximity[i][j]);
+    vmax=vmax||1;
+  }
+  App._vmax = vmax;
+
+  // canvas smearing
+  if(sel!=null && App.smearMode==='2d'){
+    draw2DSmear(canvas, xs, ys, m, iw, ih, sel, vmax, theme);
+  } else if(sel!=null && App.smearMode==='1d'){
+    draw1DSmear(canvas, xs, ys, m, iw, ih, sel, vmax, theme);
+  }
+
+  const showLabels = n<=40;
+  const muted = cssVar('--text-2') || '#52514e';
+  const borderCol = cssVar('--chart') || '#fff';
+
+  for(let i=0;i<n;i++){
+    const cx=xs(X[i][0]), cy=ys(X[i][1]);
+    let fill;
+    if(sel!=null){
+      const val=row[i];
+      const t = val/vmax;
+      // The selected point keeps the same color-linkage fill as everyone else
+      // (its own proximity value, i.e. 0 self-distance) rather than being
+      // recolored to the accent color — selection is marked purely by the
+      // black stroke + larger radius below, so the fill always reads as
+      // "the color this point's proximity value maps to" with no exception.
+      fill = App.proximityType==='similarity' ? divergingColor(t, theme) : seqColor(t, theme);
+    } else {
+      fill = cssVar('--muted') || '#898781';
+    }
+    const r = (sel===i) ? 6 : 4.5;
+    const stroke = (sel===i) ? '#000000' : borderCol;
+    const c=svgEl('circle',{cx,cy,r,fill,stroke,'stroke-width':(sel===i)?2:1.6,class:'clickable'});
+    c.addEventListener('click', (ev)=>{ ev.stopPropagation(); App.selected = App.selected===i ? null : i; renderAll(); });
+    c.addEventListener('mousemove', (ev)=>{
+      const p = sel!=null ? `\nproximity↔${App.labels[sel]}: ${fmtNum(row[i])}` : '';
+      showTooltip(ev.clientX, ev.clientY, `${App.labels[i]}${p}\n應力貢獻: ${(App.stressProp[i]*100).toFixed(2)}%${attachedInfoText(i)}`);
+    });
+    c.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(c);
+    if(showLabels && sel!==i){
+      const t=svgEl('text',{x:cx+7,y:cy+3,class:'point-label'});
+      t.textContent=App.labels[i]; svg.appendChild(t);
+    }
+  }
+  if(sel!=null){
+    const cx=xs(X[sel][0]), cy=ys(X[sel][1]);
+    const t=svgEl('text',{x:cx+9,y:cy-8,class:'point-label',style:'font-weight:600;font-size:10px;'});
+    t.textContent=App.labels[sel]; svg.appendChild(t);
+  }
+
+  // brush connecting lines
+  if(App.brush && App.brush.pairs && App.brush.pairs.length){
+    const posCol=cssVar('--div-pos')||'#e34948', negCol=cssVar('--div-neg')||'#2a78d6';
+    for(const {i,j,sign} of App.brush.pairs){
+      const x1=xs(X[i][0]), y1=ys(X[i][1]), x2=xs(X[j][0]), y2=ys(X[j][1]);
+      const line=svgEl('line',{x1,y1,x2,y2,stroke:sign>0?posCol:negCol,'stroke-width':1.6,opacity:0.85});
+      svg.insertBefore(line, svg.firstChild.nextSibling);
+    }
+  }
+
+  svg.addEventListener('click', ()=>{ App.selected=null; renderAll(); });
+}
+
+/* ---- 3D "dendrogram over the configuration" view ----
+   Renders the SAME q=2 MDS configuration used everywhere else, but with a
+   real third dimension: every leaf sits on the ordinary (Dim1, Dim2) floor
+   at height 0, and App.heatmapTree's merge structure — the exact same tree
+   the heatmap's Single/Complete/Average-Linkage dendrogram draws — rises
+   above that floor, each internal node lifted to z = its merge distance and
+   placed at the (x,y) midpoint of its two children. The whole thing is a
+   hand-rolled orthographic 3D projection with mouse-drag orbit controls;
+   this tool has no 3D/WebGL library dependency (single self-contained HTML
+   file), so rotation, projection and depth-sorted (painter's-algorithm)
+   drawing are all implemented directly against SVG below. */
+
+// Bottom-up layout: leaf world position = its fitted 2D MDS coordinate at
+// z=0; each internal node's world position is the midpoint of its two
+// children's (x,y) and z = its own merge distance (already scaled by the
+// caller so tree height is visually proportionate to the floor's spread).
+function computeTree3DLayout(tree, X, zScale){
+  const pos=new Map();
+  function recurse(nd){
+    if(nd.leaf!==undefined){
+      const p={x:X[nd.leaf][0], y:X[nd.leaf][1], z:0, leaf:nd.leaf};
+      pos.set(nd,p); return p;
+    }
+    const L=recurse(nd.left), R=recurse(nd.right);
+    const p={x:(L.x+R.x)/2, y:(L.y+R.y)/2, z:nd.dist*zScale};
+    pos.set(nd,p); return p;
+  }
+  recurse(tree);
+  return pos;
+}
+
+// Collects the original object indices under a tree node (leaf or internal) —
+// used both for the "已選取子群集" info line and for deciding, node by node,
+// which leaves belong to the currently-selected internal (merge) node's
+// cluster when highlighting it in the 3D view.
+function collectLeaves(nd, out){
+  out = out || [];
+  if(nd.leaf!==undefined){ out.push(nd.leaf); return out; }
+  collectLeaves(nd.left, out); collectLeaves(nd.right, out);
+  return out;
+}
+
+// The set of tree-node OBJECTS (internal nodes and leaves alike) forming the
+// subtree rooted at `nd`, inclusive — used to decide which tree EDGES belong
+// to a selected cluster (an edge belongs if its own parent node is in this
+// set) so the whole selected branch highlights together, not just its leaves.
+function collectSubtreeNodes(nd, out){
+  out = out || new Set();
+  out.add(nd);
+  if(nd.leaf===undefined){ collectSubtreeNodes(nd.left, out); collectSubtreeNodes(nd.right, out); }
+  return out;
+}
+
+// Orbit-camera projection: yaw spins the (x,y) floor like a turntable around
+// the world "up" (z) axis; pitch then tilts that view up/down by mixing the
+// post-yaw y with z. depth (the component dropped from the 2D projection) is
+// what the caller sorts on for painter's-algorithm occlusion and uses for a
+// cheap near/far size+opacity cue — there's no real perspective divide here,
+// just an orthographic projection, which keeps relative sizes undistorted
+// and is plenty for reading a tree's shape.
+function project3D(p, yaw, pitch){
+  const cy=Math.cos(yaw), sy=Math.sin(yaw);
+  const x1=p.x*cy - p.y*sy, y1=p.x*sy + p.y*cy, z1=p.z;
+  const cp=Math.cos(pitch), sp=Math.sin(pitch);
+  // Height (z1) contributes POSITIVELY to sy2 so that greater merge distance
+  // renders higher on screen (toScreen below flips sy into screen-space,
+  // where a larger sy ends up as a smaller — i.e. higher — pixel y) — the
+  // dendrogram rises off the floor rather than hanging beneath it.
+  const sy2=y1*cp + z1*sp, depth=z1*cp - y1*sp;
+  return {sx:x1, sy:sy2, depth};
+}
+
+// Orbit-drag state lives outside renderConfigPlot3D (module scope) rather
+// than as locals re-created each call, since the SVG — and therefore any
+// listeners attached directly to it — is torn down and rebuilt from scratch
+// on every render; only App.rot3D itself needs to persist across renders.
+const _orbit3D = {dragging:false, lastX:0, lastY:0, raf:null, justDragged:false};
+
+function renderConfigPlot3D(wrap, W, H){
+  const n=App.n, X=App.X, tree=App.heatmapTree;
+  const m={l:14,r:14,t:14,b:14};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+
+  // Scale merge distance into the same rough magnitude as the floor's own
+  // spatial spread, so the tree reads as a proportionate 3D shape instead of
+  // being either perfectly flat or absurdly spiky relative to the points —
+  // proximity units and configuration-space units have no inherent common
+  // scale, so this is a deliberate visual normalization, not a real unit
+  // conversion.
+  let xMin=Infinity,xMax=-Infinity,yMin=Infinity,yMax=-Infinity;
+  for(let i=0;i<n;i++){ xMin=Math.min(xMin,X[i][0]); xMax=Math.max(xMax,X[i][0]); yMin=Math.min(yMin,X[i][1]); yMax=Math.max(yMax,X[i][1]); }
+  const floorSpan=Math.max(xMax-xMin, yMax-yMin)||1;
+  let maxDist=0;
+  (function collect(nd){ if(nd.leaf!==undefined) return; maxDist=Math.max(maxDist,nd.dist); collect(nd.left); collect(nd.right); })(tree);
+  const zScale = maxDist>0 ? (floorSpan*0.85)/maxDist : 1;
+
+  const posMap = computeTree3DLayout(tree, X, zScale);
+  const {yaw, pitch} = App.rot3D;
+
+  // Project every node once so we can auto-fit the current (possibly
+  // rotated) view into the panel — the projected extent of the same shape
+  // changes as the user rotates it, so this is recomputed every render
+  // rather than fit once at a fixed angle.
+  const projected = new Map();
+  let sxMin=Infinity,sxMax=-Infinity,syMin=Infinity,syMax=-Infinity;
+  for(const p of posMap.values()){
+    const pr = project3D(p, yaw, pitch);
+    projected.set(p, pr);
+    sxMin=Math.min(sxMin,pr.sx); sxMax=Math.max(sxMax,pr.sx);
+    syMin=Math.min(syMin,pr.sy); syMax=Math.max(syMax,pr.sy);
+  }
+  // Also fit the floor outline's four corners (below) into the same bounds,
+  // since a tilted floor can extend past the leaf points' own bounding box.
+  const floorCorners=[{x:xMin,y:yMin,z:0},{x:xMax,y:yMin,z:0},{x:xMax,y:yMax,z:0},{x:xMin,y:yMax,z:0}]
+    .map(p=>({...p, pr:project3D(p, yaw, pitch)}));
+  for(const c of floorCorners){
+    sxMin=Math.min(sxMin,c.pr.sx); sxMax=Math.max(sxMax,c.pr.sx);
+    syMin=Math.min(syMin,c.pr.sy); syMax=Math.max(syMax,c.pr.sy);
+  }
+  // The height-scale reference stub (drawn later, at the floor's farthest
+  // corner) can reach higher than any actual tree node — folded into the
+  // fit bounds here too, or it would poke outside the panel at some angles.
+  const rootP = posMap.get(tree);
+  let heightStub=null;
+  if(rootP && rootP.z>0){
+    const baseCorner = floorCorners.reduce((best,c)=> (c.pr.depth<best.pr.depth ? c : best), floorCorners[0]);
+    const topWorld = {x:baseCorner.x, y:baseCorner.y, z:rootP.z};
+    const topPr = project3D(topWorld, yaw, pitch);
+    heightStub = {baseCorner, topPr};
+    sxMin=Math.min(sxMin,topPr.sx); sxMax=Math.max(sxMax,topPr.sx);
+    syMin=Math.min(syMin,topPr.sy); syMax=Math.max(syMax,topPr.sy);
+  }
+  // Right-angle ("elbow") edge corners — one per child of every internal
+  // node — precomputed here (before the fit-scale bounds below) rather than
+  // inside the tree-edge walk further down, for two reasons: (1) a corner's
+  // projection is NOT simply an interpolation of its child's and parent's own
+  // projected points (it mixes the child's rotated x/y with the parent's z),
+  // so like the floor corners and height stub above it needs to be folded
+  // into the auto-fit bounds itself, or an elbow can poke outside the panel
+  // at some rotation angles; (2) computing each corner once here and caching
+  // it means the draw-time walk below doesn't need to re-run project3D for
+  // the same point twice (once per child edge that shares a corner).
+  // A corner sits directly above/below its own child — same (x,y), raised or
+  // lowered only in z to the PARENT's height — so the edge from child to
+  // parent decomposes into a pure vertical riser (child -> corner) followed
+  // by a pure horizontal run in the floor plane (corner -> parent), matching
+  // the flat heatmap dendrogram's own horizontal+vertical elbow style
+  // instead of a diagonal that changes x, y and z all at once.
+  const elbowCorners = new Map();
+  (function collectElbowCorners(nd){
+    if(nd.leaf!==undefined) return;
+    const pp=posMap.get(nd), lp=posMap.get(nd.left), rp=posMap.get(nd.right);
+    const cornerL = project3D({x:lp.x, y:lp.y, z:pp.z}, yaw, pitch);
+    const cornerR = project3D({x:rp.x, y:rp.y, z:pp.z}, yaw, pitch);
+    elbowCorners.set(nd, {L:cornerL, R:cornerR});
+    sxMin=Math.min(sxMin,cornerL.sx,cornerR.sx); sxMax=Math.max(sxMax,cornerL.sx,cornerR.sx);
+    syMin=Math.min(syMin,cornerL.sy,cornerR.sy); syMax=Math.max(syMax,cornerL.sy,cornerR.sy);
+    collectElbowCorners(nd.left); collectElbowCorners(nd.right);
+  })(tree);
+  const spanX=(sxMax-sxMin)||1, spanY=(syMax-syMin)||1;
+  // App.zoom3D is a user-driven multiplier on top of the auto-fit scale
+  // (mouse-wheel zoom, see the 'wheel' listener below) — 1 means "exactly
+  // auto-fit to the panel", as before this feature existed.
+  const fitScale = Math.min(iw/spanX, ih/spanY) * 0.88 * App.zoom3D;
+  const midSx=(sxMin+sxMax)/2, midSy=(syMin+syMax)/2;
+  const cx=m.l+iw/2, cy=m.t+ih/2;
+  function toScreen(pr){ return {x:cx+(pr.sx-midSx)*fitScale, y:cy-(pr.sy-midSy)*fitScale}; }
+
+  let depthMin=Infinity,depthMax=-Infinity;
+  for(const pr of projected.values()){ depthMin=Math.min(depthMin,pr.depth); depthMax=Math.max(depthMax,pr.depth); }
+  const depthSpan=(depthMax-depthMin)||1;
+  // Nearer (larger depth, since +depth points toward the viewer after
+  // projection) reads bigger/more opaque; farther fades toward the muted
+  // floor color — a cheap depth cue since this projection has no real
+  // perspective falloff to lean on.
+  function depthT(depth){ return (depth-depthMin)/depthSpan; }
+
+  const svg=svgEl('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`});
+  wrap.appendChild(svg);
+
+  const theme=currentTheme();
+  const sel=App.selected;
+  const row = sel!=null ? App.proximity[sel] : null;
+  let vmax=1;
+  if(App.proximityType==='similarity'){ vmax=1; }
+  else { vmax=0; for(let i=0;i<n;i++) for(let j=0;j<n;j++) if(i!==j) vmax=Math.max(vmax,App.proximity[i][j]); vmax=vmax||1; }
+  App._vmax = vmax;
+
+  // selNode drives a SEPARATE highlight mode from sel/color-linkage above —
+  // clicking an internal (merge) node selects the whole cluster under it
+  // (highlighting the cluster's own leaves + branches, dimming everything
+  // else) rather than a single proximity row, so the two selection kinds
+  // stay mutually exclusive — see the click handlers below and
+  // syncConfig3DAvailability/btnClearSel elsewhere, which clear the other.
+  const selNode = App.selectedNode;
+  const clusterLeafSet = selNode ? new Set(collectLeaves(selNode)) : null;
+  const clusterNodeSet = selNode ? collectSubtreeNodes(selNode) : null;
+
+  const muted=cssVar('--muted')||'#898781';
+  const borderCol=cssVar('--chart')||'#fff';
+  const gridCol=cssVar('--grid')||'#e1e0d9';
+  const accent=cssVar('--accent')||'#4a3aa7';
+
+  // Build every drawable item with a depth value, draw farthest-first
+  // (painter's algorithm) so nearer items correctly occlude farther ones —
+  // there is no SVG z-buffer, so draw ORDER is what stands in for one.
+  const items=[];
+
+  // Floor color-smear texture: when a leaf is selected and 2D/1D smearing is
+  // on, the same kernel-smoothed proximity estimate the flat 2D configuration
+  // plot draws with a canvas is rendered here as a texture on the z=0 floor
+  // (previously this was simply disabled in 3D — see getFloorSmearCanvas).
+  // Any point with z=0 collapses project3D+toScreen to a plain 2D affine map
+  // (every z-term drops out), so the whole floor can be placed with one
+  // <image transform="matrix(...)">, computed directly below, rather than
+  // needing per-pixel projection.
+  if(sel!=null && (App.smearMode==='2d' || App.smearMode==='1d')){
+    const smearCanvas = getFloorSmearCanvas(xMin, xMax, yMin, yMax, sel, vmax, theme);
+    const fw=smearCanvas.width, fh=smearCanvas.height;
+    const dxw=(xMax-xMin)||1, dyw=(yMax-yMin)||1;
+    const cyaw=Math.cos(yaw), syaw=Math.sin(yaw), cpit=Math.cos(pitch);
+    // world(x,y,0) -> screen: screenX = Aa*x+Bb*y+Ee ; screenY = Cc*x+Dd*y+Ff
+    // (the same yaw/pitch/fitScale math project3D+toScreen apply elsewhere,
+    // expanded out and specialized to z=0).
+    const Aa=fitScale*cyaw, Bb=-fitScale*syaw, Cc=-fitScale*cpit*syaw, Dd=-fitScale*cpit*cyaw;
+    const Ee=cx - fitScale*midSx, Ff=cy + fitScale*midSy;
+    // Composed with the canvas's own pixel->world mapping (row 0 = yMax,
+    // column 0 = xMin — see buildFloorSmearCanvas) into one matrix straight
+    // from canvas pixels to screen pixels.
+    const ma=Aa*dxw/fw, mb=Cc*dxw/fw, mc=-Bb*dyw/fh, md=-Dd*dyw/fh;
+    const me=Aa*xMin + Bb*yMax + Ee, mf=Cc*xMin + Dd*yMax + Ff;
+    const href = smearCanvas.toDataURL('image/png');
+    const floorDepth = floorCorners.reduce((s,c)=>s+c.pr.depth,0)/4;
+    items.push({depth:floorDepth, draw:()=>{
+      const img=svgEl('image',{x:0,y:0,width:fw,height:fh,opacity:getSmearOpacity(),transform:`matrix(${ma} ${mb} ${mc} ${md} ${me} ${mf})`});
+      img.setAttributeNS('http://www.w3.org/1999/xlink','href',href);
+      img.setAttribute('href', href);
+      svg.appendChild(img);
+    }});
+  }
+
+  // Floor outline (z=0 bounding rectangle) anchors the "ground plane" the
+  // leaves sit on, so the lifted tree above it reads as height rather than
+  // just an ambiguous tangle of lines.
+  for(let k=0;k<4;k++){
+    const a=floorCorners[k], b=floorCorners[(k+1)%4];
+    items.push({depth:(a.pr.depth+b.pr.depth)/2, draw:()=>{
+      const pa=toScreen(a.pr), pb=toScreen(b.pr);
+      svg.appendChild(svgEl('line',{x1:pa.x,y1:pa.y,x2:pb.x,y2:pb.y,stroke:gridCol,'stroke-width':1,'pointer-events':'none'}));
+    }});
+  }
+
+  // Tree edges: right-angle ("elbow") segments per parent→child link, matching
+  // the flat heatmap dendrogram's own horizontal+vertical style. Each child
+  // edge is drawn as two segments via its precomputed corner (see
+  // elbowCorners above): a vertical riser straight up/down from the child's
+  // own floor position to the parent's height, then a horizontal run (in the
+  // x/y floor plane only, height held fixed at the parent's) over to the
+  // parent's own point — never a diagonal changing x, y and z all at once.
+  // Edges inside the selected cluster's own subtree draw bold in accent;
+  // everything else fades once a cluster is selected, so the highlighted
+  // branch reads clearly against the rest of the tree. Internal (merge)
+  // nodes also get their own small clickable marker here — previously there
+  // was nothing to click on except the leaves at the bottom of the tree.
+  (function walk(nd){
+    if(nd.leaf!==undefined) return;
+    const pp=posMap.get(nd), lp=posMap.get(nd.left), rp=posMap.get(nd.right);
+    const pr=projected.get(pp), lr=projected.get(lp), rr=projected.get(rp);
+    const corners=elbowCorners.get(nd), clPr=corners.L, crPr=corners.R;
+    const inCluster = selNode ? clusterNodeSet.has(nd) : false;
+    const edgeStroke = selNode ? (inCluster ? accent : muted) : muted;
+    const edgeWidth = selNode && inCluster ? 1.1 : 0.7;
+    const edgeOpacity = selNode ? (inCluster ? 1 : 0.16) : 0.8;
+    // pointer-events:none matters here specifically: a riser's lower endpoint
+    // sits at the EXACT same screen pixel as its child's own circle (same
+    // (x,y), only z differs), and depending on depth-sort a riser can draw
+    // on top of that circle — without this, a click dead-center on a leaf or
+    // merge-node marker could land on the decorative line instead of the
+    // circle beneath/above it.
+    function pushElbowSeg(pA, pB){
+      items.push({depth:(pA.depth+pB.depth)/2, draw:()=>{
+        const a=toScreen(pA), b=toScreen(pB);
+        svg.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:edgeStroke,'stroke-width':edgeWidth,opacity:edgeOpacity,'pointer-events':'none'}));
+      }});
+    }
+    pushElbowSeg(lr, clPr);   // left child -> its corner (vertical riser)
+    pushElbowSeg(clPr, pr);  // corner -> parent (horizontal run)
+    pushElbowSeg(rr, crPr);  // right child -> its corner (vertical riser)
+    pushElbowSeg(crPr, pr);  // corner -> parent (horizontal run)
+    const isThisSelected = nd===selNode;
+    const nodeR = isThisSelected ? 6.5 : (inCluster ? 4.5 : 3.2);
+    const nodeFill = selNode ? ((isThisSelected || inCluster) ? accent : muted) : muted;
+    const nodeOpacity = selNode ? (isThisSelected ? 1 : (inCluster ? 0.7 : 0.22)) : 0.55;
+    const leafCount = collectLeaves(nd).length;
+    items.push({depth:pr.depth, draw:()=>{
+      const sp=toScreen(pr);
+      const c=svgEl('circle',{cx:sp.x,cy:sp.y,r:nodeR,fill:nodeFill,opacity:nodeOpacity,stroke:isThisSelected?'#000000':borderCol,'stroke-width':isThisSelected?2:1,class:'clickable','data-role':'merge-node'});
+      c.addEventListener('click',(ev)=>{
+        ev.stopPropagation();
+        if(_orbit3D.justDragged) return;
+        App.selectedNode = App.selectedNode===nd ? null : nd;
+        App.selected = null;
+        renderAll();
+      });
+      c.addEventListener('mousemove',(ev)=>{
+        showTooltip(ev.clientX, ev.clientY, `合併節點（Merge Node）\n合併距離 (merge distance) = ${fmtNum(nd.dist)}\n物件數: ${leafCount}`);
+      });
+      c.addEventListener('mouseleave', hideTooltip);
+      svg.appendChild(c);
+    }});
+    walk(nd.left); walk(nd.right);
+  })(tree);
+
+  // Brush connecting lines (from the residual plot's box-select), drawn on
+  // the floor (z=0) between the same two leaves it highlights in the
+  // ordinary 2D configuration plot — same feature, same data, just also
+  // subject to depth-sorting here.
+  if(App.brush && App.brush.pairs && App.brush.pairs.length){
+    const posCol=cssVar('--div-pos')||'#e34948', negCol=cssVar('--div-neg')||'#2a78d6';
+    for(const {i,j,sign} of App.brush.pairs){
+      const pi=project3D({x:X[i][0],y:X[i][1],z:0}, yaw, pitch);
+      const pj=project3D({x:X[j][0],y:X[j][1],z:0}, yaw, pitch);
+      items.push({depth:(pi.depth+pj.depth)/2, draw:()=>{
+        const a=toScreen(pi), b=toScreen(pj);
+        svg.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:sign>0?posCol:negCol,'stroke-width':1.6,opacity:0.85,'pointer-events':'none'}));
+      }});
+    }
+  }
+
+  // Leaf points — same color-linkage fill logic as the 2D configuration
+  // plot (proximity-to-selected-point color, or muted when nothing is
+  // selected), just with depth-based size/opacity standing in for the
+  // stroke-based selection ring the flat view uses (a ring doesn't read
+  // well once points overlap in a rotated projection). When a cluster node
+  // is selected instead, fill switches to the cluster highlight (accent for
+  // members, faded muted for everyone else) rather than color-linkage.
+  for(let i=0;i<n;i++){
+    const p={x:X[i][0], y:X[i][1], z:0};
+    const pr=project3D(p, yaw, pitch);
+    const t=depthT(pr.depth);
+    let fill, opacity, isHighlighted=false;
+    if(selNode){
+      const inCluster = clusterLeafSet.has(i);
+      fill = inCluster ? accent : muted;
+      opacity = inCluster ? (0.75 + t*0.25) : 0.2;
+      isHighlighted = inCluster;
+    } else if(sel!=null){
+      const val=row[i], tt=val/vmax;
+      fill = App.proximityType==='similarity' ? divergingColor(tt, theme) : seqColor(tt, theme);
+      opacity = 0.55 + t*0.45;
+    } else {
+      fill = muted;
+      opacity = 0.55 + t*0.45;
+    }
+    const isSel = sel===i;
+    const rBase = 3 + t*2.6;
+    const r = isSel ? rBase+2 : (isHighlighted ? rBase+1 : rBase);
+    items.push({depth:pr.depth, draw:()=>{
+      const sp=toScreen(pr);
+      const c=svgEl('circle',{cx:sp.x,cy:sp.y,r,fill,opacity,stroke:isSel?'#000000':borderCol,'stroke-width':isSel?2:1,class:'clickable','data-role':'leaf'});
+      c.addEventListener('click',(ev)=>{
+        ev.stopPropagation();
+        if(_orbit3D.justDragged) return;
+        App.selected = App.selected===i ? null : i;
+        App.selectedNode = null;
+        renderAll();
+      });
+      c.addEventListener('mousemove',(ev)=>{
+        const pTip = sel!=null ? `\nproximity↔${App.labels[sel]}: ${fmtNum(row[i])}` : '';
+        showTooltip(ev.clientX, ev.clientY, `${App.labels[i]}${pTip}\n應力貢獻: ${(App.stressProp[i]*100).toFixed(2)}%\n合併高度: 依樹狀圖結構${attachedInfoText(i)}`);
+      });
+      c.addEventListener('mouseleave', hideTooltip);
+      svg.appendChild(c);
+    }});
+  }
+
+  items.sort((a,b)=>a.depth-b.depth);
+  for(const it of items) it.draw();
+
+  // Height-scale reference: a short vertical stub at the floor's own
+  // farthest corner (already computed above, alongside its own contribution
+  // to the fit bounds), from z=0 up to the root's merge distance, so the
+  // dendrogram's height has SOME numeric anchor rather than being purely
+  // relative.
+  if(heightStub){
+    const a=toScreen(heightStub.baseCorner.pr), b=toScreen(heightStub.topPr);
+    svg.appendChild(svgEl('line',{x1:a.x,y1:a.y,x2:b.x,y2:b.y,stroke:accent,'stroke-width':1,'stroke-dasharray':'2 2',opacity:0.6,'pointer-events':'none'}));
+    const lbl=svgEl('text',{x:b.x+4,y:b.y+3,class:'tick'}); lbl.textContent=`合併距離上限 ${fmtNum(maxDist)}`;
+    svg.appendChild(lbl);
+  }
+
+  // Orbit-drag: attached directly to this render's own (fresh) svg element,
+  // so there is nothing to clean up on the next render — the old svg and
+  // its listeners are simply discarded with it.
+  svg.style.cursor='grab';
+  svg.addEventListener('pointerdown',(ev)=>{
+    _orbit3D.dragging=true; _orbit3D.lastX=ev.clientX; _orbit3D.lastY=ev.clientY; _orbit3D.justDragged=false;
+    _orbit3D.pointerId=ev.pointerId;
+    // Pointer capture is deliberately NOT acquired here — see pointermove
+    // below for why grabbing it unconditionally on every press broke plain
+    // clicks entirely.
+  });
+  svg.addEventListener('pointermove',(ev)=>{
+    if(!_orbit3D.dragging) return;
+    const dx=ev.clientX-_orbit3D.lastX, dy=ev.clientY-_orbit3D.lastY;
+    // Dead zone: a plain click is never perfectly still between press and
+    // release — a few pixels of incidental mouse/trackpad jitter is normal.
+    // Below this threshold nothing happens at all — no rotation, no
+    // re-render, no pointer capture, lastX/Y left alone — for two compounding
+    // reasons real users were hitting: (1) every re-render tears down and
+    // rebuilds the WHOLE svg, including whichever circle the pointer went
+    // down on, so even a same-pixel re-render mid-gesture could disrupt the
+    // click; (2) acquiring pointer capture retargets the eventual
+    // pointerup/mouseup to the svg itself — once mousedown's target (the
+    // circle) and mouseup's target (the svg, via capture) differ, Chromium
+    // does not synthesize a "click" on the circle AT ALL, silently eating
+    // every click in the 3D view regardless of how little the mouse moved.
+    // So capture is now acquired lazily, only once real dragging is
+    // confirmed by clearing this threshold — a plain click never triggers
+    // either problem, and this check short-circuits for the rest of an
+    // actual drag once justDragged is set.
+    if(!_orbit3D.justDragged && Math.abs(dx)+Math.abs(dy)<=5) return;
+    if(!_orbit3D.justDragged){
+      _orbit3D.justDragged=true;
+      try{ svg.setPointerCapture(_orbit3D.pointerId); }catch(e){}
+      svg.style.cursor='grabbing';
+    }
+    _orbit3D.lastX=ev.clientX; _orbit3D.lastY=ev.clientY;
+    App.rot3D.yaw += dx*0.012;
+    App.rot3D.pitch = Math.max(0.06, Math.min(1.5, App.rot3D.pitch - dy*0.012));
+    if(_orbit3D.raf) return;
+    _orbit3D.raf=requestAnimationFrame(()=>{ _orbit3D.raf=null; renderConfigPlot(); });
+  });
+  function endDrag(ev){
+    _orbit3D.dragging=false; svg.style.cursor='grab';
+    try{ svg.releasePointerCapture(ev.pointerId); }catch(e){}
+    if(_orbit3D.justDragged) setTimeout(()=>{ _orbit3D.justDragged=false; }, 0);
+  }
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+  svg.addEventListener('click', ()=>{ if(_orbit3D.justDragged) return; App.selected=null; App.selectedNode=null; renderAll(); });
+
+  // Mouse-wheel zoom: scales App.zoom3D multiplicatively (so repeated small
+  // scroll ticks compound smoothly rather than adding/subtracting a fixed
+  // step regardless of current zoom level), clamped to a sane range so the
+  // view can't be zoomed out to a speck or in until it's meaningless.
+  // preventDefault stops the whole page from scrolling while the cursor is
+  // over the 3D panel — this view has no scrollable content of its own, so
+  // there's nothing lost by capturing the wheel entirely here. Re-renders
+  // via requestAnimationFrame (shared with the drag handler's _orbit3D.raf
+  // gate above) so a fast trackpad/wheel burst coalesces into one render
+  // per frame instead of one per wheel event.
+  svg.addEventListener('wheel',(ev)=>{
+    ev.preventDefault();
+    const factor = Math.exp(-ev.deltaY*0.0015);
+    App.zoom3D = Math.max(0.3, Math.min(6, App.zoom3D*factor));
+    if(_orbit3D.raf) return;
+    _orbit3D.raf=requestAnimationFrame(()=>{ _orbit3D.raf=null; renderConfigPlot(); });
+  }, {passive:false});
+}
+
+function draw2DSmear(canvas, xs, ys, m, iw, ih, sel, vmax, theme){
+  const ctx=canvas.getContext('2d');
+  const x0=xs.invert(m.l), x1=xs.invert(m.l+iw), y0=ys.invert(m.t+ih), y1=ys.invert(m.t);
+  const span = Math.max(Math.abs(x1-x0), Math.abs(y1-y0));
+  const hPct = Number(document.getElementById('bw2d').value); // 5..60, % of plot span
+  const h = Math.max((hPct/100) * span, 1e-6);
+  const n=App.n, X=App.X, row=App.proximity[sel];
+  // grid is a count of blocks across the plot's CSS-pixel width -- must stay
+  // canvas-resolution-independent (use iw, not canvas.width, which is now
+  // devicePixelRatio-scaled by makeHiDPICanvas and would otherwise inflate
+  // the block size on HiDPI displays instead of just sharpening it). Raised
+  // from 64 to 110: at typical panel widths this roughly halves each block's
+  // CSS-pixel size, which is what actually softens the "staircase" look
+  // along diagonal/curved color boundaries -- the HiDPI backing store alone
+  // only sharpens each block's edges, it doesn't shrink the blocks.
+  const grid=110;
+  const step=Math.max(2, Math.floor(iw/grid));
+  // Blocks are filled with fillRect (not putImageData, which ignores canvas
+  // clipping) so a clip to the plot's own inner rectangle keeps every pixel
+  // inside the axis frame. Just as important: the block grid is anchored to
+  // the frame's own top-left corner (m.l, m.t) rather than absolute canvas
+  // pixel 0 — previously a block starting just inside the frame but wider
+  // than the remaining iw/ih could still paint step-1 px past the right/
+  // bottom border into the tick-label margin; anchoring the grid to m.l/m.t
+  // and shrinking each edge block to fit exactly removes that overflow at
+  // the source (the clip is then just a second line of defense).
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(m.l, m.t, iw, ih);
+  ctx.clip();
+  ctx.globalAlpha = getSmearOpacity();
+  for(let py=m.t; py<m.t+ih; py+=step){
+    const bh = Math.min(step, m.t+ih-py);
+    for(let px=m.l; px<m.l+iw; px+=step){
+      const bw = Math.min(step, m.l+iw-px);
+      const dx = xs.invert(px), dy = ys.invert(py);
+      let num=0, den=0;
+      // Sum over ALL n points, including s===sel: paper eq.(6) is
+      // delta-hat_r(x) = sum_s delta_rs * kappa(x - x_s) / sum_s kappa(x - x_s),
+      // s=1..n with no exclusion of s=r. Its self-term delta_rr (0 for a
+      // distance/dissimilarity proximity, or the max of the scale for a
+      // correlation/similarity one) is what gives the smear its "peak
+      // centered at the conditioned point" described in the paper (Fig. 3) --
+      // dropping it (as this loop used to) flattens exactly that peak and
+      // leaves the color right under the selected point looking like a
+      // simple average of its neighbors instead.
+      for(let s=0;s<n;s++){
+        const ddx=dx-X[s][0], ddy=dy-X[s][1];
+        const dist=Math.sqrt(ddx*ddx+ddy*ddy);
+        const u=dist/h; const k=Math.exp(-0.5*u*u);
+        num+=k*row[s]; den+=k;
+      }
+      const est = den>1e-9 ? num/den : 0;
+      const t = App.proximityType==='similarity' ? est/vmax : est/vmax;
+      const hex = App.proximityType==='similarity' ? divergingColor(t, theme) : seqColor(t, theme);
+      ctx.fillStyle = hex;
+      ctx.fillRect(px, py, bw, bh);
+    }
+  }
+  ctx.restore();
+}
+
+function draw1DSmear(canvas, xs, ys, m, iw, ih, sel, vmax, theme){
+  const ctx=canvas.getContext('2d');
+  const n=App.n, D=App.D, row=App.proximity[sel];
+  const dArr=[], vArr=[];
+  let maxD=0;
+  // Include s===sel (d_rr=0, delta_rr=self-proximity) -- paper eq.(7), same
+  // reasoning as draw2DSmear above: this is what makes the rings closest to
+  // the clicked point converge on its own self-proximity value instead of on
+  // a plain average of its nearest neighbors.
+  for(let s=0;s<n;s++){ dArr.push(D[sel][s]); vArr.push(row[s]); maxD=Math.max(maxD,D[sel][s]); }
+  App._maxD = maxD;
+  const hh = Math.max(0.015*maxD, (Number(document.getElementById('bw1d').value)/150)*maxD);
+  const cx=xs(App.X[sel][0]), cy=ys(App.X[sel][1]);
+  const pxPerUnitX = xs(1)-xs(0);
+  const pxPerUnitY = ys(1)-ys(0);
+  const steps=120;
+  ctx.save();
+  // The rings below are drawn outward from the selected point and can grow
+  // past the plot's own border (e.g. when the selected point sits near an
+  // edge and its farthest neighbor is on the opposite side) — clip to the
+  // axis frame so a ring never paints into the tick-label margin, matching
+  // the same fix applied to the 2D smear above.
+  ctx.beginPath();
+  ctx.rect(m.l, m.t, iw, ih);
+  ctx.clip();
+  ctx.globalAlpha=getSmearOpacity();
+  for(let k=steps; k>=1; k--){
+    const d = maxD*k/steps;
+    let num=0,den=0;
+    for(let s=0;s<dArr.length;s++){
+      const u=(d-dArr[s])/hh; const kw=Math.exp(-0.5*u*u);
+      num+=kw*vArr[s]; den+=kw;
+    }
+    const est = den>1e-9 ? num/den : 0;
+    const t = est/vmax;
+    const hex = App.proximityType==='similarity' ? divergingColor(t, theme) : seqColor(t, theme);
+    ctx.fillStyle=hex;
+    const rx = Math.max(Math.abs(pxPerUnitX)*d, 0.5), ry = Math.max(Math.abs(pxPerUnitY)*d, 0.5);
+    ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---- 3D floor color-smear texture ----
+// Cache for the 3D floor's color-smear texture (used by renderConfigPlot3D's
+// floor-image item) — the texture only depends on which leaf is selected,
+// the smear mode/bandwidth, the data bounds, the palette and the theme, none
+// of which change from frame to frame while the user is simply dragging to
+// rotate the view. Recomputing an O(resolution² × n) kernel estimate on every
+// orbit-drag animation frame would be wasteful and is unnecessary, so this is
+// only rebuilt when its key actually changes; the (cheap) affine placement
+// of the cached canvas is recomputed every render instead.
+const _floorSmearCache = {key:null, canvas:null};
+function getFloorSmearCanvas(xMin, xMax, yMin, yMax, sel, vmax, theme){
+  const bwVal = App.smearMode==='2d'
+    ? document.getElementById('bw2d').value
+    : document.getElementById('bw1d').value;
+  const key = [sel, App.smearMode, bwVal, xMin, xMax, yMin, yMax, vmax, theme,
+    App.proximityType, App.seqPaletteKey, App.divPaletteKey, App.n].join('|');
+  if(_floorSmearCache.key === key) return _floorSmearCache.canvas;
+  const canvas = buildFloorSmearCanvas(xMin, xMax, yMin, yMax, sel, vmax, theme);
+  _floorSmearCache.key = key; _floorSmearCache.canvas = canvas;
+  return canvas;
+}
+function setSmearPixel(imgData, px, py, fw, hex){
+  const [r,g,b]=hexToRgb(hex);
+  const idx=(py*fw+px)*4;
+  imgData.data[idx]=r; imgData.data[idx+1]=g; imgData.data[idx+2]=b; imgData.data[idx+3]=255;
+}
+// Builds the texture directly in DATA space: canvas pixel (px,py) maps to
+// world (x,y) with row 0 = yMax (top of the data rect) and column 0 = xMin —
+// the same convention renderConfigPlot3D's floor-image placement composes
+// with its own world→screen affine transform. Reuses the exact 2D/1D kernel
+// math draw2DSmear/draw1DSmear use for the flat configuration plot, except
+// the 1D radial kernel is evaluated in isotropic DATA distance here rather
+// than the flat view's screen-pixel ellipses (which are anisotropic whenever
+// the panel isn't square) — a disclosed, deliberate difference, not a bug.
+function buildFloorSmearCanvas(xMin, xMax, yMin, yMax, sel, vmax, theme){
+  const fw=140, fh=140;
+  const canvas=document.createElement('canvas');
+  canvas.width=fw; canvas.height=fh;
+  const ctx=canvas.getContext('2d');
+  const n=App.n, X=App.X, row=App.proximity[sel];
+  const dx=(xMax-xMin)||1, dy=(yMax-yMin)||1;
+  const imgData=ctx.createImageData(fw,fh);
+  if(App.smearMode==='2d'){
+    const span=Math.max(dx,dy);
+    const hPct=Number(document.getElementById('bw2d').value);
+    const h=Math.max((hPct/100)*span, 1e-6);
+    for(let py=0; py<fh; py++){
+      const wy = yMax - ((py+0.5)/fh)*dy;
+      for(let px=0; px<fw; px++){
+        const wx = xMin + ((px+0.5)/fw)*dx;
+        let num=0,den=0;
+        // Include s===sel -- see the matching comment in draw2DSmear above
+        // (paper eq.(6) sums over all s=1..n, self-term included).
+        for(let s=0;s<n;s++){
+          const ddx=wx-X[s][0], ddy=wy-X[s][1];
+          const dist=Math.sqrt(ddx*ddx+ddy*ddy);
+          const u=dist/h; const k=Math.exp(-0.5*u*u);
+          num+=k*row[s]; den+=k;
+        }
+        const est = den>1e-9 ? num/den : 0;
+        const t = est/vmax;
+        const hex = App.proximityType==='similarity' ? divergingColor(t, theme) : seqColor(t, theme);
+        setSmearPixel(imgData, px, py, fw, hex);
+      }
+    }
+  } else {
+    const D=App.D;
+    const dArr=[], vArr=[]; let maxD=0;
+    // Include s===sel -- see the matching comment in draw1DSmear above
+    // (paper eq.(7), same self-term reasoning).
+    for(let s=0;s<n;s++){ dArr.push(D[sel][s]); vArr.push(row[s]); maxD=Math.max(maxD,D[sel][s]); }
+    const hh=Math.max(0.015*(maxD||1), (Number(document.getElementById('bw1d').value)/150)*(maxD||1));
+    const selX=App.X[sel][0], selY=App.X[sel][1];
+    for(let py=0; py<fh; py++){
+      const wy = yMax - ((py+0.5)/fh)*dy;
+      for(let px=0; px<fw; px++){
+        const wx = xMin + ((px+0.5)/fw)*dx;
+        const ddx=wx-selX, ddy=wy-selY;
+        const d = Math.sqrt(ddx*ddx+ddy*ddy);
+        let num=0,den=0;
+        for(let s=0;s<dArr.length;s++){
+          const u=(d-dArr[s])/hh; const kw=Math.exp(-0.5*u*u);
+          num+=kw*vArr[s]; den+=kw;
+        }
+        const est = den>1e-9 ? num/den : 0;
+        const t = est/vmax;
+        const hex = App.proximityType==='similarity' ? divergingColor(t, theme) : seqColor(t, theme);
+        setSmearPixel(imgData, px, py, fw, hex);
+      }
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+  return canvas;
+}
+
+function drawAxes(svg, xs, ys, m, iw, ih, xlab, ylab){
+  const xCount=Math.max(3, Math.min(6, Math.floor(iw/62)));
+  const yCount=Math.max(3, Math.min(6, Math.floor(ih/42)));
+  const xt=niceTicks(xs.invert(m.l), xs.invert(m.l+iw), xCount);
+  const yt=niceTicks(ys.invert(m.t+ih), ys.invert(m.t), yCount);
+  const gGrid=svgEl('g'); svg.appendChild(gGrid);
+  const tickX = ylab ? m.l-9 : m.l-7;
+  for(const v of xt){
+    const px=xs(v);
+    if(px<m.l-1||px>m.l+iw+1) continue;
+    gGrid.appendChild(svgEl('line',{x1:px,x2:px,y1:m.t,y2:m.t+ih,stroke:'currentColor',class:'tick',opacity:0.5}));
+    const t=svgEl('text',{x:px,y:m.t+ih+13,'text-anchor':'middle'}); t.setAttribute('class','tick'); t.textContent=fmtNum(v);
+    svg.appendChild(t);
+  }
+  for(const v of yt){
+    const py=ys(v);
+    if(py<m.t-1||py>m.t+ih+1) continue;
+    gGrid.appendChild(svgEl('line',{x1:m.l,x2:m.l+iw,y1:py,y2:py,stroke:'currentColor',class:'tick',opacity:0.5}));
+    const t=svgEl('text',{x:tickX,y:py+3,'text-anchor':'end'}); t.setAttribute('class','tick'); t.textContent=fmtNum(v);
+    svg.appendChild(t);
+  }
+  svg.appendChild(svgEl('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'none',stroke:cssVar('--border')||'#ccc','stroke-width':1}));
+  if(xlab){
+    const xl=svgEl('text',{x:m.l+iw/2,y:m.t+ih+24,'text-anchor':'middle',class:'axis-label'}); xl.textContent=xlab;
+    svg.appendChild(xl);
+  }
+  if(ylab){
+    const yl=svgEl('text',{x:10,y:m.t+ih/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 10 ${m.t+ih/2})`}); yl.textContent=ylab;
+    svg.appendChild(yl);
+  }
+}
+
+/* ---- generic scatter for the 3 diagnostic plots ---- */
+function renderDiagnostic(wrapId, kind){
+  const wrap=document.getElementById(wrapId);
+  wrap.innerHTML='';
+  const W=Math.max(wrap.clientWidth||300,220);
+  const H=Math.round(W*0.82);
+  wrap.style.height=H+'px';
+  const n=App.n, D=App.D, Dhat=App.Dhat, prox=App.proximity;
+  const pairs=pairIndices(n);
+
+  // build (x,y) per kind
+  let xArr=[], yArr=[], xlab, ylab;
+  for(const [i,j] of pairs){
+    if(kind==='linear'){ xArr.push(Dhat[i][j]); yArr.push(D[i][j]); }
+    else if(kind==='transform'){ xArr.push(prox[i][j]); yArr.push(Dhat[i][j]); }
+    else { xArr.push(prox[i][j]); yArr.push(D[i][j]); }
+  }
+  if(kind==='linear'){ xlab='Disparity'; ylab='Distance'; }
+  else if(kind==='transform'){ xlab='Proximity'; ylab='Disparity'; }
+  else { xlab='Proximity'; ylab='Distance'; }
+
+  let xmin=Math.min(...xArr), xmax=Math.max(...xArr), ymin=Math.min(...yArr), ymax=Math.max(...yArr);
+  if(kind==='linear'){ xmin=ymin=Math.min(xmin,ymin); xmax=ymax=Math.max(xmax,ymax); }
+  const padX=(xmax-xmin||1)*0.08, padY=(ymax-ymin||1)*0.08;
+  xmin-=padX; xmax+=padX; ymin-=padY; ymax+=padY;
+
+  const m={l:44,r:10,t:10,b:26};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const xs=scaleLinear([xmin,xmax],[m.l,m.l+iw]);
+  const ys=scaleLinear([ymin,ymax],[m.t+ih,m.t]);
+  const svg=svgEl('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`});
+  wrap.appendChild(svg);
+  drawAxes(svg, xs, ys, m, iw, ih, xlab, '');
+
+  if(kind==='linear'){
+    const lo=Math.max(xmin,ymin), hi=Math.min(xmax,ymax);
+    svg.appendChild(svgEl('line',{x1:xs(lo),y1:ys(lo),x2:xs(hi),y2:ys(hi),class:'ref-line'}));
+  }
+
+  const sel=App.selected;
+  const theme=currentTheme();
+  const vmax=App._vmax||1;
+  const muted = cssVar('--muted')||'#999';
+
+  for(let k=0;k<pairs.length;k++){
+    const [i,j]=pairs[k];
+    const cx=xs(xArr[k]), cy=ys(yArr[k]);
+    const involved = sel!=null && (i===sel || j===sel);
+    let fill=muted, r=2.6, op=0.35;
+    if(sel!=null){
+      if(involved){
+        const other = i===sel ? j : i;
+        const val=prox[sel][other];
+        const t=val/vmax;
+        fill = App.proximityType==='similarity' ? divergingColor(t,theme) : seqColor(t, theme);
+        r=4; op=0.95;
+      } else { op=0.14; r=2; }
+    } else { op=0.45; r=2.6; }
+    const c=svgEl('circle',{cx,cy,r,fill,opacity:op});
+    c.addEventListener('mousemove',(ev)=>{
+      showTooltip(ev.clientX,ev.clientY,`${App.labels[i]} – ${App.labels[j]}\nprox=${fmtNum(prox[i][j])}  D=${fmtNum(D[i][j])}  D̂=${fmtNum(Dhat[i][j])}`);
+    });
+    c.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(c);
+  }
+}
+
+/* ---- decomposed stress proportion bar chart ---- */
+function renderStressBar(){
+  const wrap=document.getElementById('wrapStressBar');
+  wrap.innerHTML='';
+  const n=App.n;
+  const order=Array.from({length:n},(_,i)=>i).sort((a,b)=>App.stressProp[b]-App.stressProp[a]);
+  const slot=Math.max(16, Math.min(34, Math.floor((wrap.clientWidth||600)/Math.max(n,1))));
+  const W=Math.max(wrap.clientWidth||600, n*slot);
+  const H=240;
+  wrap.style.height=H+'px';
+  const m={l:38,r:10,t:10,b:30};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const maxProp=Math.max(...App.stressProp)*100;
+  const ys=scaleLinear([0, Math.max(maxProp*1.12, 1)], [m.t+ih, m.t]);
+  const svg=svgEl('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`});
+  wrap.appendChild(svg);
+
+  const yt=niceTicks(0, maxProp, 4);
+  for(const v of yt){
+    const py=ys(v);
+    svg.appendChild(svgEl('line',{x1:m.l,x2:m.l+iw,y1:py,y2:py,class:'tick',stroke:'currentColor',opacity:0.5}));
+    const t=svgEl('text',{x:m.l-6,y:py+3,'text-anchor':'end'}); t.setAttribute('class','tick'); t.textContent=v.toFixed(0)+'%';
+    svg.appendChild(t);
+  }
+  svg.appendChild(svgEl('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'none',stroke:cssVar('--border')||'#ccc'}));
+
+  const barW=Math.min(24, iw/n*0.72);
+  const accent=cssVar('--accent')||'#4a3aa7';
+  const muted=cssVar('--muted')||'#999';
+  for(let k=0;k<n;k++){
+    const i=order[k];
+    const pct=App.stressProp[i]*100;
+    const slotX=m.l + (iw/n)*k + (iw/n - barW)/2;
+    const barY=ys(pct);
+    const isSel = App.selected===i;
+    const rect=svgEl('rect',{x:slotX,y:barY,width:barW,height:Math.max(m.t+ih-barY,0),rx:3,fill:isSel?accent:muted,opacity:isSel?1:0.55,class:'clickable'});
+    rect.addEventListener('click',()=>{ App.selected = App.selected===i ? null : i; renderAll(); });
+    rect.addEventListener('mousemove',(ev)=>{ showTooltip(ev.clientX,ev.clientY,`${App.labels[i]}\n應力貢獻: ${pct.toFixed(2)}%${attachedInfoText(i)}`); });
+    rect.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(rect);
+    if(n<=25){
+      const lbl=svgEl('text',{x:slotX+barW/2,y:m.t+ih+11,'text-anchor':'middle',class:'tick'});
+      lbl.textContent=App.labels[i]; svg.appendChild(lbl);
+    }
+  }
+  if(n>25){
+    const note=svgEl('text',{x:m.l,y:H-4,class:'axis-label'}); note.textContent=`共 ${n} 個物件，已依貢獻度排序（標籤請以滑鼠懸停查看）`;
+    svg.appendChild(note);
+  }
+}
+
+/* ---- residual plot with brushing ---- */
+function renderResidual(){
+  const wrap=document.getElementById('wrapResidual');
+  wrap.innerHTML='';
+  const W=Math.max(wrap.clientWidth||700,320);
+  const H=260;
+  wrap.style.height=H+'px';
+  const n=App.n, D=App.D, Dhat=App.Dhat;
+  const pairs=pairIndices(n);
+  const xArr=[], yArr=[];
+  for(const [i,j] of pairs){ xArr.push(Dhat[i][j]); yArr.push(D[i][j]-Dhat[i][j]); }
+  let xmin=Math.min(...xArr), xmax=Math.max(...xArr), ymin=Math.min(...yArr), ymax=Math.max(...yArr);
+  const padX=(xmax-xmin||1)*0.06, padY=(ymax-ymin||1)*0.12;
+  xmin-=padX; xmax+=padX; ymin-=padY; ymax+=padY;
+  const m={l:56,r:14,t:10,b:28};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const xs=scaleLinear([xmin,xmax],[m.l,m.l+iw]);
+  const ys=scaleLinear([ymin,ymax],[m.t+ih,m.t]);
+  const svg=svgEl('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`});
+  wrap.appendChild(svg);
+  drawAxes(svg, xs, ys, m, iw, ih, 'Disparity', 'Residual (D − D̂)');
+  svg.appendChild(svgEl('line',{x1:m.l,x2:m.l+iw,y1:ys(0),y2:ys(0),class:'zeroline'}));
+
+  const divPos=cssVar('--div-pos')||'#e34948', divNeg=cssVar('--div-neg')||'#2a78d6', muted=cssVar('--muted')||'#999';
+  // Brush highlighting has to be applied HERE, at dot-creation time, not only
+  // inside the pointerup handler below — this whole SVG (including every dot)
+  // is torn down and rebuilt from scratch on every render (wrap.innerHTML=''
+  // above), and pointerup's own brush-commit code calls renderResidual() again
+  // immediately after it runs. Any fill/opacity it set via setAttribute on the
+  // OLD dot elements is therefore discarded before the browser ever paints it —
+  // the dots would always come back plain grey after a box-select. Deriving
+  // each dot's color from App.brush.pairs right here means it survives that
+  // self-triggered re-render (and any other re-render: resize, config-plot
+  // clicks, etc.) instead of only a brief moment that never actually shows.
+  const hasBrush = !!(App.brush && App.brush.pairs && App.brush.pairs.length);
+  const dots=[];
+  for(let k=0;k<pairs.length;k++){
+    const [i,j]=pairs[k];
+    const cx=xs(xArr[k]), cy=ys(yArr[k]);
+    const inBrush = hasBrush && App.brush.pairs.some(p=>p.i===i&&p.j===j);
+    const fill = inBrush ? (yArr[k]>=0?divPos:divNeg) : muted;
+    const opacity = inBrush ? 0.95 : (hasBrush ? 0.25 : 0.5);
+    const r = inBrush ? 3.6 : 2.6;
+    const c=svgEl('circle',{cx,cy,r,fill,opacity});
+    c.addEventListener('mousemove',(ev)=>{ showTooltip(ev.clientX,ev.clientY,`${App.labels[i]} – ${App.labels[j]}\nresidual=${fmtNum(yArr[k])}`); });
+    c.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(c);
+    dots.push({el:c, dataX:xArr[k], dataY:yArr[k], i, j});
+  }
+
+  // Persisted selection boxes from earlier shift-drags in this brush session
+  // (App.brush.rects) — the svg is rebuilt from scratch on every render, so
+  // these have to be redrawn each time rather than surviving as DOM state.
+  const accentSoft=cssVar('--accent-soft')||'rgba(74,58,167,.1)', accent=cssVar('--accent')||'#4a3aa7';
+  if(App.brush && App.brush.rects){
+    for(const r of App.brush.rects){
+      svg.appendChild(svgEl('rect',{x:r.x0,y:r.y0,width:r.x1-r.x0,height:r.y1-r.y0,fill:accentSoft,stroke:accent,'stroke-width':1,'stroke-dasharray':'3 2'}));
+    }
+  }
+
+  // brush rect interaction — live feedback rect while dragging; committed
+  // regions are redrawn from App.brush.rects above on every render instead.
+  const brushRect=svgEl('rect',{x:0,y:0,width:0,height:0,fill:accentSoft,stroke:accent,'stroke-width':1,'stroke-dasharray':'3 2',visibility:'hidden'});
+  svg.appendChild(brushRect);
+  const capture=svgEl('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'transparent',cursor:'crosshair'});
+  svg.appendChild(capture);
+
+  function mergePairs(existing, incoming){
+    const map=new Map();
+    for(const p of existing) map.set(p.i+'_'+p.j, p);
+    for(const p of incoming) map.set(p.i+'_'+p.j, p);
+    return Array.from(map.values());
+  }
+
+  let start=null, startShift=false;
+  function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+  capture.addEventListener('pointerdown',(ev)=>{
+    const rect=svg.getBoundingClientRect();
+    const scaleX=W/rect.width, scaleY=H/rect.height;
+    const px=clamp((ev.clientX-rect.left)*scaleX, m.l, m.l+iw);
+    const py=clamp((ev.clientY-rect.top)*scaleY, m.t, m.t+ih);
+    start={px,py};
+    startShift=ev.shiftKey;
+    capture.setPointerCapture(ev.pointerId);
+  });
+  capture.addEventListener('pointermove',(ev)=>{
+    if(!start) return;
+    const rect=svg.getBoundingClientRect();
+    const scaleX=W/rect.width, scaleY=H/rect.height;
+    const px=clamp((ev.clientX-rect.left)*scaleX, m.l, m.l+iw);
+    const py=clamp((ev.clientY-rect.top)*scaleY, m.t, m.t+ih);
+    const x0=Math.min(start.px,px), x1=Math.max(start.px,px);
+    const y0=Math.min(start.py,py), y1=Math.max(start.py,py);
+    brushRect.setAttribute('x',x0); brushRect.setAttribute('y',y0);
+    brushRect.setAttribute('width',x1-x0); brushRect.setAttribute('height',y1-y0);
+    brushRect.setAttribute('visibility','visible');
+  });
+  capture.addEventListener('pointerup',(ev)=>{
+    if(!start) return;
+    const rect=svg.getBoundingClientRect();
+    const scaleX=W/rect.width, scaleY=H/rect.height;
+    const px=clamp((ev.clientX-rect.left)*scaleX, m.l, m.l+iw);
+    const py=clamp((ev.clientY-rect.top)*scaleY, m.t, m.t+ih);
+    const x0=Math.min(start.px,px), x1=Math.max(start.px,px);
+    const y0=Math.min(start.py,py), y1=Math.max(start.py,py);
+    const shiftHeld=startShift;
+    start=null;
+    if(x1-x0<3 && y1-y0<3){
+      brushRect.setAttribute('visibility','hidden');
+      // A plain click clears the whole selection (starts fresh); a
+      // shift-click that misses is a no-op so it doesn't wipe out a
+      // multi-region selection the user is still building.
+      if(!shiftHeld){ App.brush=null; renderConfigPlot(); renderResidual(); }
+      return;
+    }
+    const newPairs=[];
+    for(const d of dots){
+      const cx=xs(d.dataX), cy=ys(d.dataY);
+      if(cx>=x0&&cx<=x1&&cy>=y0&&cy<=y1){ newPairs.push({i:d.i, j:d.j, sign: d.dataY>=0?1:-1}); }
+    }
+    if(shiftHeld && App.brush && App.brush.pairs){
+      App.brush = {pairs: mergePairs(App.brush.pairs, newPairs), rects: App.brush.rects.concat([{x0,x1,y0,y1}])};
+    } else {
+      App.brush = {pairs: newPairs, rects: [{x0,x1,y0,y1}]};
+    }
+    // Dot recoloring itself now happens inside renderResidual()'s own
+    // dot-creation loop (driven by App.brush.pairs), since this function
+    // tears down and rebuilds the whole SVG right below — see the comment
+    // there for why setting attributes on the old `dots` here would just be
+    // immediately discarded.
+    renderConfigPlot();
+    renderResidual();
+  });
+}
+
+/* ---- color legend under configuration plot ---- */
+// Shared by the configuration-plot legend and the heatmap legend, so both
+// panels stay in sync with the current color scale and proximity type.
+function paletteLegendGradientCSS(theme){
+  // A `discrete:true` sequential palette (currently only GAP_Rainbow13) is
+  // meant to be read as its 13 literal named swatches, not a smooth ramp —
+  // so its legend is built as hard-edged equal-width color BANDS (each stop
+  // repeated at both ends of its own band, with no interpolated color in
+  // between), instead of the usual sampled-and-blended CSS gradient below.
+  if(App.proximityType!=='similarity'){
+    const pal = SEQ_PALETTES[App.seqPaletteKey] || SEQ_PALETTES.Blues;
+    if(pal.discrete){
+      const n=pal.stops.length;
+      const parts=[];
+      for(let i=0;i<n;i++){
+        const hex = seqColor((i+0.5)/n, theme);
+        const t0=(i/n*100).toFixed(4), t1=((i+1)/n*100).toFixed(4);
+        parts.push(hex+' '+t0+'%', hex+' '+t1+'%');
+      }
+      return 'linear-gradient(90deg,'+parts.join(',')+')';
+    }
+  }
+  const stops=12;
+  let css='linear-gradient(90deg,';
+  const parts=[];
+  for(let k=0;k<=stops;k++){
+    const t=k/stops;
+    let hex;
+    if(App.proximityType==='similarity'){ hex=divergingColor(t*2-1, theme); }
+    else { hex=seqColor(t, theme); }
+    parts.push(hex+' '+(t*100).toFixed(0)+'%');
+  }
+  css+=parts.join(',')+')';
+  return css;
+}
+function paletteLegendCaption(){
+  if(App.proximityType==='similarity'){
+    const dp = DIV_PALETTES[App.divPaletteKey] || DIV_PALETTES.RdBu;
+    return '相似度（Proximity，'+dp.label+'）— 左右兩極為正／負相關的兩端，顏色越鮮明代表強度越高；下排 Disparity 為該顏色（相似度值）依目前配適換算出的對應 disparity，參考論文 Figure 3/6/7/10 的雙刻度色階畫法';
+  }
+  const sp = SEQ_PALETTES[App.seqPaletteKey] || SEQ_PALETTES.Blues;
+  return '相異度（Proximity，'+sp.label+'）— 顏色越鮮明突出＝越接近；顏色越融入底色＝越遠離；下排 Disparity 為該顏色（相異度值）依目前配適換算出的對應 disparity，參考論文 Figure 3/6/7/10 的雙刻度色階畫法';
+}
+// Builds a sorted (proximity, fitted-disparity) lookup table from every
+// realized pair in the current fit, then linearly interpolates it to answer
+// "what disparity does proximity value t correspond to under the CURRENT
+// fit?" -- this is what lets the legend print a second "Disparity" tick row
+// aligned under the main "Proximity" row, mirroring the dual-scale color bar
+// in the paper's Figure 3/6/7/10 (top row = Proximity, bottom row = the
+// Disparity that proximity level maps to via the fitted transformation f).
+// Works for both interval (affine f) and nonmetric (monotone step f) modes,
+// and for both proximity types, because App.Dhat is always monotonic in
+// App.proximity by construction (PAVA enforces it for nonmetric; the OLS fit
+// is itself monotonic in delta for interval, and delta is itself monotonic
+// -- increasing or decreasing -- in the raw proximity for either type), so a
+// sorted lookup + linear interpolation is valid without special-casing mode
+// or proximity type.
+function proximityToDisparityLookup(){
+  const n=App.n, prox=App.proximity, Dhat=App.Dhat;
+  if(!n || !Dhat) return [];
+  const pts=[];
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    if(i===j) continue;
+    pts.push([prox[i][j], Dhat[i][j]]);
+  }
+  pts.sort((a,b)=>a[0]-b[0]);
+  return pts;
+}
+function interpDisparity(lookup, t){
+  if(!lookup.length) return 0;
+  if(t<=lookup[0][0]) return lookup[0][1];
+  const last=lookup[lookup.length-1];
+  if(t>=last[0]) return last[1];
+  let lo=0, hi=lookup.length-1;
+  while(hi-lo>1){
+    const mid=(lo+hi)>>1;
+    if(lookup[mid][0]<=t) lo=mid; else hi=mid;
+  }
+  const [x0,y0]=lookup[lo], [x1,y1]=lookup[hi];
+  if(x1===x0) return y0;
+  const f=(t-x0)/(x1-x0);
+  return y0 + f*(y1-y0);
+}
+function renderLegendInto(gradId, ticksId, captionId, ticksDisparityId){
+  const gradEl=document.getElementById(gradId);
+  const ticksEl=document.getElementById(ticksId);
+  const ticksDispEl=ticksDisparityId ? document.getElementById(ticksDisparityId) : null;
+  const theme=currentTheme();
+  const vmax=App._vmax||1;
+  gradEl.style.background=paletteLegendGradientCSS(theme);
+  ticksEl.innerHTML='';
+  if(ticksDispEl) ticksDispEl.innerHTML='';
+  const lookup = ticksDispEl ? proximityToDisparityLookup() : null;
+  const n=5;
+  for(let k=0;k<=n;k++){
+    const t=k/n;
+    const val = App.proximityType==='similarity' ? (t*2-1)*vmax : t*vmax;
+    const span=document.createElement('span');
+    span.textContent=fmtNum(val);
+    ticksEl.appendChild(span);
+    if(ticksDispEl){
+      const dv = interpDisparity(lookup, val);
+      const dspan=document.createElement('span');
+      dspan.textContent=fmtNum(dv);
+      ticksDispEl.appendChild(dspan);
+    }
+  }
+  const existing=document.getElementById(captionId);
+  if(existing) existing.remove();
+  const cap=document.createElement('div'); cap.id=captionId; cap.style.cssText='font-size:10.5px;color:var(--muted);margin-top:2px;';
+  cap.textContent=paletteLegendCaption();
+  // Caption goes on the shared .legend-bar container (two levels up: ticksEl
+  // -> its .legend-row wrapper -> .legend-bar), not ticksEl's immediate
+  // parent, now that each tick row is wrapped in its own labeled .legend-row.
+  ticksEl.parentElement.parentElement.appendChild(cap);
+}
+function renderLegend(){
+  renderLegendInto('legendGrad','legendTicks','legendCaption','legendTicksDisparity');
+}
+
+/* ---- proximity matrix heatmap ---- */
+const HEATMAP_ORDER_LABELS = {
+  original:'原始順序', single:'最短距離法（Single-Linkage）', complete:'最長距離法（Complete-Linkage）',
+  average:'平均距離法（Average-Linkage）', r2e:'R2E（Rank-Two Ellipse）', random:'隨機順序',
+};
+
+// Draws the hierarchical-clustering dendrogram to the right of the heatmap,
+// for the three linkage-based seriation methods (Single/Complete/Average-
+// Linkage) — the only ones with an actual merge tree behind them (R2E and
+// Original/Random reorder objects without building one). Walks `tree` — the
+// SAME (possibly flipped) tree object computeHeatmapOrder() built and read
+// left-to-right to produce App.heatmapOrder — left-to-right again here, so
+// each leaf's vertical slot lines up with its row/column in the heatmap
+// exactly, including after a flip swapped which child renders on which side.
+// Standard rotated-dendrogram layout: leaves sit at distance 0 touching the
+// heatmap's right edge; each merge draws two horizontal "elbow" segments
+// from its children out to the merge's own distance, joined by one vertical
+// bracket — so higher (looser) merges extend further right, with the root
+// farthest out.
+function renderDendrogram(svg, tree, m, iw, ih, dendroGap, dendroWidth, cell){
+  let maxDist=0;
+  (function collectMaxDist(nd){
+    if(nd.leaf!==undefined) return;
+    maxDist=Math.max(maxDist, nd.dist);
+    collectMaxDist(nd.left); collectMaxDist(nd.right);
+  })(tree);
+  const x0=m.l+iw+dendroGap, x1=x0+dendroWidth;
+  const xScale=scaleLinear([0, maxDist||1], [x0, x1]);
+  const stroke=cssVar('--muted')||'#999';
+
+  let leafIdx=0;
+  function recurse(nd){
+    if(nd.leaf!==undefined){
+      const y=m.t+(leafIdx++)*cell+cell/2;
+      return {x:xScale(0), y};
+    }
+    const L=recurse(nd.left), R=recurse(nd.right);
+    const xm=xScale(nd.dist);
+    svg.appendChild(svgEl('line',{x1:L.x,x2:xm,y1:L.y,y2:L.y,stroke,'stroke-width':1}));
+    svg.appendChild(svgEl('line',{x1:R.x,x2:xm,y1:R.y,y2:R.y,stroke,'stroke-width':1}));
+    const bracket=svgEl('line',{x1:xm,x2:xm,y1:L.y,y2:R.y,stroke,'stroke-width':1});
+    bracket.addEventListener('mousemove',(ev)=>{ showTooltip(ev.clientX,ev.clientY,`合併距離 (merge distance) = ${fmtNum(nd.dist)}`); });
+    bracket.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(bracket);
+    return {x:xm, y:(L.y+R.y)/2};
+  }
+  recurse(tree);
+
+  // Minimal distance-scale reference: "0" at the heatmap edge (every leaf's
+  // own position) and the root's own merge distance at the far edge — just
+  // enough to read relative merge heights without a full tick axis.
+  const t0=svgEl('text',{x:x0,y:m.t+ih+9,'text-anchor':'start',class:'tick'}); t0.textContent='0';
+  const t1=svgEl('text',{x:x1,y:m.t+ih+9,'text-anchor':'end',class:'tick'}); t1.textContent=fmtNum(maxDist);
+  svg.appendChild(t0); svg.appendChild(t1);
+}
+
+function renderHeatmap(){
+  const wrap=document.getElementById('wrapHeatmap');
+  wrap.innerHTML='';
+  const n=App.n, prox=App.proximity;
+  // Display-order permutation from the seriation controls: order[a] is the
+  // ORIGINAL object index shown at display row/column a. Recomputed only on
+  // data load/refit/dropdown-change (computeHeatmapOrder), never here, so
+  // e.g. "Random" order stays stable across incidental re-renders/resizes.
+  // Rows and columns always share this one order since the matrix is symmetric.
+  const order = (App.heatmapOrder && App.heatmapOrder.length===n) ? App.heatmapOrder : Array.from({length:n},(_,i)=>i);
+  // Labels auto-show for small matrices; the "顯示列/欄名稱" checkbox lets the
+  // user force them on for larger ones too (renderHeatmap then widens the
+  // per-cell minimum so forced-on labels don't collide vertically).
+  const showLabels = n<=40 || App.heatmapShowLabels;
+  // App.heatmapTree is only ever set (by computeHeatmapOrder) for the three
+  // linkage-based seriation methods — that's exactly the case where there's
+  // a merge tree worth drawing, so its mere presence doubles as the "should
+  // we show a dendrogram" flag rather than re-checking the dropdown value.
+  const showDendro = !!App.heatmapTree;
+  const dendroGap = showDendro ? 8 : 0;
+  const dendroWidth = showDendro ? 90 : 0;
+  const m={l:showLabels?74:16, r:10+dendroGap+dendroWidth, t:showLabels?74:16, b:10};
+  const avail=Math.max((wrap.clientWidth||600)-m.l-m.r, 60);
+  const minCell = showLabels ? 12 : 3;
+  const cell=Math.max(minCell, Math.min(22, Math.floor(avail/Math.max(n,1))));
+  const iw=n*cell, ih=n*cell;
+  // Rounded for the same reason as renderConfigPlot: wrap.clientWidth can be
+  // fractional, and an integer-truncating canvas.width vs. a fractional
+  // canvas.style.width would stretch the heatmap's canvas cell-fill layer out
+  // of alignment with the SVG grid/labels/highlight drawn on top of it.
+  const W=Math.round(Math.max(wrap.clientWidth||600, iw+m.l+m.r));
+  const H=ih+m.t+m.b;
+  wrap.style.height=H+'px';
+
+  const canvas=makeHiDPICanvas(W, H);
+  wrap.appendChild(canvas);
+  const svg=svgEl('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`});
+  wrap.appendChild(svg);
+
+  const theme=currentTheme();
+  const vmax=App._vmax||1;
+  const ctx=canvas.getContext('2d');
+  for(let a=0;a<n;a++){
+    for(let b=0;b<n;b++){
+      const val=prox[order[a]][order[b]];
+      const t=val/vmax;
+      ctx.fillStyle = App.proximityType==='similarity' ? divergingColor(t, theme) : seqColor(t, theme);
+      ctx.fillRect(m.l+b*cell, m.t+a*cell, cell, cell);
+    }
+  }
+  if(cell>=8){
+    ctx.strokeStyle = cssVar('--chart') || '#fff';
+    ctx.lineWidth=1;
+    for(let k=0;k<=n;k++){
+      ctx.beginPath(); ctx.moveTo(m.l+k*cell+0.5, m.t); ctx.lineTo(m.l+k*cell+0.5, m.t+ih); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(m.l, m.t+k*cell+0.5); ctx.lineTo(m.l+iw, m.t+k*cell+0.5); ctx.stroke();
+    }
+  }
+
+  svg.appendChild(svgEl('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'none',stroke:cssVar('--border')||'#ccc'}));
+
+  const selPos = App.selected!=null ? order.indexOf(App.selected) : -1;
+  const accent=cssVar('--accent')||'#4a3aa7';
+  // Selection is "which object is selected" (picked by row when a cell is
+  // clicked — see cellFromEvent/selectObject below), and since rows and
+  // columns share one seriation order, that object always sits at the SAME
+  // display position on both axes (selPos). A rectangle spanning the whole
+  // row + whole column therefore always lands on the (selPos,selPos)
+  // diagonal — for an off-diagonal cell click (object A's row × object B's
+  // column) the highlight then appears to sit somewhere other than where
+  // the user clicked. Recoloring the selected object's own row/column NAME
+  // instead ties the highlight to the object, not to a grid position, so it
+  // never looks "off" — used whenever labels are visible. The rect cross
+  // below is kept only as a fallback for large matrices with no labels to
+  // recolor.
+  if(selPos>=0 && !showLabels){
+    svg.appendChild(svgEl('rect',{x:m.l,y:m.t+selPos*cell,width:iw,height:cell,fill:'none',stroke:accent,'stroke-width':2}));
+    svg.appendChild(svgEl('rect',{x:m.l+selPos*cell,y:m.t,width:cell,height:ih,fill:'none',stroke:accent,'stroke-width':2}));
+  }
+
+  function selectObject(idx){ App.selected = App.selected===idx ? null : idx; renderAll(); }
+
+  if(showLabels){
+    for(let a=0;a<n;a++){
+      const ty=m.t+a*cell+cell/2+3, origI=order[a];
+      const isSel=origI===App.selected;
+      const style=isSel ? `pointer-events:auto;font-weight:700;fill:${accent};` : 'pointer-events:auto;';
+      const t=svgEl('text',{x:m.l-6,y:ty,'text-anchor':'end',class:'point-label clickable',style});
+      t.textContent=App.labels[origI];
+      t.addEventListener('click', ()=>selectObject(origI));
+      svg.appendChild(t);
+    }
+    for(let b=0;b<n;b++){
+      const tx=m.l+b*cell+cell/2, origJ=order[b];
+      const isSel=origJ===App.selected;
+      const style=isSel ? `pointer-events:auto;font-weight:700;fill:${accent};` : 'pointer-events:auto;';
+      const t=svgEl('text',{x:tx,y:m.t-6,'text-anchor':'start',class:'point-label clickable',style,transform:`rotate(-90 ${tx} ${m.t-6})`});
+      t.textContent=App.labels[origJ];
+      t.addEventListener('click', ()=>selectObject(origJ));
+      svg.appendChild(t);
+    }
+  } else {
+    const note=svgEl('text',{x:m.l,y:H-2,class:'axis-label'});
+    const orderLabel = HEATMAP_ORDER_LABELS[App.heatmapOrderMethod] || '目前順序';
+    note.textContent=`共 ${n}×${n} 個物件，已依「${orderLabel}」排列（標籤與數值請以滑鼠懸停查看）`;
+    svg.appendChild(note);
+  }
+
+  if(showDendro){
+    renderDendrogram(svg, App.heatmapTree, m, iw, ih, dendroGap, dendroWidth, cell);
+  }
+
+  const capture=svgEl('rect',{x:m.l,y:m.t,width:iw,height:ih,fill:'transparent',cursor:'pointer'});
+  function cellFromEvent(ev){
+    const rect=svg.getBoundingClientRect();
+    const scaleX=W/rect.width, scaleY=H/rect.height;
+    const px=(ev.clientX-rect.left)*scaleX, py=(ev.clientY-rect.top)*scaleY;
+    const b=Math.floor((px-m.l)/cell), a=Math.floor((py-m.t)/cell);
+    if(a<0||a>=n||b<0||b>=n) return null;
+    return {i:order[a], j:order[b]};
+  }
+  capture.addEventListener('mousemove',(ev)=>{
+    const c=cellFromEvent(ev);
+    if(!c){ hideTooltip(); return; }
+    showTooltip(ev.clientX, ev.clientY, `${App.labels[c.i]} × ${App.labels[c.j]}\nproximity=${fmtNum(prox[c.i][c.j])}`);
+  });
+  capture.addEventListener('mouseleave', hideTooltip);
+  capture.addEventListener('click',(ev)=>{
+    const c=cellFromEvent(ev);
+    if(!c) return;
+    selectObject(c.i);
+  });
+  svg.appendChild(capture);
+
+  const orderLabel = HEATMAP_ORDER_LABELS[App.heatmapOrderMethod] || '目前順序';
+  document.getElementById('heatmapHint').textContent = App.selected==null
+    ? `依「${orderLabel}」排列 · 點選列/欄或格子可顯示色彩連動`
+    : `依「${orderLabel}」排列 · 已選取 ${App.labels[App.selected]}（列與欄已標示）`;
+
+  renderLegendInto('heatmapLegendGrad','heatmapLegendTicks','heatmapLegendCaption','heatmapLegendTicksDisparity');
+}
+
+/* ============================== INIT ============================== */
+function setupResize(){
+  let raf=null;
+  window.addEventListener('resize', ()=>{
+    if(raf) cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(()=>{ if(App.X) renderAll(); });
+  });
+}
+
+function init(){
+  toggleSimTransformField();
+  updateAlgorithmUI();
+  populatePaletteSelect();
+  setupResize();
+  const demo=buildDemoData();
+  loadDataset(demo.proximity, demo.labels, 'dissimilarity', demo.note, 'interval');
+}
+init();
+
+})();
+</script>
