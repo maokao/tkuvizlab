@@ -299,6 +299,10 @@
           <div class="phead">
             <h3>組態圖（Configuration Plot）— 點選任一物件以顯示色彩連動</h3>
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <label class="phint" style="display:flex; align-items:center; gap:5px; margin:0; cursor:pointer;">
+                <input type="checkbox" id="configShowLabels" checked style="margin:0; accent-color:var(--accent);">
+                顯示物件名稱
+              </label>
               <button class="btn ghost small" id="btn3DToggle" aria-pressed="false">3D 樹狀圖</button>
               <button class="btn ghost small" id="btn3DReset" style="display:none;">重置視角</button>
               <span class="phint mono" id="selInfo">未選取</span>
@@ -315,7 +319,13 @@
         <div class="panel">
           <div class="phead">
             <h3>分解應力比例圖</h3>
-            <span class="phint">依貢獻度排序，點長條可選取</span>
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <label class="phint" style="display:flex; align-items:center; gap:5px; margin:0; cursor:pointer;">
+                <input type="checkbox" id="stressShowLabels" checked style="margin:0; accent-color:var(--accent);">
+                顯示物件名稱
+              </label>
+              <span class="phint">依貢獻度排序，點長條或名稱可選取</span>
+            </div>
           </div>
           <div class="chart-wrap scrollx" id="wrapStressBar"></div>
         </div>
@@ -1355,7 +1365,7 @@ const App = {
   // buildAttachedInfo()/attachedInfoText() below. null whenever there is
   // none (demo data, a plain proximity-matrix upload, or no 附加 variables).
   attachedInfo:null,
-  seqPaletteKey:'GAP_Rainbow', divPaletteKey:'GAP_BlueRed', heatmapShowLabels:false,
+  seqPaletteKey:'GAP_Rainbow', divPaletteKey:'GAP_BlueRed', heatmapShowLabels:false, configShowLabels:true, stressShowLabels:true,
   heatmapOrder:[], heatmapOrderMethod:'original', heatmapFlipMethod:'none', heatmapTree:null,
   algorithm:'smacof', distP:2,
   // config3D: whether the Configuration Plot shows the 3D "dendrogram rising
@@ -1783,6 +1793,14 @@ document.getElementById('heatmapShowLabels').addEventListener('change', (e)=>{
   App.heatmapShowLabels = e.target.checked;
   if(App.X) renderHeatmap();
 });
+document.getElementById('configShowLabels').addEventListener('change', (e)=>{
+  App.configShowLabels = e.target.checked;
+  if(App.X) renderConfigPlot();
+});
+document.getElementById('stressShowLabels').addEventListener('change', (e)=>{
+  App.stressShowLabels = e.target.checked;
+  if(App.X) renderStressBar();
+});
 document.getElementById('heatmapOrderMethod').addEventListener('change', ()=>{
   if(!App.X) return;
   computeHeatmapOrder();
@@ -1962,7 +1980,10 @@ function renderConfigPlot(){
     draw1DSmear(canvas, xs, ys, m, iw, ih, sel, vmax, theme);
   }
 
-  const showLabels = n<=40;
+  // Labels auto-show for small n (<=40, kept readable without clutter) and
+  // can always be forced on via the #configShowLabels switch regardless of
+  // n -- same override pattern as the heatmap's own #heatmapShowLabels.
+  const showLabels = n<=40 || App.configShowLabels;
   const muted = cssVar('--text-2') || '#52514e';
   const borderCol = cssVar('--chart') || '#fff';
 
@@ -2783,9 +2804,15 @@ function renderStressBar(){
   const order=Array.from({length:n},(_,i)=>i).sort((a,b)=>App.stressProp[b]-App.stressProp[a]);
   const slot=Math.max(16, Math.min(34, Math.floor((wrap.clientWidth||600)/Math.max(n,1))));
   const W=Math.max(wrap.clientWidth||600, n*slot);
-  const H=240;
+  // Auto-shows for small n (<=25, horizontal labels fit without crowding)
+  // and can always be forced on via #stressShowLabels regardless of n -- same
+  // override pattern as the heatmap/config-plot label switches. Labels tilt
+  // -40deg (set below) so they stay legible even packed at n=50's narrow
+  // per-bar slot width, which plain horizontal labels could not do.
+  const showLabels = n<=25 || App.stressShowLabels;
+  const H = showLabels ? 290 : 240;
   wrap.style.height=H+'px';
-  const m={l:38,r:10,t:10,b:30};
+  const m={l:38,r:10,t:10,b: showLabels ? 80 : 30};
   const iw=W-m.l-m.r, ih=H-m.t-m.b;
   const maxProp=Math.max(...App.stressProp)*100;
   const ys=scaleLinear([0, Math.max(maxProp*1.12, 1)], [m.t+ih, m.t]);
@@ -2811,17 +2838,35 @@ function renderStressBar(){
     const barY=ys(pct);
     const isSel = App.selected===i;
     const rect=svgEl('rect',{x:slotX,y:barY,width:barW,height:Math.max(m.t+ih-barY,0),rx:3,fill:isSel?accent:muted,opacity:isSel?1:0.55,class:'clickable'});
-    rect.addEventListener('click',()=>{ App.selected = App.selected===i ? null : i; renderAll(); });
-    rect.addEventListener('mousemove',(ev)=>{ showTooltip(ev.clientX,ev.clientY,`${App.labels[i]}\n應力貢獻: ${pct.toFixed(2)}%${attachedInfoText(i)}`); });
+    const onClick = ()=>{ App.selected = App.selected===i ? null : i; renderAll(); };
+    const onHover = (ev)=>{ showTooltip(ev.clientX,ev.clientY,`${App.labels[i]}\n應力貢獻: ${pct.toFixed(2)}%${attachedInfoText(i)}`); };
+    rect.addEventListener('click', onClick);
+    rect.addEventListener('mousemove', onHover);
     rect.addEventListener('mouseleave', hideTooltip);
     svg.appendChild(rect);
-    if(n<=25){
-      const lbl=svgEl('text',{x:slotX+barW/2,y:m.t+ih+11,'text-anchor':'middle',class:'tick'});
-      lbl.textContent=App.labels[i]; svg.appendChild(lbl);
+    if(showLabels){
+      // Tilted -40deg under each bar, same idiom as a rotated x-axis tick
+      // label: text-anchor 'end' so the string ends at (lx,ly), rotated
+      // around that same point so it reads bottom-left -> top-right up into
+      // the bar it belongs to. The label is its own clickable, hoverable
+      // element -- same selection/tooltip wiring as the bar -- so clicking
+      // or hovering the name interacts with the config plot, heatmap, etc.
+      // exactly like clicking the bar already did.
+      const lx=slotX+barW/2, ly=m.t+ih+11;
+      const lbl=svgEl('text',{x:lx,y:ly,'text-anchor':'end',class:'point-label clickable',transform:`rotate(-40 ${lx} ${ly})`});
+      // .point-label sets pointer-events:none by default (it's normally just
+      // a passive annotation elsewhere in this file) -- override it here so
+      // this label, unlike those, is itself a real click/hover target.
+      lbl.setAttribute('style', `pointer-events:auto;${isSel ? `font-weight:600; fill:${accent};` : ''}`);
+      lbl.textContent=App.labels[i];
+      lbl.addEventListener('click', onClick);
+      lbl.addEventListener('mousemove', onHover);
+      lbl.addEventListener('mouseleave', hideTooltip);
+      svg.appendChild(lbl);
     }
   }
-  if(n>25){
-    const note=svgEl('text',{x:m.l,y:H-4,class:'axis-label'}); note.textContent=`共 ${n} 個物件，已依貢獻度排序（標籤請以滑鼠懸停查看）`;
+  if(!showLabels){
+    const note=svgEl('text',{x:m.l,y:H-4,class:'axis-label'}); note.textContent=`共 ${n} 個物件，已依貢獻度排序（標籤請以滑鼠懸停查看，或開啟「顯示物件名稱」）`;
     svg.appendChild(note);
   }
 }
